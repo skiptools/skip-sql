@@ -1,0 +1,10 @@
+# skip.tools per-configuration file
+
+#skip:
+#  package: 'skip.sql'
+
+# the blocks to add to the build.gradle.kts
+build:
+  contents:
+    - block: 'dependencies'
+      contents:
