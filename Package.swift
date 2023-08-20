@@ -10,7 +10,7 @@ let package = Package(
         .library(name: "SkipSQLKt", targets: ["SkipSQLKt"]),
     ],
     dependencies: [
-        .package(url: "https://source.skip.tools/skip.git", from: "0.5.83"),
+        .package(url: "https://source.skip.tools/skip.git", from: "0.0.0"),
         .package(url: "https://source.skip.tools/skip-unit.git", from: "0.0.0"),
         .package(url: "https://source.skip.tools/skip-lib.git", from: "0.0.0"),
         .package(url: "https://source.skip.tools/skip-foundation.git", from: "0.0.0"),
@@ -25,7 +25,7 @@ let package = Package(
         ], resources: [.process("Skip")], plugins: [.plugin(name: "transpile", package: "skip")]),
         .testTarget(name: "SkipSQLTests", dependencies: [
             "SkipSQL"
-        ], resources: [.process("Resources")], plugins: [.plugin(name: "preflight", package: "skip")]),
+        ], plugins: [.plugin(name: "preflight", package: "skip")]),
         .testTarget(name: "SkipSQLKtTests", dependencies: [
             "SkipSQLKt",
             .product(name: "SkipUnitKt", package: "skip-unit"),
