@@ -26,7 +26,7 @@ import Foundation
 /// A context for evaluating SQL Statements against a SQLite database.
 @available(macOS 11, iOS 14, watchOS 7, tvOS 14, *)
 public final class SQLContext {
-    internal static let logger: Logger = Logger(subsystem: "skip.kit", category: "SQL")
+    internal static let logger: Logger = Logger(subsystem: "skip.sql", category: "SQL")
 
     #if SKIP
     public let db: android.database.sqlite.SQLiteDatabase
@@ -447,7 +447,7 @@ public final class SQLContext {
             #endif
         }
 
-        func close() throws {
+        public func close() throws {
             if !closed {
                 #if SKIP
                 self.cursor.close()
