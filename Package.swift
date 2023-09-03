@@ -10,13 +10,13 @@ let package = Package(
         .library(name: "SkipSQLKt", targets: ["SkipSQLKt"]),
     ],
     dependencies: [
-        .package(url: "https://source.skip.tools/skip.git", from: "0.6.12"),
-        .package(url: "https://source.skip.tools/skip-unit.git", from: "0.2.0"),
-        .package(url: "https://source.skip.tools/skip-lib.git", from: "0.3.0"),
-        .package(url: "https://source.skip.tools/skip-foundation.git", from: "0.1.0"),
+        .package(url: "https://source.skip.tools/skip.git", from: "0.6.27"),
+        .package(url: "https://source.skip.tools/skip-unit.git", from: "0.2.3"),
+        .package(url: "https://source.skip.tools/skip-lib.git", from: "0.3.3"),
+        .package(url: "https://source.skip.tools/skip-foundation.git", from: "0.1.3"),
     ],
     targets: [
-        .target(name: "SkipSQL", plugins: [.plugin(name: "preflight", package: "skip")]),
+        .target(name: "SkipSQL", plugins: [.plugin(name: "skippy", package: "skip")]),
         .target(name: "SkipSQLKt", dependencies: [
             "SkipSQL",
             .product(name: "SkipUnitKt", package: "skip-unit"),
@@ -25,7 +25,7 @@ let package = Package(
         ], resources: [.process("Skip")], plugins: [.plugin(name: "transpile", package: "skip")]),
         .testTarget(name: "SkipSQLTests", dependencies: [
             "SkipSQL"
-        ], plugins: [.plugin(name: "preflight", package: "skip")]),
+        ], plugins: [.plugin(name: "skippy", package: "skip")]),
         .testTarget(name: "SkipSQLKtTests", dependencies: [
             "SkipSQLKt",
             .product(name: "SkipUnit", package: "skip-unit"),
