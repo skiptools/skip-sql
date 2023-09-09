@@ -28,7 +28,7 @@ final class SQLContextTests: XCTestCase {
         //var random = PseudoRandomNumberGenerator(seed: 1234)
         //let rnd = (0...999999).randomElement(using: &random)!
         let rnd = 1
-        let dbname = "/tmp/demosql_\(rnd).db"
+        let dbname = "\(NSTemporaryDirectory())/demosql_\(rnd).db"
 
         print("connecting to: " + dbname)
         let conn = try SQLContext(dbname)
@@ -116,7 +116,7 @@ final class SQLContextTests: XCTestCase {
     }
 
     func testConnection() throws {
-        let url: URL = URL.init(fileURLWithPath: "/tmp/testConnection.db", isDirectory: false)
+        let url: URL = URL.init(fileURLWithPath: "\(NSTemporaryDirectory())/testConnection.db", isDirectory: false)
         let conn: SQLContext = try SQLContext.open(url: url)
         //XCTAssertEqual(1.0, try conn.query(sql: "SELECT 1.0").singleValue()?.floatValue)
         //XCTAssertEqual(3.5, try conn.query(sql: "SELECT 1.0 + 2.5").singleValue()?.floatValue)
