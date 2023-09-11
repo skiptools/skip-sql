@@ -10,7 +10,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://source.skip.tools/skip.git", from: "0.6.60"),
-        .package(url: "https://source.skip.tools/skip-foundation.git", from: "0.1.19"),
+        .package(url: "https://source.skip.tools/skip-foundation.git", from: "0.1.21"),
     ],
     targets: [
         .target(name: "SkipSQL", dependencies: [.product(name: "SkipFoundation", package: "skip-foundation", condition: .when(platforms: [.macOS]))], plugins: [.plugin(name: "skipstone", package: "skip")]),
