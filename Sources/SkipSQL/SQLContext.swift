@@ -76,7 +76,7 @@ public final class SQLContext {
     }
 
     /// Executes a single SQL statement.
-    public func execute(sql: any StringProtocol, params: [SQLValue] = []) throws {
+    public func execute(sql: String, params: [SQLValue] = []) throws {
         Self.logger.debug("execute: \(sql.description)")
         #if SKIP
         let bindArgs = params.map { $0.toBindArg() }
@@ -147,7 +147,7 @@ public final class SQLContext {
         /// Whether the cursor has started to be traversed
         private var opened = false
 
-        fileprivate init(_ connection: SQLContext, _ SQL: any StringProtocol, params: [SQLValue]) throws {
+        fileprivate init(_ connection: SQLContext, _ SQL: String, params: [SQLValue]) throws {
             self.connection = connection
             SQLContext.logger.debug("query: \(SQL.description)")
 
