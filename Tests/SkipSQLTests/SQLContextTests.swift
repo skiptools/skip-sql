@@ -17,17 +17,20 @@ final class SQLiteTests: XCTestCase {
         try sqlite.exec(sql: "SELECT 1")
         try sqlite.exec(sql: "SELECT CURRENT_TIMESTAMP")
 
-        try sqlite.exec(sql: "CREATE TABLE FOO(TXT TEXT, NUM NUMERIC, INT INTEGER, DBL REAL, BLB BLOB)")
+        try sqlite.exec(sql: "CREATE TABLE SQLTYPES(TXT TEXT, NUM NUMERIC, INT INTEGER, DBL REAL, BLB BLOB)")
+        try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES('ABC', 1.1, 1, 2.2, 'XYZ')")
         do {
-            let stmnt = try sqlite.prepare(sql: "SELECT * FROM FOO")
+            let stmnt = try sqlite.prepare(sql: "SELECT * FROM SQLTYPES")
             XCTAssertEqual(["TXT", "NUM", "INT", "DBL", "BLB"], stmnt.columnNames)
+            XCTAssertEqual(Set(["SQLTYPES"]), Set(stmnt.columnTables))
+            XCTAssertTrue(try stmnt.next())
+            XCTAssertFalse(try stmnt.next())
             try stmnt.close()
         }
-        try sqlite.exec(sql: "DROP TABLE FOO")
+        try sqlite.exec(sql: "DROP TABLE SQLTYPES")
 
-        try sqlite.close() // "unable to close due to unfinalized statements or unfinished backups"
+        try sqlite.close() // make sure statements are closed or: "unable to close due to unfinalized statements or unfinished backups"
     }
-
 }
 
 //// SKIP INSERT: @org.junit.runner.RunWith(androidx.test.ext.junit.runners.AndroidJUnit4::class)

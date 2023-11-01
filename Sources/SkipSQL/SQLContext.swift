@@ -17,6 +17,7 @@ private let logger: Logger = Logger(subsystem: "skip.sql", category: "SQL")
 public final class SQLContext {
     /// The pointer to the SQLite database
     private let db: OpaquePointer
+    private var closed = false
 
     public init(path: String = ":memory:", flags: Int32? = nil, vfs: String? = nil) throws {
         var db: OpaquePointer? = nil
@@ -29,18 +30,19 @@ public final class SQLContext {
     }
 
     public func exec(sql: String) throws {
+        try checkClosed()
         try check(code: SQLite3.sqlite3_exec(db, sql, nil, nil, nil))
     }
 
     public func close() throws {
-        try check(code: SQLite3.sqlite3_close(db))
+        if !closed {
+            closed = true
+            try check(code: SQLite3.sqlite3_close(db))
+        }
     }
 
-//    deinit {
-//        try? close()
-//    }
-
     public func prepare(sql: String) throws -> SQLStatement {
+        try checkClosed()
         var stmnt: OpaquePointer? = nil
 
         try check(code: withUnsafeMutablePointer(to: &stmnt) { ptr in
@@ -50,11 +52,17 @@ public final class SQLContext {
         return SQLStatement(stmnt: stmnt!)
     }
 
+    private func checkClosed() throws {
+        if closed {
+            throw SQLContextClosedError()
+        }
+    }
 }
 
 public final class SQLStatement {
     /// The pointer to the SQLite statement
     private let stmnt: OpaquePointer
+    private var closed = false
 
     fileprivate init(stmnt: OpaquePointer) {
         self.stmnt = stmnt
@@ -62,37 +70,79 @@ public final class SQLStatement {
 
     public lazy var columnCount: Int32 = SQLite3.sqlite3_column_count(stmnt)
 
-    public lazy var columnNames: [String] = Array((0..<Int32(columnCount)).map {
-        let name = SQLite3.sqlite3_column_name(stmnt, $0)
-        #if !SKIP
-        return String(cString: name!)
-        #else
-        return name // JNA handles coersion to Java strings automatically
-        #endif
+    public lazy var columnNames: [String] = Array((0..<columnCount).map {
+        str(SQLite3.sqlite3_column_name(stmnt, $0))
     })
 
-    public func close() throws {
-        try check(code: SQLite3.sqlite3_finalize(stmnt))
+    public lazy var columnTypes: [String] = Array((0..<columnCount).map {
+        str(SQLite3.sqlite3_column_decltype(stmnt, $0))
+    })
+
+    public lazy var columnTables: [String] = Array((0..<columnCount).map {
+        str(SQLite3.sqlite3_column_table_name(stmnt, $0))
+    })
+
+    public lazy var columnDatabases: [String] = Array((0..<columnCount).map {
+        str(SQLite3.sqlite3_column_database_name(stmnt, $0))
+    })
+
+    public func next() throws -> Bool {
+        try checkClosed()
+        let result = SQLite3.sqlite3_step(stmnt)
+        if result == SQLITE_ROW {
+            return true
+        } else if result == SQLITE_DONE {
+            return false
+        } else {
+            throw SQLStatementError(code: result)
+        }
     }
 
-//    deinit {
-//        try? close()
-//    }
+    public func close() throws {
+        if !closed {
+            closed = true
+            try check(code: SQLite3.sqlite3_finalize(stmnt))
+        }
+    }
 
-
+    /// It is a grievous error for the application to try to use a prepared statement after it has been finalized.
+    private func checkClosed() throws {
+        if closed {
+            throw SQLStatementClosedError()
+        }
+    }
 }
-
 
 fileprivate func check(code: Int32 = 0) throws {
     if code != 0 {
-        throw SQLiteError(code: code)
+        throw SQLContextError(code: code)
     }
 }
 
-public struct SQLiteError : Error {
+#if !SKIP
+fileprivate func str(_ ptr: Optional<UnsafePointer<Int8>>) -> String {
+    return ptr == nil ? "" : String(cString: ptr!)
+}
+#else
+fileprivate func str(_ str: String) -> String {
+    return str // JNA handles coersion to Java strings automatically
+}
+#endif
+
+
+public struct SQLContextClosedError : Error {
+}
+
+public struct SQLStatementClosedError : Error {
+}
+
+public struct SQLContextError : Error {
     public let code: Int32
 }
 
+public struct SQLStatementError : Error {
+    public let code: Int32
+}
 
 #if SKIP
 
