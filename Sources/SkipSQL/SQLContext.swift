@@ -65,6 +65,29 @@ public final class SQLContext {
         return SQLStatement(stmnt: stmnt!)
     }
 
+    public enum TransactionMode: String {
+        case deferred = "DEFERRED"
+        case immediate = "IMMEDIATE"
+        case exclusive = "EXCLUSIVE"
+    }
+    
+    /// Performs the given operation in the context of a transaction
+    public func transaction(_ mode: TransactionMode = .deferred, block: () throws -> Void) throws {
+        try perform("BEGIN \(mode.rawValue) TRANSACTION", block, "COMMIT TRANSACTION", or: "ROLLBACK TRANSACTION")
+    }
+
+    /// Performs the given operation in the context of a begin and commit/rollback statement
+    fileprivate func perform(_ begin: String, _ block: () throws -> Void, _ commit: String, or rollback: String) throws {
+        try self.exec(sql: begin)
+        do {
+            try block()
+            try self.exec(sql: commit)
+        } catch {
+            try self.exec(sql: rollback)
+            throw error
+        }
+    }
+
     private func checkClosed() throws {
         if closed {
             throw SQLContextClosedError()
@@ -110,6 +133,7 @@ public final class SQLStatement {
         str(SQLite3.sqlite3_column_decltype(stmnt, $0))
     })
 
+    // doesn't work in Android
 //    public lazy var columnTables: [String] = Array((0..<columnCount).map {
 //        str(SQLite3.sqlite3_column_table_name(stmnt, $0))
 //    })
@@ -147,15 +171,23 @@ public final class SQLStatement {
             SQLite3.sqlite3_clear_bindings(stmnt)
         }
     }
+    
+    /// Returns the type of the column at the given index.
+    public func type(at idx: Int32) -> SQLType {
+        SQLType(rawValue: SQLite3.sqlite3_column_type(stmnt, idx)) ?? .null
+    }
 
+    /// Returns the integer at the given index, coercing if necessary according to https://www.sqlite.org/datatype3.html
     public func integer(at idx: Int32) -> Int64 {
         SQLite3.sqlite3_column_int64(stmnt, idx)
     }
 
+    /// Returns the double at the given index, coercing if necessary according to https://www.sqlite.org/datatype3.html
     public func double(at idx: Int32) -> Double {
         SQLite3.sqlite3_column_double(stmnt, idx)
     }
 
+    /// Returns the string at the given index, coercing if necessary according to https://www.sqlite.org/datatype3.html
     public func string(at idx: Int32) -> String? {
         guard let ptr = SQLite3.sqlite3_column_text(stmnt, idx) else {
             return nil
@@ -163,7 +195,67 @@ public final class SQLStatement {
         return String(cString: ptr)
     }
 
-    /// Returns the values of the current row as an array of strings
+    /// Returns the blob Data at the given index, coercing if necessary according to https://www.sqlite.org/datatype3.html
+    public func blob(at idx: Int32) -> Data? {
+        if let pointer = SQLite3.sqlite3_column_blob(stmnt, idx) {
+            let length = SQLite3.sqlite3_column_bytes(stmnt, idx)
+            #if !SKIP
+            return Data(bytes: pointer, count: Int(length))
+            #else
+            let byteArray = pointer.getByteArray(0, length)
+            return Data(platformValue: byteArray)
+            #endif
+        } else {
+            // The return value from sqlite3_column_blob() for a zero-length BLOB is a NULL pointer.
+            // https://www.sqlite.org/c3ref/column_blob.html
+            return nil
+        }
+    }
+
+    /// Returns the value at the given index, based on the type returned from `type(at:)`.
+    public func value(at idx: Int32) -> SQLValue {
+        switch type(at: idx) {
+        case SQLType.integer: 
+            return SQLValue.integer(integer(at: idx))
+        case SQLType.float: 
+            return SQLValue.float(double(at: idx))
+        case SQLType.text: 
+            if let string = string(at: idx) {
+                return SQLValue.text(string)
+            } else {
+                return SQLValue.null
+            }
+        case SQLType.blob:
+            if let blob = blob(at: idx) {
+                return SQLValue.blob(blob)
+            } else {
+                return SQLValue.null
+            }
+        case SQLType.null:
+            return SQLValue.null
+        }
+    }
+
+    public func rowValues() -> [SQLValue] {
+        Array((0..<columnCount).map { value(at: $0) })
+    }
+    
+    /// Convenience for iterating to the next row and returning the values, optionally closing the statement after the values have been retrieved.
+    public func nextValues(close: Bool) throws -> [SQLValue]? {
+        defer {
+            if close {
+                try? self.close()
+            }
+        }
+
+        if !(try next()) {
+            return nil
+        }
+
+        return rowValues()
+    }
+
+    /// Returns the values of the current row as an array of strings, coercing if necessary according to https://www.sqlite.org/datatype3.html
     public func stringValues() -> [String?] {
         Array((0..<columnCount).map { string(at: $0) })
     }
@@ -192,6 +284,51 @@ fileprivate func str(_ str: String) -> String {
 }
 #endif
 
+
+/// The return value of `sqlite3_column_type()` can be used to decide which
+/// of the first six interface should be used to extract the column value.
+/// The value returned by `sqlite3_column_type()` is only meaningful if no
+/// automatic type conversions have occurred for the value in question.
+/// After a type conversion, the result of calling `sqlite3_column_type()`
+/// is undefined, though harmless.  Future
+/// versions of SQLite may change the behavior of `sqlite3_column_type()`
+/// following a type conversion.
+public enum SQLType : Int32, CaseIterable, Hashable {
+    case integer = 1 // SQLITE_INTEGER
+    case float = 2 // SQLITE_FLOAT
+    case text = 3 // SQLITE_TEXT
+    case blob = 4 // SQLITE_BLOB
+    case null = 5 // SQLITE_NULL
+}
+
+public enum SQLValue : Hashable {
+    case integer(Int64)
+    case float(Double)
+    case text(String)
+    case blob(Data)
+    case null
+
+    public var description: String {
+        switch self {
+        case .integer(let integer): return integer.description
+        case .float(let float): return float.description
+        case .text(let text): return text.description
+        case .blob(let blob): return blob.description
+        case .null: return "null"
+        }
+    }
+
+    /// Returns the type of this value
+    public var type: SQLType {
+        switch self {
+        case .integer: return .integer
+        case .float: return .float
+        case .text: return .text
+        case .blob: return .blob
+        case .null: return .null
+        }
+    }
+}
 
 public struct SQLContextClosedError : Error {
 }
@@ -234,8 +371,10 @@ private protocol SQLiteLibrary : com.sun.jna.Library {
     func sqlite3_changes(db: OpaquePointer) -> Int32
     func sqlite3_total_changes(db: OpaquePointer) -> Int32
 
-    // Statement API
+    func sqlite3_exec(db: OpaquePointer, sql: String, callback: OpaquePointer?, pArg: OpaquePointer?, errmsg: UnsafeMutableRawPointer?) -> Int32
     func sqlite3_prepare_v2(db: OpaquePointer, sql: String, nBytes: Int32, ppStmt: UnsafeMutableRawPointer?, tail: UnsafeMutableRawPointer?) -> Int32
+
+    // Statement API
     func sqlite3_step(stmt: OpaquePointer) -> Int32
     func sqlite3_finalize(stmt: OpaquePointer) -> Int32
     func sqlite3_reset(stmt: OpaquePointer) -> Int32
@@ -270,7 +409,9 @@ private protocol SQLiteLibrary : com.sun.jna.Library {
     func sqlite3_column_int64(stmt: OpaquePointer, columnIndex: Int32) -> Int64
     func sqlite3_column_double(stmt: OpaquePointer, columnIndex: Int32) -> Double
     func sqlite3_column_text(stmt: OpaquePointer, columnIndex: Int32) -> OpaquePointer
-    
+    func sqlite3_column_blob(stmt: OpaquePointer, columnIndex: Int32) -> OpaquePointer
+    func sqlite3_column_bytes(stmt: OpaquePointer, columnIndex: Int32) -> Int32
+
     //SQLITE_API const void *sqlite3_column_blob(sqlite3_stmt*, int iCol);
     //SQLITE_API double sqlite3_column_double(sqlite3_stmt*, int iCol);
     //SQLITE_API int sqlite3_column_int(sqlite3_stmt*, int iCol);
@@ -282,13 +423,6 @@ private protocol SQLiteLibrary : com.sun.jna.Library {
     //SQLITE_API int sqlite3_column_bytes16(sqlite3_stmt*, int iCol);
     //SQLITE_API int sqlite3_column_type(sqlite3_stmt*, int iCol);
 
-
-
-    // Transactions
-    func sqlite3_exec(db: OpaquePointer, sql: String, callback: OpaquePointer?, pArg: OpaquePointer?, errmsg: UnsafeMutableRawPointer?) -> Int32
-    func sqlite3_begin_transaction(db: OpaquePointer) -> Int32
-    func sqlite3_commit(db: OpaquePointer) -> Int32
-    func sqlite3_rollback(db: OpaquePointer) -> Int32
 
     // Backup API
     func sqlite3_backup_init(destDb: OpaquePointer, destName: String, sourceDb: OpaquePointer?, sourceName: String) -> OpaquePointer
