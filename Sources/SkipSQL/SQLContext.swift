@@ -19,6 +19,19 @@ public final class SQLContext {
     private let db: OpaquePointer
     private var closed = false
 
+    /// The options that were used to compile the embedded SQLite.
+    ///
+    /// One Darwin platforms, this will be something like: `["MAX_VARIABLE_NUMBER=500000", "ENABLE_NORMALIZE", "DEFAULT_LOOKASIDE=1200,102", "MAX_LIKE_PATTERN_LENGTH=50000", "OMIT_AUTORESET", "CCCRYPT256", "DEFAULT_CACHE_SIZE=2000", "MUTEX_UNFAIR", "MAX_ATTACHED=10", "MAX_LENGTH=2147483645", "MAX_EXPR_DEPTH=1000", "ENABLE_FTS4", "ENABLE_SESSION", "MAX_MMAP_SIZE=1073741824", "ENABLE_UNKNOWN_SQL_FUNCTION", "DEFAULT_SECTOR_SIZE=4096", "DEFAULT_MMAP_SIZE=0", "ENABLE_UPDATE_DELETE_LIMIT", "ENABLE_FTS5", "ENABLE_RTREE", "MAX_SQL_LENGTH=1000000000", "DEFAULT_MEMSTATUS=0", "ENABLE_SQLLOG", "MAX_FUNCTION_ARG=127", "ENABLE_FTS3_PARENTHESIS", "MAX_PAGE_COUNT=1073741823", "ENABLE_FTS3", "MALLOC_SOFT_LIMIT=1024", "MAX_COMPOUND_SELECT=500", "MAX_TRIGGER_DEPTH=1000", "DEFAULT_PCACHE_INITSZ=20", "ENABLE_PREUPDATE_HOOK", "DEFAULT_SYNCHRONOUS=2", "MAX_VDBE_OP=250000000", "ENABLE_SNAPSHOT", "ENABLE_STMT_SCANSTATUS", "OMIT_LOAD_EXTENSION", "DEFAULT_WAL_AUTOCHECKPOINT=1000", "STMTJRNL_SPILL=131072", "TEMP_STORE=1", "THREADSAFE=2", "USE_URI", "DEFAULT_JOURNAL_SIZE_LIMIT=32768", "ENABLE_DBSTAT_VTAB", "ENABLE_API_ARMOR", "ENABLE_LOCKING_STYLE=1", "HAS_CODEC_RESTRICTED", "DEFAULT_FILE_FORMAT=4", "MAX_COLUMN=2000", "MAX_WORKER_THREADS=8", "ATOMIC_INTRINSICS=1", "DEFAULT_RECURSIVE_TRIGGERS", "ENABLE_BYTECODE_VTAB", "ENABLE_FTS3_TOKENIZER", "DEFAULT_WORKER_THREADS=0", "SYSTEM_MALLOC", "HAVE_ISNAN", "DEFAULT_CKPTFULLFSYNC", "BUG_COMPATIBLE_20160819", "MAX_DEFAULT_PAGE_SIZE=8192", "MAX_PAGE_SIZE=65536", "ENABLE_COLUMN_METADATA", "COMPILER=clang-15.0.0", "DEFAULT_PAGE_SIZE=4096", "DEFAULT_AUTOVACUUM", "DEFAULT_WAL_SYNCHRONOUS=1"]`
+    ///
+    /// This does nothing on Android (perhaps due to missing compile arg `SQLITE_OMIT_COMPILEOPTION_DIAGS`), and so it is marked as `internal`
+    ///
+    /// See: https://www.sqlite.org/pragma.html#pragma_compile_options
+    //internal static let compileOptions: Result<Set<String>, Error> = Result {
+    //    Set(try SQLContext().query(sql: "PRAGMA compile_options").compactMap({
+    //        $0.first ?? nil
+    //    }))
+    //}
+
     public init(path: String = ":memory:", flags: Int32? = nil, vfs: String? = nil) throws {
         var db: OpaquePointer? = nil
 
@@ -57,6 +70,25 @@ public final class SQLContext {
             throw SQLContextClosedError()
         }
     }
+    
+    /// Issues a SQL query and return all the strings
+    /// - Returns: an array of rows containing strings with all the column values
+    public func query(sql: String) throws -> [[String?]] {
+        let stmnt = try prepare(sql: sql)
+        defer { try? stmnt.close() }
+        var rows: [[String?]] = []
+        while try stmnt.next() {
+            var cols: [String?] = []
+            #if !SKIP
+            cols.reserveCapacity(Int(stmnt.columnCount))
+            #endif
+            for i in 0..<stmnt.columnCount {
+                cols.append(stmnt.string(at: i))
+            }
+            rows.append(cols)
+        }
+        return rows
+    }
 }
 
 public final class SQLStatement {
@@ -78,9 +110,9 @@ public final class SQLStatement {
         str(SQLite3.sqlite3_column_decltype(stmnt, $0))
     })
 
-    public lazy var columnTables: [String] = Array((0..<columnCount).map {
-        str(SQLite3.sqlite3_column_table_name(stmnt, $0))
-    })
+//    public lazy var columnTables: [String] = Array((0..<columnCount).map {
+//        str(SQLite3.sqlite3_column_table_name(stmnt, $0))
+//    })
 
     public lazy var columnDatabases: [String] = Array((0..<columnCount).map {
         str(SQLite3.sqlite3_column_database_name(stmnt, $0))
@@ -103,6 +135,37 @@ public final class SQLStatement {
             closed = true
             try check(code: SQLite3.sqlite3_finalize(stmnt))
         }
+    }
+    
+    public func reset() throws {
+        reset(clearBindings: true)
+    }
+
+    fileprivate func reset(clearBindings: Bool) {
+        SQLite3.sqlite3_reset(stmnt)
+        if clearBindings {
+            SQLite3.sqlite3_clear_bindings(stmnt)
+        }
+    }
+
+    public func integer(at idx: Int32) -> Int64 {
+        SQLite3.sqlite3_column_int64(stmnt, idx)
+    }
+
+    public func double(at idx: Int32) -> Double {
+        SQLite3.sqlite3_column_double(stmnt, idx)
+    }
+
+    public func string(at idx: Int32) -> String? {
+        guard let ptr = SQLite3.sqlite3_column_text(stmnt, idx) else {
+            return nil
+        }
+        return String(cString: ptr)
+    }
+
+    /// Returns the values of the current row as an array of strings
+    public func stringValues() -> [String?] {
+        Array((0..<columnCount).map { string(at: $0) })
     }
 
     /// It is a grievous error for the application to try to use a prepared statement after it has been finalized.
@@ -185,7 +248,10 @@ private protocol SQLiteLibrary : com.sun.jna.Library {
 
     func sqlite3_column_name(stmt: OpaquePointer!, columnIndex: Int32) -> String
     func sqlite3_column_database_name(stmt: OpaquePointer, columnIndex: Int32) -> String
-    func sqlite3_column_table_name(stmt: OpaquePointer, columnIndex: Int32) -> String
+
+    // Unavailable in Android's sqlite
+    //func sqlite3_column_table_name(stmt: OpaquePointer, columnIndex: Int32) -> String
+
     func sqlite3_column_origin_name(stmt: OpaquePointer, columnIndex: Int32) -> String
     func sqlite3_column_decltype(stmt: OpaquePointer, columnIndex: Int32) -> String
 
@@ -201,9 +267,22 @@ private protocol SQLiteLibrary : com.sun.jna.Library {
     // Column Value API
     func sqlite3_column_type(stmt: OpaquePointer, columnIndex: Int32) -> Int32
     func sqlite3_column_int(stmt: OpaquePointer, columnIndex: Int32) -> Int32
-    func sqlite3_column_long(stmt: OpaquePointer, columnIndex: Int32) -> Int64
+    func sqlite3_column_int64(stmt: OpaquePointer, columnIndex: Int32) -> Int64
     func sqlite3_column_double(stmt: OpaquePointer, columnIndex: Int32) -> Double
-    func sqlite3_column_text(stmt: OpaquePointer, columnIndex: Int32) -> String
+    func sqlite3_column_text(stmt: OpaquePointer, columnIndex: Int32) -> OpaquePointer
+    
+    //SQLITE_API const void *sqlite3_column_blob(sqlite3_stmt*, int iCol);
+    //SQLITE_API double sqlite3_column_double(sqlite3_stmt*, int iCol);
+    //SQLITE_API int sqlite3_column_int(sqlite3_stmt*, int iCol);
+    //SQLITE_API sqlite3_int64 sqlite3_column_int64(sqlite3_stmt*, int iCol);
+    //SQLITE_API const unsigned char *sqlite3_column_text(sqlite3_stmt*, int iCol);
+    //SQLITE_API const void *sqlite3_column_text16(sqlite3_stmt*, int iCol);
+    //SQLITE_API sqlite3_value *sqlite3_column_value(sqlite3_stmt*, int iCol);
+    //SQLITE_API int sqlite3_column_bytes(sqlite3_stmt*, int iCol);
+    //SQLITE_API int sqlite3_column_bytes16(sqlite3_stmt*, int iCol);
+    //SQLITE_API int sqlite3_column_type(sqlite3_stmt*, int iCol);
+
+
 
     // Transactions
     func sqlite3_exec(db: OpaquePointer, sql: String, callback: OpaquePointer?, pArg: OpaquePointer?, errmsg: UnsafeMutableRawPointer?) -> Int32
