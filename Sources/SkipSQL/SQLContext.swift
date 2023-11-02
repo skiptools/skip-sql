@@ -31,12 +31,20 @@ public final class SQLContext {
     //        $0.first ?? nil
     //    }))
     //}
-
-    public init(path: String = ":memory:", flags: Int32? = nil, vfs: String? = nil) throws {
+    
+    /// Create a new `SQLContext` with the given options, either in-memory (the default), or on a file path.
+    /// - Parameters:
+    ///   - path: the path to the local file, or ":memory:" for an in-memory database
+    ///   - flags: the flags to use to open the database
+    public init(path: String = ":memory:", flags: OpenFlags? = nil) throws {
         var db: OpaquePointer? = nil
 
-        try check(code: withUnsafeMutablePointer(to: &db) { ptr in
-            SQLite3.sqlite3_open(path, ptr)
+        try check(db, code: withUnsafeMutablePointer(to: &db) { ptr in
+            if let flags = flags {
+                return SQLite3.sqlite3_open_v2(path, ptr, flags.rawValue, nil)
+            } else {
+                return SQLite3.sqlite3_open(path, ptr)
+            }
         })
 
         self.db = db!
@@ -45,14 +53,19 @@ public final class SQLContext {
     /// Execute the given SQL statement and returns the number of rows affected.
     @discardableResult public func exec(sql: String, parameters: [SQLValue] = []) throws -> Int32 {
         try checkClosed()
-        try check(code: SQLite3.sqlite3_exec(db, sql, nil, nil, nil))
+        try check(db, code: SQLite3.sqlite3_exec(db, sql, nil, nil, nil))
         return SQLite3.sqlite3_changes(db)
     }
 
-    public func close() throws {
+    public func close() {
         if !closed {
             closed = true
-            try check(code: SQLite3.sqlite3_close(db))
+            do {
+                try check(db, code: SQLite3.sqlite3_close(db))
+            } catch {
+                // warn rather than throw an error on close
+                logger.warning("error closing sqlite database: \(error)")
+            }
         }
     }
 
@@ -60,11 +73,11 @@ public final class SQLContext {
         try checkClosed()
         var stmnt: OpaquePointer? = nil
 
-        try check(code: withUnsafeMutablePointer(to: &stmnt) { ptr in
+        try check(db, code: withUnsafeMutablePointer(to: &stmnt) { ptr in
             SQLite3.sqlite3_prepare_v2(db, sql, Int32(-1), ptr, nil)
         })
 
-        return SQLStatement(stmnt: stmnt!)
+        return SQLStatement(db: db, stmnt: stmnt!)
     }
 
     public enum TransactionMode: String {
@@ -76,6 +89,17 @@ public final class SQLContext {
     /// Performs the given operation in the context of a transaction
     public func transaction(_ mode: TransactionMode = .deferred, block: () throws -> Void) throws {
         try perform("BEGIN \(mode.rawValue) TRANSACTION", block, "COMMIT TRANSACTION", or: "ROLLBACK TRANSACTION")
+    }
+
+    /// Performs the given operation within the databases mutex lock
+    public func mutex<T>(block: () throws -> T) rethrows -> T {
+        let lock = SQLite3.sqlite3_db_mutex(db)
+        SQLite3.sqlite3_mutex_enter(lock)
+        defer {
+            SQLite3.sqlite3_mutex_leave(lock)
+            // SQLite3.sqlite3_mutex_free(lock) // don't free!
+        }
+        return try block()
     }
 
     /// Performs the given operation in the context of a begin and commit/rollback statement
@@ -100,7 +124,7 @@ public final class SQLContext {
     /// - Returns: an array of rows containing strings with all the column values
     public func query(sql: String) throws -> [[String?]] {
         let stmnt = try prepare(sql: sql)
-        defer { try? stmnt.close() }
+        defer { stmnt.close() }
         var rows: [[String?]] = []
         while try stmnt.next() {
             var cols: [String?] = []
@@ -114,14 +138,35 @@ public final class SQLContext {
         }
         return rows
     }
+
+    public struct OpenFlags: OptionSet {
+       public let rawValue: Int32
+
+        public init(rawValue: Int32) {
+            self.rawValue = rawValue
+        }
+
+        public static let readOnly = OpenFlags(rawValue: 0x00000001)
+        public static let readWrite = OpenFlags(rawValue: 0x00000002)
+        public static let create = OpenFlags(rawValue: 0x00000004)
+        public static let uri = OpenFlags(rawValue: 0x00000040)
+        public static let memory = OpenFlags(rawValue: 0x00000080)
+        public static let nomutex = OpenFlags(rawValue: 0x00008000)
+        public static let fullMutex = OpenFlags(rawValue: 0x00010000)
+        public static let sharedCache = OpenFlags(rawValue: 0x00020000)
+        public static let privateCache = OpenFlags(rawValue: 0x00040000)
+    }
+
 }
 
 public final class SQLStatement {
     /// The pointer to the SQLite statement
+    private let db: OpaquePointer
     private let stmnt: OpaquePointer
     private var closed = false
 
-    fileprivate init(stmnt: OpaquePointer) {
+    fileprivate init(db: OpaquePointer, stmnt: OpaquePointer) {
+        self.db = db
         self.stmnt = stmnt
     }
 
@@ -148,25 +193,49 @@ public final class SQLStatement {
     public func bind(_ value: SQLValue, at index: Int32) throws {
         switch value {
         case .null:
-            try check(code: SQLite3.sqlite3_bind_null(stmnt, index))
+            try check(db, code: SQLite3.sqlite3_bind_null(stmnt, index))
         case .integer(let int):
-            try check(code: SQLite3.sqlite3_bind_int64(stmnt, index, int))
+            try check(db, code: SQLite3.sqlite3_bind_int64(stmnt, index, int))
         case .text(let str):
-            try check(code: SQLite3.sqlite3_bind_text(stmnt, index, str, -1, nil))
+            try check(db, code: SQLite3.sqlite3_bind_text(stmnt, index, str, -1, nil))
         case .float(let double):
-            try check(code: SQLite3.sqlite3_bind_double(stmnt, index, double))
+            try check(db, code: SQLite3.sqlite3_bind_double(stmnt, index, double))
         case .blob(let blob):
-            #if SKIP
-            let buf = java.nio.ByteBuffer.allocateDirect(blob.count)
-            buf.put(blob.kotlin(nocopy: true))
-            let ptr = com.sun.jna.Native.getDirectBufferPointer(buf)
-            #else
-            let ptr = Array(blob)
-            #endif
-            try check(code: SQLite3.sqlite3_bind_blob(stmnt, index, ptr, Int32(blob.count), nil))
+            let size = Int32(blob.count)
+            if size == 0 {
+                try check(db, code: SQLite3.sqlite3_bind_zeroblob(stmnt, index, size))
+            } else {
+                #if SKIP
+                let buf = java.nio.ByteBuffer.allocateDirect(size)
+                buf.put(blob.kotlin(nocopy: true))
+                let ptr = com.sun.jna.Native.getDirectBufferPointer(buf)
+                try check(db, code: SQLite3.sqlite3_bind_blob(stmnt, index, ptr, size, nil))
+                #else
+                try blob.withUnsafeBytes { ptr in
+                    try check(db, code: SQLite3.sqlite3_bind_blob(stmnt, index, ptr.baseAddress, size, nil))
+                }
+                #endif
+            }
+        }
+    }
+    
+    /// Perform an update with the prepared statemement, resetting it once the update is complete
+    /// - Parameter params: the parameters to bind to the SQL statement
+    public func update(_ params: [SQLValue] = []) throws {
+        try checkClosed()
+        defer { reset() }
+        for (i, param) in params.enumerated() {
+            try bind(param, at: Int32(i + 1)) // column index starts at 1
+        }
+        let result = SQLite3.sqlite3_step(stmnt)
+        if result == SQLITE_DONE {
+            return
+        } else {
+            throw SQLStatementError(code: result)
         }
     }
 
+    /// After a prepared statement has been prepared this function must be called one or more times to evaluate the statement.
     public func next() throws -> Bool {
         try checkClosed()
         let result = SQLite3.sqlite3_step(stmnt)
@@ -179,14 +248,19 @@ public final class SQLStatement {
         }
     }
 
-    public func close() throws {
+    public func close() {
         if !closed {
             closed = true
-            try check(code: SQLite3.sqlite3_finalize(stmnt))
+            do {
+                try check(db, code: SQLite3.sqlite3_finalize(stmnt))
+            } catch {
+                // warn rather than throw an error on close
+                logger.warning("error closing sqlite statement: \(error)")
+            }
         }
     }
     
-    public func reset() throws {
+    public func reset() {
         reset(clearBindings: true)
     }
 
@@ -269,7 +343,7 @@ public final class SQLStatement {
     public func nextValues(close: Bool) throws -> [SQLValue]? {
         defer {
             if close {
-                try? self.close()
+                self.close()
             }
         }
 
@@ -293,9 +367,10 @@ public final class SQLStatement {
     }
 }
 
-fileprivate func check(code: Int32 = 0) throws {
+fileprivate func check(_ db: OpaquePointer?, code: Int32) throws {
     if code != 0 {
-        throw SQLContextError(code: code)
+        let msg = db == nil ? "Unknown" : String(cString: SQLite3.sqlite3_errmsg(db!))
+        throw SQLError(msg: msg, code: code)
     }
 }
 
@@ -361,8 +436,26 @@ public struct SQLContextClosedError : Error {
 public struct SQLStatementClosedError : Error {
 }
 
-public struct SQLContextError : Error {
+public struct InternalError : Error {
     public let code: Int32
+
+    public init(code: Int32) {
+        self.code = code
+    }
+}
+
+public struct SQLError : Error {
+    public let msg: String
+    public let code: Int32
+
+    public init(msg: String, code: Int32) {
+        self.msg = msg
+        self.code = code
+    }
+
+    public var description: String {
+        "SQLite error \(code): \(msg)"
+    }
 }
 
 public struct SQLStatementError : Error {
@@ -392,7 +485,7 @@ private protocol SQLiteLibrary : com.sun.jna.Library {
     func sqlite3_open_v2(filename: String, ppDb: UnsafeMutableRawPointer?, flags: Int32, vfs: String?) -> Int32
     func sqlite3_close(db: OpaquePointer) -> Int32
     func sqlite3_errcode(db: OpaquePointer) -> Int32
-    func sqlite3_errmsg(db: OpaquePointer) -> String
+    func sqlite3_errmsg(db: OpaquePointer) -> OpaquePointer
     func sqlite3_changes(db: OpaquePointer) -> Int32
     func sqlite3_total_changes(db: OpaquePointer) -> Int32
 
@@ -428,6 +521,8 @@ private protocol SQLiteLibrary : com.sun.jna.Library {
     func sqlite3_bind_double(stmt: OpaquePointer, paramIndex: Int32, value: Double) -> Int32
     func sqlite3_bind_text(stmt: OpaquePointer, paramIndex: Int32, value: String, length: Int32, destructor: OpaquePointer?) -> Int32
     func sqlite3_bind_blob(stmt: OpaquePointer, paramIndex: Int32, value: OpaquePointer, length: Int32, destructor: OpaquePointer?) -> Int32
+    func sqlite3_bind_zeroblob(stmt: OpaquePointer, paramIndex: Int32, length: Int32) -> Int32
+
 
     // Column Value API
     func sqlite3_column_type(stmt: OpaquePointer, columnIndex: Int32) -> Int32
@@ -474,6 +569,14 @@ private protocol SQLiteLibrary : com.sun.jna.Library {
     func sqlite3_release_savepoint(db: OpaquePointer, savepointName: String) -> Int32
     func sqlite3_rollback_to_savepoint(db: OpaquePointer, savepointName: String) -> Int32
 
+    // Locks
+    func sqlite3_db_mutex(db: OpaquePointer) -> OpaquePointer
+    func sqlite3_mutex_free(lock: OpaquePointer)
+    func sqlite3_mutex_enter(lock: OpaquePointer)
+    func sqlite3_mutex_leave(lock: OpaquePointer)
+    //func int sqlite3_mutex_try(sqlite3_mutex*);
+
+    
     // Additional Configuration
     func sqlite3_trace(db: OpaquePointer, xTrace: OpaquePointer?, pApp: OpaquePointer?) -> Int32
     func sqlite3_progress_handler(db: OpaquePointer, op: Int32, xProgress: OpaquePointer?, pApp: OpaquePointer?) -> Int32

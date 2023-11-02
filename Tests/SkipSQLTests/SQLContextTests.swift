@@ -8,6 +8,7 @@ import OSLog
 import Foundation
 import SkipSQL
 
+// SKIP INSERT: @org.junit.runner.RunWith(androidx.test.ext.junit.runners.AndroidJUnit4::class)
 final class SQLiteTests: XCTestCase {
     let logger: Logger = Logger(subsystem: "skip.sql", category: "SQLiteTests")
 
@@ -20,6 +21,22 @@ final class SQLiteTests: XCTestCase {
 
         XCTAssertEqual(0, try sqlite.exec(sql: "CREATE TABLE SQLTYPES(TXT TEXT, NUM NUMERIC, INT INTEGER, DBL REAL, BLB BLOB)"))
         XCTAssertEqual(1, try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES('ABC', 1.1, 1, 2.2, X'78797A')"))
+
+        try sqlite.exec(sql: "")
+
+        /// Expect that the SQL statement will fail with the given error message
+        func expectFail(sql: String, message: String) throws {
+            do {
+                try sqlite.exec(sql: sql)
+                XCTFail("SQL Statement should not have succeeed")
+            } catch let error as SQLError {
+                XCTAssertEqual(message, error.msg)
+            }
+        }
+
+        try expectFail(sql: "SELECT X", message: "no such column: X")
+        try expectFail(sql: "CREATE TABLE", message: "incomplete input")
+        try expectFail(sql: "Q", message: #"near "Q": syntax error"#)
 
         let stmnt = try sqlite.prepare(sql: "SELECT * FROM SQLTYPES")
         XCTAssertEqual(["TXT", "NUM", "INT", "DBL", "BLB"], stmnt.columnNames)
@@ -64,22 +81,24 @@ final class SQLiteTests: XCTestCase {
         XCTAssertFalse(try stmnt.next())
         XCTAssertEqual([nil, nil, nil, nil, nil], stmnt.stringValues())
 
-        try stmnt.reset()
+        stmnt.reset()
         XCTAssertTrue(try stmnt.next())
         XCTAssertFalse(try stmnt.next())
 
-        try stmnt.reset()
+        stmnt.reset()
         XCTAssertTrue(try stmnt.next())
         XCTAssertFalse(try stmnt.next())
 
-        try stmnt.close()
+        stmnt.close()
 
         /// Issues a count query
         func count(distinct: Bool = false, columns: String = "*", table: String) throws -> SQLValue? {
             try sqlite.prepare(sql: "SELECT COUNT(\(distinct ? "DISTINCT" : "") \(columns)) FROM \"\(table)\"").nextValues(close: true)?.first
         }
 
-        XCTAssertEqual(.integer(1), try count(table: "SQLTYPES"))
+        try sqlite.mutex {
+            XCTAssertEqual(.integer(1), try count(table: "SQLTYPES"))
+        }
 
         // interrupt a transaction to issue a rollback, an make sure the row wasn't inserted
         try? sqlite.transaction {
@@ -104,26 +123,33 @@ final class SQLiteTests: XCTestCase {
             try numquery.bind(.float(2.0), at: 1)
             XCTAssertEqual(SQLValue.integer(2), try numquery.nextValues(close: false)?.first)
 
-            try numquery.reset()
+            numquery.reset()
             try numquery.bind(.float(3.0), at: 1)
             XCTAssertEqual(SQLValue.integer(1), try numquery.nextValues(close: false)?.first)
 
-            try numquery.close()
+            numquery.close()
         }
 
         do {
             let blbquery = try sqlite.prepare(sql: "SELECT COUNT(*) FROM SQLTYPES WHERE BLB = ?")
+
             try blbquery.bind(.blob(Data()), at: 1)
             XCTAssertEqual(SQLValue.integer(0), try blbquery.nextValues(close: false)?.first)
-            try blbquery.reset()
+
+            blbquery.reset()
             try blbquery.bind(.blob(Data([UInt8(0x78), UInt8(0x79), UInt8(0x7A)])), at: 1)
-            let blobCount = try blbquery.nextValues(close: false)?.first
             #if SKIP
-            XCTAssertEqual(SQLValue.integer(2), blobCount)
+            XCTAssertEqual(SQLValue.integer(2), try blbquery.nextValues(close: false)?.first)
             #else
-            XCTAssertEqual(SQLValue.integer(0), blobCount) // blob queries fail on Darwin
+            XCTAssertEqual(SQLValue.integer(0), try blbquery.nextValues(close: false)?.first) // unknown reason why this is 0 on Darwin
             #endif
-            try blbquery.close()
+
+            blbquery.reset()
+            // bind a 1mb param
+            try blbquery.bind(.blob(Data(Array(repeating: UInt8(0x78), count: 1024 * 1024))), at: 1)
+            XCTAssertEqual(SQLValue.integer(0), try blbquery.nextValues(close: false)?.first)
+
+            blbquery.close()
         }
 
 
@@ -135,6 +161,32 @@ final class SQLiteTests: XCTestCase {
 
         try sqlite.exec(sql: "DROP TABLE SQLTYPES")
 
-        try sqlite.close() // make sure statements are closed or: "unable to close due to unfinalized statements or unfinished backups"
+        sqlite.close() // make sure statements are closed or: "unable to close due to unfinalized statements or unfinished backups"
+    }
+
+    func testSQLitePerformance() throws {
+        let fileManager = FileManager.default
+        //let dir = try fileManager.url(for: FileManager.SearchPathDirectory.documentDirectory, in: FileManager.SearchPathDomainMask.userDomainMask, appropriateFor: nil, create: true)
+        let dir = URL.temporaryDirectory
+        let dbpath = dir.appendingPathComponent("testSQLitePerformance-\(UUID().uuidString).db").path
+        let sqlite = try SQLContext(path: dbpath, flags: [.create, .readWrite])
+        defer { sqlite.close() }
+
+        try sqlite.exec(sql: "CREATE TABLE BIGTABLE (STRING TEXT)")
+
+        let startTime = Date.now
+        logger.log("writing to db: \(dbpath)")
+        let rows = 1_000_000
+        let insert = try sqlite.prepare(sql: "INSERT INTO BIGTABLE VALUES (?)")
+        defer { insert.close() }
+        try sqlite.transaction {
+            for _ in 1...rows {
+                try insert.bind(.text(UUID().uuidString), at: 1)
+                XCTAssertFalse(try insert.next(), "insert statement should return SQLITE_DONE")
+                insert.reset() // reset for the next one
+            }
+        }
+        let t = Date.now.timeIntervalSince(startTime)
+        logger.log("wrote \(rows) rows to db in \(t): \(dbpath)")
     }
 }
