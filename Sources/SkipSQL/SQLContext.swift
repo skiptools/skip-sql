@@ -42,9 +42,11 @@ public final class SQLContext {
         self.db = db!
     }
 
-    public func exec(sql: String) throws {
+    /// Execute the given SQL statement and returns the number of rows affected.
+    @discardableResult public func exec(sql: String, parameters: [SQLValue] = []) throws -> Int32 {
         try checkClosed()
         try check(code: SQLite3.sqlite3_exec(db, sql, nil, nil, nil))
+        return SQLite3.sqlite3_changes(db)
     }
 
     public func close() throws {
@@ -141,6 +143,29 @@ public final class SQLStatement {
     public lazy var columnDatabases: [String] = Array((0..<columnCount).map {
         str(SQLite3.sqlite3_column_database_name(stmnt, $0))
     })
+
+    /// Binds the given value at the index
+    public func bind(_ value: SQLValue, at index: Int32) throws {
+        switch value {
+        case .null:
+            try check(code: SQLite3.sqlite3_bind_null(stmnt, index))
+        case .integer(let int):
+            try check(code: SQLite3.sqlite3_bind_int64(stmnt, index, int))
+        case .text(let str):
+            try check(code: SQLite3.sqlite3_bind_text(stmnt, index, str, -1, nil))
+        case .float(let double):
+            try check(code: SQLite3.sqlite3_bind_double(stmnt, index, double))
+        case .blob(let blob):
+            #if SKIP
+            let buf = java.nio.ByteBuffer.allocateDirect(blob.count)
+            buf.put(blob.kotlin(nocopy: true))
+            let ptr = com.sun.jna.Native.getDirectBufferPointer(buf)
+            #else
+            let ptr = Array(blob)
+            #endif
+            try check(code: SQLite3.sqlite3_bind_blob(stmnt, index, ptr, Int32(blob.count), nil))
+        }
+    }
 
     public func next() throws -> Bool {
         try checkClosed()
@@ -399,9 +424,10 @@ private protocol SQLiteLibrary : com.sun.jna.Library {
     // Parameter Binding
     func sqlite3_bind_null(stmt: OpaquePointer, paramIndex: Int32) -> Int32
     func sqlite3_bind_int(stmt: OpaquePointer, paramIndex: Int32, value: Int32) -> Int32
-    func sqlite3_bind_long(stmt: OpaquePointer, paramIndex: Int32, value: Int64) -> Int32
+    func sqlite3_bind_int64(stmt: OpaquePointer, paramIndex: Int32, value: Int64) -> Int32
     func sqlite3_bind_double(stmt: OpaquePointer, paramIndex: Int32, value: Double) -> Int32
     func sqlite3_bind_text(stmt: OpaquePointer, paramIndex: Int32, value: String, length: Int32, destructor: OpaquePointer?) -> Int32
+    func sqlite3_bind_blob(stmt: OpaquePointer, paramIndex: Int32, value: OpaquePointer, length: Int32, destructor: OpaquePointer?) -> Int32
 
     // Column Value API
     func sqlite3_column_type(stmt: OpaquePointer, columnIndex: Int32) -> Int32

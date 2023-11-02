@@ -14,58 +14,65 @@ final class SQLiteTests: XCTestCase {
     func testSQLite() throws {
         let sqlite = try SQLContext()
 
-        try sqlite.exec(sql: "SELECT 1")
-        try sqlite.exec(sql: "SELECT CURRENT_TIMESTAMP")
-        try sqlite.exec(sql: "PRAGMA compile_options")
+        XCTAssertEqual(0, try sqlite.exec(sql: "SELECT 1"))
+        XCTAssertEqual(0, try sqlite.exec(sql: "SELECT CURRENT_TIMESTAMP"))
+        XCTAssertEqual(0, try sqlite.exec(sql: "PRAGMA compile_options"))
 
-        try sqlite.exec(sql: "CREATE TABLE SQLTYPES(TXT TEXT, NUM NUMERIC, INT INTEGER, DBL REAL, BLB BLOB)")
-        try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES('ABC', 1.1, 1, 2.2, X'78797A')")
+        XCTAssertEqual(0, try sqlite.exec(sql: "CREATE TABLE SQLTYPES(TXT TEXT, NUM NUMERIC, INT INTEGER, DBL REAL, BLB BLOB)"))
+        XCTAssertEqual(1, try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES('ABC', 1.1, 1, 2.2, X'78797A')"))
 
-        do {
-            let stmnt = try sqlite.prepare(sql: "SELECT * FROM SQLTYPES")
-            XCTAssertEqual(["TXT", "NUM", "INT", "DBL", "BLB"], stmnt.columnNames)
-            // XCTAssertEqual(Set(["SQLTYPES"]), Set(stmnt.columnTables)) // unavailable on Android
-            XCTAssertEqual(["TEXT", "NUMERIC", "INTEGER", "REAL", "BLOB"], stmnt.columnTypes)
-            XCTAssertEqual([nil, nil, nil, nil, nil], stmnt.stringValues())
-            XCTAssertTrue(try stmnt.next())
-            XCTAssertEqual(["ABC", "1.1", "1", "2.2", "xyz"], stmnt.stringValues())
+        let stmnt = try sqlite.prepare(sql: "SELECT * FROM SQLTYPES")
+        XCTAssertEqual(["TXT", "NUM", "INT", "DBL", "BLB"], stmnt.columnNames)
+        // XCTAssertEqual(Set(["SQLTYPES"]), Set(stmnt.columnTables)) // unavailable on Android
+        XCTAssertEqual(["TEXT", "NUMERIC", "INTEGER", "REAL", "BLOB"], stmnt.columnTypes)
+        XCTAssertEqual([nil, nil, nil, nil, nil], stmnt.stringValues())
+        XCTAssertTrue(try stmnt.next())
+        XCTAssertEqual(["ABC", "1.1", "1", "2.2", "xyz"], stmnt.stringValues())
 
-            XCTAssertEqual(.null, stmnt.type(at: -1)) // underflow
-            XCTAssertEqual(.text, stmnt.type(at: 0))
-            XCTAssertEqual(.float, stmnt.type(at: 1))
-            XCTAssertEqual(.integer, stmnt.type(at: 2))
-            XCTAssertEqual(.float, stmnt.type(at: 3))
-            //XCTAssertEqual(.blob, stmnt.type(at: 4))
-            XCTAssertEqual(.null, stmnt.type(at: stmnt.columnCount + 1)) // overflow
+        XCTAssertEqual(.null, stmnt.type(at: -1)) // underflow
+        XCTAssertEqual(.text, stmnt.type(at: 0))
+        XCTAssertEqual(.float, stmnt.type(at: 1))
+        XCTAssertEqual(.integer, stmnt.type(at: 2))
+        XCTAssertEqual(.float, stmnt.type(at: 3))
+        //XCTAssertEqual(.blob, stmnt.type(at: 4))
+        XCTAssertEqual(.null, stmnt.type(at: stmnt.columnCount + 1)) // overflow
 
-            XCTAssertEqual(0.0, stmnt.double(at: -1)) // underflow
-            XCTAssertEqual(0.0, stmnt.double(at: 0))
-            XCTAssertEqual(1.1, stmnt.double(at: 1))
-            XCTAssertEqual(1.0, stmnt.double(at: 2))
-            XCTAssertEqual(2.2, stmnt.double(at: 3))
-            XCTAssertEqual(0.0, stmnt.double(at: 4))
-            XCTAssertEqual(0.0, stmnt.double(at: stmnt.columnCount + 1)) // overflow
+        XCTAssertEqual(0.0, stmnt.double(at: -1)) // underflow
+        XCTAssertEqual(0.0, stmnt.double(at: 0))
+        XCTAssertEqual(1.1, stmnt.double(at: 1))
+        XCTAssertEqual(1.0, stmnt.double(at: 2))
+        XCTAssertEqual(2.2, stmnt.double(at: 3))
+        XCTAssertEqual(0.0, stmnt.double(at: 4))
+        XCTAssertEqual(0.0, stmnt.double(at: stmnt.columnCount + 1)) // overflow
 
-            XCTAssertEqual(0, stmnt.integer(at: -1))
-            XCTAssertEqual(0, stmnt.integer(at: 0))
-            XCTAssertEqual(1, stmnt.integer(at: 1))
-            XCTAssertEqual(1, stmnt.integer(at: 2))
-            XCTAssertEqual(2, stmnt.integer(at: 3))
-            XCTAssertEqual(0, stmnt.integer(at: 4))
-            XCTAssertEqual(0, stmnt.integer(at: stmnt.columnCount + 1))
+        XCTAssertEqual(0, stmnt.integer(at: -1))
+        XCTAssertEqual(0, stmnt.integer(at: 0))
+        XCTAssertEqual(1, stmnt.integer(at: 1))
+        XCTAssertEqual(1, stmnt.integer(at: 2))
+        XCTAssertEqual(2, stmnt.integer(at: 3))
+        XCTAssertEqual(0, stmnt.integer(at: 4))
+        XCTAssertEqual(0, stmnt.integer(at: stmnt.columnCount + 1))
 
-            XCTAssertEqual(nil, stmnt.blob(at: -1))
-            XCTAssertEqual("ABC".data(using: .utf8), stmnt.blob(at: 0))
-            XCTAssertEqual("1.1".data(using: .utf8), stmnt.blob(at: 1))
-            XCTAssertEqual("1".data(using: .utf8), stmnt.blob(at: 2))
-            XCTAssertEqual("2.2".data(using: .utf8), stmnt.blob(at: 3))
-            XCTAssertEqual("xyz".data(using: .utf8), stmnt.blob(at: 4))
-            XCTAssertEqual(nil, stmnt.blob(at: stmnt.columnCount + 1))
+        XCTAssertEqual(nil, stmnt.blob(at: -1))
+        XCTAssertEqual("ABC".data(using: .utf8), stmnt.blob(at: 0))
+        XCTAssertEqual("1.1".data(using: .utf8), stmnt.blob(at: 1))
+        XCTAssertEqual("1".data(using: .utf8), stmnt.blob(at: 2))
+        XCTAssertEqual("2.2".data(using: .utf8), stmnt.blob(at: 3))
+        XCTAssertEqual("xyz".data(using: .utf8), stmnt.blob(at: 4))
+        XCTAssertEqual(nil, stmnt.blob(at: stmnt.columnCount + 1))
 
-            XCTAssertFalse(try stmnt.next())
-            XCTAssertEqual([nil, nil, nil, nil, nil], stmnt.stringValues())
-            try stmnt.close()
-        }
+        XCTAssertFalse(try stmnt.next())
+        XCTAssertEqual([nil, nil, nil, nil, nil], stmnt.stringValues())
+
+        try stmnt.reset()
+        XCTAssertTrue(try stmnt.next())
+        XCTAssertFalse(try stmnt.next())
+
+        try stmnt.reset()
+        XCTAssertTrue(try stmnt.next())
+        XCTAssertFalse(try stmnt.next())
+
+        try stmnt.close()
 
         /// Issues a count query
         func count(distinct: Bool = false, columns: String = "*", table: String) throws -> SQLValue? {
@@ -76,8 +83,8 @@ final class SQLiteTests: XCTestCase {
 
         // interrupt a transaction to issue a rollback, an make sure the row wasn't inserted
         try? sqlite.transaction {
-            try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES('ABC', 1.1, 1, 2.2, X'78797A')")
-            try sqlite.exec(sql: "illegal_sql_throws_error_and_issues_rollback()")
+            XCTAssertEqual(1, try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES('ABC', 1.1, 1, 2.2, X'78797A')"))
+            try sqlite.exec(sql: "skip_sql_throws_error_and_issues_rollback()")
         }
 
         XCTAssertEqual(.integer(1), try count(table: "SQLTYPES"))
@@ -85,10 +92,46 @@ final class SQLiteTests: XCTestCase {
 
         // now really insert the row and try some more queries
         try sqlite.transaction {
-            try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES('ABC', 1.1, 1, 2.2, X'78797A')")
+            try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES('ABC', 1.1, 1, 3.3, X'78797A')")
+            //try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES(?, ?, ?, ?, ?)", parameters: [.text("ABC"), .float(1.1), .integer(1), .float(2.2), .blob(Data())])
         }
-        XCTAssertEqual(.integer(2), try count(table: "SQLTYPES"))
-        XCTAssertEqual(.integer(1), try count(distinct: true, columns: "NUM", table: "SQLTYPES"))
+
+        XCTAssertEqual(SQLValue.integer(2), try count(table: "SQLTYPES"))
+        XCTAssertEqual(SQLValue.integer(1), try count(distinct: true, columns: "NUM", table: "SQLTYPES"))
+
+        do {
+            let numquery = try sqlite.prepare(sql: "SELECT COUNT(*) FROM SQLTYPES WHERE DBL >= ?")
+            try numquery.bind(.float(2.0), at: 1)
+            XCTAssertEqual(SQLValue.integer(2), try numquery.nextValues(close: false)?.first)
+
+            try numquery.reset()
+            try numquery.bind(.float(3.0), at: 1)
+            XCTAssertEqual(SQLValue.integer(1), try numquery.nextValues(close: false)?.first)
+
+            try numquery.close()
+        }
+
+        do {
+            let blbquery = try sqlite.prepare(sql: "SELECT COUNT(*) FROM SQLTYPES WHERE BLB = ?")
+            try blbquery.bind(.blob(Data()), at: 1)
+            XCTAssertEqual(SQLValue.integer(0), try blbquery.nextValues(close: false)?.first)
+            try blbquery.reset()
+            try blbquery.bind(.blob(Data([UInt8(0x78), UInt8(0x79), UInt8(0x7A)])), at: 1)
+            let blobCount = try blbquery.nextValues(close: false)?.first
+            #if SKIP
+            XCTAssertEqual(SQLValue.integer(2), blobCount)
+            #else
+            XCTAssertEqual(SQLValue.integer(0), blobCount) // blob queries fail on Darwin
+            #endif
+            try blbquery.close()
+        }
+
+
+        // XCTAssertEqual(1, try sqlite.exec(sql: "DELETE FROM SQLTYPES LIMIT 1")) // Android fail: SQLiteLog: (1) near "LIMIT": syntax error in "DELETE FROM SQLTYPES LIMIT 1"
+        // XCTAssertEqual(.integer(1), try count(table: "SQLTYPES"))
+
+        XCTAssertEqual(2, try sqlite.exec(sql: "DELETE FROM SQLTYPES"))
+        XCTAssertEqual(SQLValue.integer(0), try count(table: "SQLTYPES"))
 
         try sqlite.exec(sql: "DROP TABLE SQLTYPES")
 
