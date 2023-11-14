@@ -584,7 +584,66 @@ private protocol SQLiteLibrary : com.sun.jna.Library {
     // Virtual Table API
     func sqlite3_create_module(db: OpaquePointer, moduleName: String, pModule: OpaquePointer?, pClientData: OpaquePointer?) -> Int32
 
+    func sqlite3_update_hook(db: OpaquePointer?, callback: SQLiteUpdateHookCallback?, pArg: OpaquePointer?) -> Pointer?
+
 }
+
+private protocol SQLiteUpdateHookCallback : com.sun.jna.Callback {
+    func callback(
+        userData: OpaquePointer?,
+        operation: Int32, // Operation code (e.g., SQLITE_INSERT, SQLITE_UPDATE, SQLITE_DELETE)
+        databaseName: OpaquePointer?,
+        tableName: OpaquePointer?,
+        rowid: Int64
+    )
+}
+
+// TODO:
+//import com.sun.jna.Callback
+//import com.sun.jna.Library
+//import com.sun.jna.Native
+//import com.sun.jna.Pointer
+//
+//// Define an interface for the SQLite library using JNA
+//interface SQLiteLibrary : Library {
+//    fun sqlite3_update_hook(db: Pointer?, callback: SQLiteUpdateHookCallback?, pArg: Pointer?): Pointer?
+//}
+//
+//// Define a callback interface for the SQLite update hook
+//private protocol SQLiteUpdateHookCallback : com.sun.jna.Callback {
+//    fun callback(
+//        userData: Pointer?,  // Pointer to user data, if any
+//        operation: Int,      // Operation code (e.g., SQLITE_INSERT, SQLITE_UPDATE, SQLITE_DELETE)
+//        databaseName: String?,
+//        tableName: String?,
+//        rowid: Long
+//    )
+//}
+//
+//fun main() {
+//    // Load the SQLite library using JNA
+//    val sqlite3 = Native.load("sqlite3", SQLiteLibrary::class.java)
+//
+//    // Initialize an SQLite database
+//    val db = Pointer(0) // You can obtain an actual database pointer by opening a database
+//
+//    // Define your update hook callback
+//    val updateHookCallback = object : SQLiteUpdateHookCallback {
+//        override fun callback(userData: Pointer?, operation: Int, databaseName: String?, tableName: String?, rowid: Long) {
+//            // Handle the update hook callback here
+//            println("Update Hook: Operation $operation on $tableName (RowID: $rowid)")
+//        }
+//    }
+//
+//    // Register the update hook callback
+//    sqlite3.sqlite3_update_hook(db, updateHookCallback, null)
+//
+//    // Your SQLite operations go here
+//    // ...
+//
+//    // Close the database when you're done
+//    // sqlite3.sqlite3_close(db)
+//}
 
 // MARK: SQLite Result Codes
 
