@@ -584,10 +584,11 @@ private protocol SQLiteLibrary : com.sun.jna.Library {
     // Virtual Table API
     func sqlite3_create_module(db: OpaquePointer, moduleName: String, pModule: OpaquePointer?, pClientData: OpaquePointer?) -> Int32
 
-    func sqlite3_update_hook(db: OpaquePointer?, callback: SQLiteUpdateHookCallback?, pArg: OpaquePointer?) -> Pointer?
+    //func sqlite3_update_hook(db: OpaquePointer?, callback: SQLiteUpdateHookCallback?, pArg: OpaquePointer?) -> Pointer?
 
 }
 
+/*
 private protocol SQLiteUpdateHookCallback : com.sun.jna.Callback {
     func callback(
         userData: OpaquePointer?,
@@ -597,6 +598,7 @@ private protocol SQLiteUpdateHookCallback : com.sun.jna.Callback {
         rowid: Int64
     )
 }
+*/
 
 // TODO:
 //import com.sun.jna.Callback
