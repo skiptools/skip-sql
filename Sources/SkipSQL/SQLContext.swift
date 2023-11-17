@@ -50,11 +50,12 @@ public final class SQLContext {
         self.db = db!
     }
 
-    /// Execute the given SQL statement and returns the number of rows affected.
-    @discardableResult public func exec(sql: String, parameters: [SQLValue] = []) throws -> Int32 {
+    /// Execute the given SQL statement
+    public func exec(sql: String, parameters: [SQLValue] = []) throws {
         try checkClosed()
-        try check(db, code: SQLite3.sqlite3_exec(db, sql, nil, nil, nil))
-        return SQLite3.sqlite3_changes(db)
+        let stmnt = try prepare(sql: sql)
+        defer { stmnt.close() }
+        try stmnt.update(parameters: parameters)
     }
 
     public func close() {
@@ -71,13 +72,17 @@ public final class SQLContext {
 
     public func prepare(sql: String) throws -> SQLStatement {
         try checkClosed()
-        var stmnt: OpaquePointer? = nil
+        var stmntPtr: OpaquePointer? = nil
 
-        try check(db, code: withUnsafeMutablePointer(to: &stmnt) { ptr in
+        try check(db, code: withUnsafeMutablePointer(to: &stmntPtr) { ptr in
             SQLite3.sqlite3_prepare_v2(db, sql, Int32(-1), ptr, nil)
         })
 
-        return SQLStatement(db: db, stmnt: stmnt!)
+        if stmntPtr == nil {
+            throw SQLStatementCreationError()
+        }
+
+        return SQLStatement(db: db, stmnt: stmntPtr!)
     }
 
     public enum TransactionMode: String {
@@ -122,17 +127,14 @@ public final class SQLContext {
     
     /// Issues a SQL query and return all the strings
     /// - Returns: an array of rows containing strings with all the column values
-    public func query(sql: String) throws -> [[String?]] {
+    public func query(sql: String) throws -> [[SQLValue]] {
         let stmnt = try prepare(sql: sql)
         defer { stmnt.close() }
-        var rows: [[String?]] = []
+        var rows: [[SQLValue]] = []
         while try stmnt.next() {
-            var cols: [String?] = []
-            #if !SKIP
-            cols.reserveCapacity(Int(stmnt.columnCount))
-            #endif
+            var cols: [SQLValue] = []
             for i in 0..<stmnt.columnCount {
-                cols.append(stmnt.string(at: i))
+                cols.append(stmnt.value(at: i))
             }
             rows.append(cols)
         }
@@ -221,17 +223,24 @@ public final class SQLStatement {
     
     /// Perform an update with the prepared statemement, resetting it once the update is complete
     /// - Parameter params: the parameters to bind to the SQL statement
-    public func update(_ params: [SQLValue] = []) throws {
+    public func update(parameters: [SQLValue] = []) throws {
         try checkClosed()
         defer { reset() }
-        for (i, param) in params.enumerated() {
-            try bind(param, at: Int32(i + 1)) // column index starts at 1
+        if !parameters.isEmpty {
+            try bind(parameters: parameters)
         }
         let result = SQLite3.sqlite3_step(stmnt)
         if result == SQLITE_DONE {
             return
         } else {
             throw SQLStatementError(code: result)
+        }
+    }
+
+    /// Binds the given parameters to the statement. The parameter count must match the number of `?` parameters in the statement.
+    public func bind(parameters: [SQLValue]) throws {
+        for (i, param) in parameters.enumerated() {
+            try bind(param, at: Int32(i + 1)) // column index starts at 1
         }
     }
 
@@ -408,16 +417,6 @@ public enum SQLValue : Hashable {
     case blob(Data)
     case null
 
-    public var description: String {
-        switch self {
-        case .integer(let integer): return integer.description
-        case .float(let float): return float.description
-        case .text(let text): return text.description
-        case .blob(let blob): return blob.description
-        case .null: return "null"
-        }
-    }
-
     /// Returns the type of this value
     public var type: SQLType {
         switch self {
@@ -428,9 +427,50 @@ public enum SQLValue : Hashable {
         case .null: return .null
         }
     }
+    
+    public var description: String {
+        switch self {
+        case .integer(let integer): return integer.description
+        case .float(let float): return float.description
+        case .text(let text): return text.description
+        case .blob(let blob): return blob.description
+        case .null: return "null"
+        }
+    }
+
+    public var integerValue: Int64? {
+        switch self {
+        case .integer(let integer): return integer
+        default: return nil
+        }
+    }
+
+    public var floatValue: Double? {
+        switch self {
+        case .float(let float): return float
+        default: return nil
+        }
+    }
+
+    public var textValue: String? {
+        switch self {
+        case .text(let text): return text
+        default: return nil
+        }
+    }
+
+    public var blobValue: Data? {
+        switch self {
+        case .blob(let blob): return blob
+        default: return nil
+        }
+    }
 }
 
 public struct SQLContextClosedError : Error {
+}
+
+public struct SQLStatementCreationError : Error {
 }
 
 public struct SQLStatementClosedError : Error {

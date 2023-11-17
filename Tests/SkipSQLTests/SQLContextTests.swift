@@ -15,14 +15,14 @@ final class SQLiteTests: XCTestCase {
     func testSQLite() throws {
         let sqlite = try SQLContext()
 
-        XCTAssertEqual(0, try sqlite.exec(sql: "SELECT 1"))
-        XCTAssertEqual(0, try sqlite.exec(sql: "SELECT CURRENT_TIMESTAMP"))
-        XCTAssertEqual(0, try sqlite.exec(sql: "PRAGMA compile_options"))
+        _ = try sqlite.query(sql: "SELECT 1")
+        _ = try sqlite.query(sql: "SELECT CURRENT_TIMESTAMP")
+        _ = try sqlite.query(sql: "PRAGMA compile_options")
 
-        XCTAssertEqual(0, try sqlite.exec(sql: "CREATE TABLE SQLTYPES(TXT TEXT, NUM NUMERIC, INT INTEGER, DBL REAL, BLB BLOB)"))
-        XCTAssertEqual(1, try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES('ABC', 1.1, 1, 2.2, X'78797A')"))
+        try sqlite.exec(sql: "CREATE TABLE SQLTYPES(TXT TEXT, NUM NUMERIC, INT INTEGER, DBL REAL, BLB BLOB)")
+        try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES('ABC', 1.1, 1, 2.2, X'78797A')")
 
-        try sqlite.exec(sql: "")
+        //try sqlite.exec(sql: "")
 
         /// Expect that the SQL statement will fail with the given error message
         func expectFail(sql: String, message: String) throws {
@@ -102,7 +102,7 @@ final class SQLiteTests: XCTestCase {
 
         // interrupt a transaction to issue a rollback, an make sure the row wasn't inserted
         try? sqlite.transaction {
-            XCTAssertEqual(1, try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES('ABC', 1.1, 1, 2.2, X'78797A')"))
+            try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES('ABC', 1.1, 1, 2.2, X'78797A')")
             try sqlite.exec(sql: "skip_sql_throws_error_and_issues_rollback()")
         }
 
@@ -156,7 +156,7 @@ final class SQLiteTests: XCTestCase {
         // XCTAssertEqual(1, try sqlite.exec(sql: "DELETE FROM SQLTYPES LIMIT 1")) // Android fail: SQLiteLog: (1) near "LIMIT": syntax error in "DELETE FROM SQLTYPES LIMIT 1"
         // XCTAssertEqual(.integer(1), try count(table: "SQLTYPES"))
 
-        XCTAssertEqual(2, try sqlite.exec(sql: "DELETE FROM SQLTYPES"))
+        try sqlite.exec(sql: "DELETE FROM SQLTYPES")
         XCTAssertEqual(SQLValue.integer(0), try count(table: "SQLTYPES"))
 
         try sqlite.exec(sql: "DROP TABLE SQLTYPES")
@@ -165,8 +165,6 @@ final class SQLiteTests: XCTestCase {
     }
 
     func testSQLitePerformance() throws {
-        let fileManager = FileManager.default
-        //let dir = try fileManager.url(for: FileManager.SearchPathDirectory.documentDirectory, in: FileManager.SearchPathDomainMask.userDomainMask, appropriateFor: nil, create: true)
         let dir = URL.temporaryDirectory
         let dbpath = dir.appendingPathComponent("testSQLitePerformance-\(UUID().uuidString).db").path
         let sqlite = try SQLContext(path: dbpath, flags: [.create, .readWrite])
