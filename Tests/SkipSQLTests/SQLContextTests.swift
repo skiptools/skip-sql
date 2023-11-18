@@ -19,8 +19,17 @@ final class SQLiteTests: XCTestCase {
         _ = try sqlite.query(sql: "SELECT CURRENT_TIMESTAMP")
         _ = try sqlite.query(sql: "PRAGMA compile_options")
 
+        var updates = 0
+        sqlite.onUpdate { action, rowid, dbname, tblname in
+            self.logger.info("update hook: \(action.rawValue) \(rowid) \(dbname).\(tblname)")
+            updates += 1
+        }
+
         try sqlite.exec(sql: "CREATE TABLE SQLTYPES(TXT TEXT, NUM NUMERIC, INT INTEGER, DBL REAL, BLB BLOB)")
+
+        XCTAssertEqual(0, updates)
         try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES('ABC', 1.1, 1, 2.2, X'78797A')")
+        XCTAssertEqual(1, updates)
 
         //try sqlite.exec(sql: "")
 
@@ -152,7 +161,6 @@ final class SQLiteTests: XCTestCase {
             blbquery.close()
         }
 
-
         // XCTAssertEqual(1, try sqlite.exec(sql: "DELETE FROM SQLTYPES LIMIT 1")) // Android fail: SQLiteLog: (1) near "LIMIT": syntax error in "DELETE FROM SQLTYPES LIMIT 1"
         // XCTAssertEqual(.integer(1), try count(table: "SQLTYPES"))
 
@@ -162,6 +170,8 @@ final class SQLiteTests: XCTestCase {
         try sqlite.exec(sql: "DROP TABLE SQLTYPES")
 
         sqlite.close() // make sure statements are closed or: "unable to close due to unfinalized statements or unfinished backups"
+
+        XCTAssertEqual(3, updates)
     }
 
     func testSQLitePerformance() throws {

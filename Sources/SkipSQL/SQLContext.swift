@@ -18,6 +18,7 @@ public final class SQLContext {
     /// The pointer to the SQLite database
     private let db: OpaquePointer
     private var closed = false
+    private var updateHook: UpdateAction? = nil
 
     /// The options that were used to compile the embedded SQLite.
     ///
@@ -140,6 +141,49 @@ public final class SQLContext {
         }
         return rows
     }
+
+    /// An action that can be registered to receive updates whenever a ROWID table changes
+    public typealias UpdateAction = (_ action: SQLAction, _ rowid: Int64, _ dbname: String, _ tblname: String) -> ()
+
+    /// Registers a function to be invoked whenever a ROWID table is changed
+    ///
+    /// As described at https://www.sqlite.org/c3ref/update_hook.html , a given connection can only have a single update hook at a time, so setting this function will replace any pre-existing update hook.
+    public func onUpdate(hook: @escaping UpdateAction) {
+        self.updateHook = hook
+        #if !SKIP
+        let updateActionPtr = Unmanaged.passRetained(hook as AnyObject).toOpaque()
+        func callback(updateActionPtr: UnsafeMutableRawPointer?, operation: Int32, dbname: UnsafePointer<CChar>?, tblname: UnsafePointer<CChar>?, rowid: sqlite3_int64) -> Void {
+            if let operation = SQLAction(rawValue: operation),
+               let updateActionPtr = updateActionPtr,
+               let hook = Unmanaged<AnyObject>.fromOpaque(updateActionPtr).takeUnretainedValue() as? UpdateAction,
+               let dbnamePtr = dbname, let tblnamePtr = tblname {
+                hook(operation, rowid, String(cString: dbnamePtr), String(cString: tblnamePtr))
+            }
+        }
+        SQLite3.sqlite3_update_hook(db, callback, updateActionPtr)
+        #else
+        // The Kotlin update mechanism is different; it uses a SQLiteUpdateHookCallback implementation, and doesn't pass a userData pointer
+        SQLite3.sqlite3_update_hook(db, UpdateHook(action: hook), nil)
+        #endif
+
+    }
+
+    #if SKIP
+    private class UpdateHook : SQLiteUpdateHookCallback {
+        let updateAction: UpdateAction
+
+        init(action: UpdateAction) {
+            self.updateAction = action
+        }
+
+        override func callback(ptr: OpaquePointer?, operation: Int32, databaseName: OpaquePointer?, tableName: OpaquePointer?, rowid: Int64) {
+            if let operation = SQLAction(rawValue: operation),
+               let dbnamePtr = databaseName, let tblnamePtr = tableName {
+                updateAction(operation, rowid, String(cString: dbnamePtr), String(cString: tblnamePtr))
+            }
+        }
+    }
+    #endif
 
     public struct OpenFlags: OptionSet {
        public let rawValue: Int32
@@ -393,6 +437,12 @@ fileprivate func str(_ str: String) -> String {
 }
 #endif
 
+/// An action taken on a row
+public enum SQLAction : Int32 {
+    case insert = 18 // SQLITE_INSERT
+    case delete = 9 // SQLITE_DELETE
+    case update = 23 // SQLITE_UPDATE
+}
 
 /// The return value of `sqlite3_column_type()` can be used to decide which
 /// of the first six interface should be used to extract the column value.
@@ -624,68 +674,13 @@ private protocol SQLiteLibrary : com.sun.jna.Library {
     // Virtual Table API
     func sqlite3_create_module(db: OpaquePointer, moduleName: String, pModule: OpaquePointer?, pClientData: OpaquePointer?) -> Int32
 
-    //func sqlite3_update_hook(db: OpaquePointer?, callback: SQLiteUpdateHookCallback?, pArg: OpaquePointer?) -> Pointer?
-
+    func sqlite3_update_hook(db: OpaquePointer?, callback: SQLiteUpdateHookCallback?, pArg: OpaquePointer?) -> OpaquePointer?
 }
 
-/*
 private protocol SQLiteUpdateHookCallback : com.sun.jna.Callback {
-    func callback(
-        userData: OpaquePointer?,
-        operation: Int32, // Operation code (e.g., SQLITE_INSERT, SQLITE_UPDATE, SQLITE_DELETE)
-        databaseName: OpaquePointer?,
-        tableName: OpaquePointer?,
-        rowid: Int64
-    )
+    func callback(userData: OpaquePointer?, operation: Int32, databaseName: OpaquePointer?, tableName: OpaquePointer?, rowid: Int64)
 }
-*/
 
-// TODO:
-//import com.sun.jna.Callback
-//import com.sun.jna.Library
-//import com.sun.jna.Native
-//import com.sun.jna.Pointer
-//
-//// Define an interface for the SQLite library using JNA
-//interface SQLiteLibrary : Library {
-//    fun sqlite3_update_hook(db: Pointer?, callback: SQLiteUpdateHookCallback?, pArg: Pointer?): Pointer?
-//}
-//
-//// Define a callback interface for the SQLite update hook
-//private protocol SQLiteUpdateHookCallback : com.sun.jna.Callback {
-//    fun callback(
-//        userData: Pointer?,  // Pointer to user data, if any
-//        operation: Int,      // Operation code (e.g., SQLITE_INSERT, SQLITE_UPDATE, SQLITE_DELETE)
-//        databaseName: String?,
-//        tableName: String?,
-//        rowid: Long
-//    )
-//}
-//
-//fun main() {
-//    // Load the SQLite library using JNA
-//    val sqlite3 = Native.load("sqlite3", SQLiteLibrary::class.java)
-//
-//    // Initialize an SQLite database
-//    val db = Pointer(0) // You can obtain an actual database pointer by opening a database
-//
-//    // Define your update hook callback
-//    val updateHookCallback = object : SQLiteUpdateHookCallback {
-//        override fun callback(userData: Pointer?, operation: Int, databaseName: String?, tableName: String?, rowid: Long) {
-//            // Handle the update hook callback here
-//            println("Update Hook: Operation $operation on $tableName (RowID: $rowid)")
-//        }
-//    }
-//
-//    // Register the update hook callback
-//    sqlite3.sqlite3_update_hook(db, updateHookCallback, null)
-//
-//    // Your SQLite operations go here
-//    // ...
-//
-//    // Close the database when you're done
-//    // sqlite3.sqlite3_close(db)
-//}
 
 // MARK: SQLite Result Codes
 
