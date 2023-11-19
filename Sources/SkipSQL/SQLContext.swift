@@ -14,30 +14,38 @@ private let SQLite3 = SQLiteLibrary()
 
 private let logger: Logger = Logger(subsystem: "skip.sql", category: "SQL")
 
+/// A context for performing operations on a SQLite database.
 public final class SQLContext {
+    /// The logging level for this context; SQL statements and warnings will be sent to this log
+    public var logLevel: OSLogType? = nil
+
     /// The pointer to the SQLite database
     private let db: OpaquePointer
     private var closed = false
-    private var updateHook: UpdateAction? = nil
+    private var updateHook: UpdateHook? = nil
 
-    /// The options that were used to compile the embedded SQLite.
-    ///
-    /// One Darwin platforms, this will be something like: `["MAX_VARIABLE_NUMBER=500000", "ENABLE_NORMALIZE", "DEFAULT_LOOKASIDE=1200,102", "MAX_LIKE_PATTERN_LENGTH=50000", "OMIT_AUTORESET", "CCCRYPT256", "DEFAULT_CACHE_SIZE=2000", "MUTEX_UNFAIR", "MAX_ATTACHED=10", "MAX_LENGTH=2147483645", "MAX_EXPR_DEPTH=1000", "ENABLE_FTS4", "ENABLE_SESSION", "MAX_MMAP_SIZE=1073741824", "ENABLE_UNKNOWN_SQL_FUNCTION", "DEFAULT_SECTOR_SIZE=4096", "DEFAULT_MMAP_SIZE=0", "ENABLE_UPDATE_DELETE_LIMIT", "ENABLE_FTS5", "ENABLE_RTREE", "MAX_SQL_LENGTH=1000000000", "DEFAULT_MEMSTATUS=0", "ENABLE_SQLLOG", "MAX_FUNCTION_ARG=127", "ENABLE_FTS3_PARENTHESIS", "MAX_PAGE_COUNT=1073741823", "ENABLE_FTS3", "MALLOC_SOFT_LIMIT=1024", "MAX_COMPOUND_SELECT=500", "MAX_TRIGGER_DEPTH=1000", "DEFAULT_PCACHE_INITSZ=20", "ENABLE_PREUPDATE_HOOK", "DEFAULT_SYNCHRONOUS=2", "MAX_VDBE_OP=250000000", "ENABLE_SNAPSHOT", "ENABLE_STMT_SCANSTATUS", "OMIT_LOAD_EXTENSION", "DEFAULT_WAL_AUTOCHECKPOINT=1000", "STMTJRNL_SPILL=131072", "TEMP_STORE=1", "THREADSAFE=2", "USE_URI", "DEFAULT_JOURNAL_SIZE_LIMIT=32768", "ENABLE_DBSTAT_VTAB", "ENABLE_API_ARMOR", "ENABLE_LOCKING_STYLE=1", "HAS_CODEC_RESTRICTED", "DEFAULT_FILE_FORMAT=4", "MAX_COLUMN=2000", "MAX_WORKER_THREADS=8", "ATOMIC_INTRINSICS=1", "DEFAULT_RECURSIVE_TRIGGERS", "ENABLE_BYTECODE_VTAB", "ENABLE_FTS3_TOKENIZER", "DEFAULT_WORKER_THREADS=0", "SYSTEM_MALLOC", "HAVE_ISNAN", "DEFAULT_CKPTFULLFSYNC", "BUG_COMPATIBLE_20160819", "MAX_DEFAULT_PAGE_SIZE=8192", "MAX_PAGE_SIZE=65536", "ENABLE_COLUMN_METADATA", "COMPILER=clang-15.0.0", "DEFAULT_PAGE_SIZE=4096", "DEFAULT_AUTOVACUUM", "DEFAULT_WAL_SYNCHRONOUS=1"]`
-    ///
-    /// This does nothing on Android (perhaps due to missing compile arg `SQLITE_OMIT_COMPILEOPTION_DIAGS`), and so it is marked as `internal`
-    ///
-    /// See: https://www.sqlite.org/pragma.html#pragma_compile_options
-    //internal static let compileOptions: Result<Set<String>, Error> = Result {
-    //    Set(try SQLContext().query(sql: "PRAGMA compile_options").compactMap({
-    //        $0.first ?? nil
-    //    }))
-    //}
-    
+    /// The rowid of the most recent successful `INSERT` into a rowid table
+    public var lastInsertRowID: Int64 {
+        SQLite3.sqlite3_last_insert_rowid(db)
+    }
+
+    /// The number of rows modified, inserted or deleted by the most recently completed INSERT, UPDATE or DELETE statement
+    public var changes: Int64 {
+        SQLite3.sqlite3_changes64(db)
+    }
+
+    /// The total number of rows inserted, modified or deleted by all [INSERT], [UPDATE] or [DELETE] statements completed since the database connection was opened, including those executed as part of triggers
+    public var totalChanges: Int64 {
+        SQLite3.sqlite3_total_changes64(db)
+    }
+
     /// Create a new `SQLContext` with the given options, either in-memory (the default), or on a file path.
     /// - Parameters:
     ///   - path: the path to the local file, or ":memory:" for an in-memory database
     ///   - flags: the flags to use to open the database
-    public init(path: String = ":memory:", flags: OpenFlags? = nil) throws {
+    public init(path: String = ":memory:", flags: OpenFlags? = nil, logLevel: OSLogType? = nil) throws {
+        self.logLevel = logLevel
+
         var db: OpaquePointer? = nil
 
         try check(db, code: withUnsafeMutablePointer(to: &db) { ptr in
@@ -49,6 +57,10 @@ public final class SQLContext {
         })
 
         self.db = db!
+
+        if let logLevel = logLevel {
+            logger.log(level: logLevel, "opened database: \(path)")
+        }
     }
 
     /// Execute the given SQL statement
@@ -59,6 +71,7 @@ public final class SQLContext {
         try stmnt.update(parameters: parameters)
     }
 
+    /// Close the connection.
     public func close() {
         if !closed {
             closed = true
@@ -71,8 +84,12 @@ public final class SQLContext {
         }
     }
 
+    /// Prepares the given SQL as a statement, which can be executed with parameter bindings.
     public func prepare(sql: String) throws -> SQLStatement {
         try checkClosed()
+        if let logLevel = self.logLevel {
+            logger.log(level: logLevel, "prepare: \(sql)")
+        }
         var stmntPtr: OpaquePointer? = nil
 
         try check(db, code: withUnsafeMutablePointer(to: &stmntPtr) { ptr in
@@ -86,15 +103,27 @@ public final class SQLContext {
         return SQLStatement(db: db, stmnt: stmntPtr!)
     }
 
+    /// How a transaction is being performed
     public enum TransactionMode: String {
         case deferred = "DEFERRED"
         case immediate = "IMMEDIATE"
         case exclusive = "EXCLUSIVE"
     }
     
-    /// Performs the given operation in the context of a transaction
-    public func transaction(_ mode: TransactionMode = .deferred, block: () throws -> Void) throws {
-        try perform("BEGIN \(mode.rawValue) TRANSACTION", block, "COMMIT TRANSACTION", or: "ROLLBACK TRANSACTION")
+    /// Performs the given operation in the context of a transaction.
+    ///
+    /// Specifying `.none` as the transaction mode will execute the command without a transaction.
+    public func transaction<T>(_ mode: TransactionMode? = .deferred, block: () throws -> T) throws -> T {
+        if let mode = mode {
+            return try perform(
+                mode == .deferred 
+                    ? "BEGIN TRANSACTION"
+                    : "BEGIN \(mode.rawValue) TRANSACTION",
+                block,
+                "COMMIT TRANSACTION", or: "ROLLBACK TRANSACTION")
+        } else {
+            return try block()
+        }
     }
 
     /// Performs the given operation within the databases mutex lock
@@ -109,11 +138,12 @@ public final class SQLContext {
     }
 
     /// Performs the given operation in the context of a begin and commit/rollback statement
-    fileprivate func perform(_ begin: String, _ block: () throws -> Void, _ commit: String, or rollback: String) throws {
+    fileprivate func perform<T>(_ begin: String, _ block: () throws -> T, _ commit: String, or rollback: String) throws -> T {
         try self.exec(sql: begin)
         do {
-            try block()
+            let result = try block()
             try self.exec(sql: commit)
+            return result
         } catch {
             try self.exec(sql: rollback)
             throw error
@@ -149,8 +179,8 @@ public final class SQLContext {
     ///
     /// As described at https://www.sqlite.org/c3ref/update_hook.html , a given connection can only have a single update hook at a time, so setting this function will replace any pre-existing update hook.
     public func onUpdate(hook: @escaping UpdateAction) {
-        self.updateHook = hook
         #if !SKIP
+        self.updateHook = hook
         let updateActionPtr = Unmanaged.passRetained(hook as AnyObject).toOpaque()
         func callback(updateActionPtr: UnsafeMutableRawPointer?, operation: Int32, dbname: UnsafePointer<CChar>?, tblname: UnsafePointer<CChar>?, rowid: sqlite3_int64) -> Void {
             if let operation = SQLAction(rawValue: operation),
@@ -162,13 +192,16 @@ public final class SQLContext {
         }
         SQLite3.sqlite3_update_hook(db, callback, updateActionPtr)
         #else
+        self.updateHook = UpdateHook(action: hook) // need to retain or it will be garbage collected eventually
         // The Kotlin update mechanism is different; it uses a SQLiteUpdateHookCallback implementation, and doesn't pass a userData pointer
-        SQLite3.sqlite3_update_hook(db, UpdateHook(action: hook), nil)
+        SQLite3.sqlite3_update_hook(db, self.updateHook, nil)
         #endif
 
     }
 
-    #if SKIP
+    #if !SKIP
+    private typealias UpdateHook = UpdateAction
+    #else
     private class UpdateHook : SQLiteUpdateHookCallback {
         let updateAction: UpdateAction
 
@@ -442,6 +475,14 @@ public enum SQLAction : Int32 {
     case insert = 18 // SQLITE_INSERT
     case delete = 9 // SQLITE_DELETE
     case update = 23 // SQLITE_UPDATE
+
+    public var description: String {
+        switch self {
+        case .insert: return "INSERT"
+        case .delete: return "DELETE"
+        case .update: return "UPDATE"
+        }
+    }
 }
 
 /// The return value of `sqlite3_column_type()` can be used to decide which
@@ -576,8 +617,11 @@ private protocol SQLiteLibrary : com.sun.jna.Library {
     func sqlite3_close(db: OpaquePointer) -> Int32
     func sqlite3_errcode(db: OpaquePointer) -> Int32
     func sqlite3_errmsg(db: OpaquePointer) -> OpaquePointer
-    func sqlite3_changes(db: OpaquePointer) -> Int32
+    func sqlite3_last_insert_rowid(db: OpaquePointer) -> Int64
     func sqlite3_total_changes(db: OpaquePointer) -> Int32
+    func sqlite3_changes(db: OpaquePointer) -> Int32
+    func sqlite3_total_changes64(db: OpaquePointer) -> Int64
+    func sqlite3_changes64(db: OpaquePointer) -> Int64
 
     func sqlite3_exec(db: OpaquePointer, sql: String, callback: OpaquePointer?, pArg: OpaquePointer?, errmsg: UnsafeMutableRawPointer?) -> Int32
     func sqlite3_prepare_v2(db: OpaquePointer, sql: String, nBytes: Int32, ppStmt: UnsafeMutableRawPointer?, tail: UnsafeMutableRawPointer?) -> Int32
@@ -591,7 +635,6 @@ private protocol SQLiteLibrary : com.sun.jna.Library {
     func sqlite3_bind_parameter_name(stmnt: OpaquePointer, columnIndex: Int32) -> String
     func sqlite3_bind_parameter_index(stmnt: OpaquePointer, name: String) -> Int32
     func sqlite3_clear_bindings(stmnt: OpaquePointer) -> Int32
-
 
     func sqlite3_column_name(stmt: OpaquePointer!, columnIndex: Int32) -> String
     func sqlite3_column_database_name(stmt: OpaquePointer, columnIndex: Int32) -> String
@@ -666,7 +709,6 @@ private protocol SQLiteLibrary : com.sun.jna.Library {
     func sqlite3_mutex_leave(lock: OpaquePointer)
     //func int sqlite3_mutex_try(sqlite3_mutex*);
 
-    
     // Additional Configuration
     func sqlite3_trace(db: OpaquePointer, xTrace: OpaquePointer?, pApp: OpaquePointer?) -> Int32
     func sqlite3_progress_handler(db: OpaquePointer, op: Int32, xProgress: OpaquePointer?, pApp: OpaquePointer?) -> Int32
