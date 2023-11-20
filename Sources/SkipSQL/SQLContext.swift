@@ -24,6 +24,10 @@ public final class SQLContext {
     private var closed = false
     private var updateHook: UpdateHook? = nil
 
+    private lazy var beginTransaction: Result<SQLStatement, Error> = Result { try prepare(sql: "BEGIN TRANSACTION") }
+    private lazy var commitTransaction: Result<SQLStatement, Error> = Result { try prepare(sql: "COMMIT TRANSACTION") }
+    private lazy var rollbackTransaction: Result<SQLStatement, Error> = Result { try prepare(sql: "ROLLBACK TRANSACTION") }
+
     /// The rowid of the most recent successful `INSERT` into a rowid table
     public var lastInsertRowID: Int64 {
         SQLite3.sqlite3_last_insert_rowid(db)
@@ -117,10 +121,10 @@ public final class SQLContext {
         if let mode = mode {
             return try perform(
                 mode == .deferred 
-                    ? "BEGIN TRANSACTION"
-                    : "BEGIN \(mode.rawValue) TRANSACTION",
+                    ? beginTransaction.get()
+                    : prepare(sql: "BEGIN \(mode.rawValue) TRANSACTION"),
                 block,
-                "COMMIT TRANSACTION", or: "ROLLBACK TRANSACTION")
+                commitTransaction.get(), or: rollbackTransaction.get())
         } else {
             return try block()
         }
@@ -138,14 +142,14 @@ public final class SQLContext {
     }
 
     /// Performs the given operation in the context of a begin and commit/rollback statement
-    fileprivate func perform<T>(_ begin: String, _ block: () throws -> T, _ commit: String, or rollback: String) throws -> T {
-        try self.exec(sql: begin)
+    fileprivate func perform<T>(_ begin: SQLStatement, _ block: () throws -> T, _ commit: SQLStatement, or rollback: SQLStatement) throws -> T {
+        try begin.update()
         do {
             let result = try block()
-            try self.exec(sql: commit)
+            try commit.update()
             return result
         } catch {
-            try self.exec(sql: rollback)
+            try rollback.update()
             throw error
         }
     }
