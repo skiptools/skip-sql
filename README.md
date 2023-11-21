@@ -29,11 +29,11 @@ When passing `nil` as the path, the `SQLContext` will reside entirely in memory,
 let ctx = try SQLContext(path: nil)
 defer { ctx.close() }
 
-let rows: [[SQLValue]] = ctx.query(sql: "SELECT 1, 2 + 3, 4 * 5")
+let rows: [[SQLValue]] = ctx.query(sql: "SELECT 1, 1.1+2.2, 'AB'||'C'")
 
 assert(rows[0][0] == SQLValue.integer(1))
-assert(rows[0][1] == SQLValue.integer(5))
-assert(rows[0][2] == SQLValue.integer(20))
+assert(rows[0][1] == SQLValue.float(3.3))
+assert(rows[0][2] == SQLValue.text("ABC"))
 
 ```
 
@@ -47,6 +47,8 @@ try ctx.transaction {
     try ctx.exec(sql: "INSERT INTO TABLE_NAME VALUES(2)")
 }
 ```
+
+The default transaction type is `.deferred`, but it can be specified as a parameter to `transaction` to override the default, or `nil` to perform the operation without a transaction.
 
 ### Bound parameters
 
@@ -119,18 +121,18 @@ try migrateSchema(v: 7, ddl: addDataItemColumn(.thumbnail))
 
 ```
 
-### Threading 
+### Concurrency
 
-As a think layer over a SQLite connection, SkipSQL itself performs no locking. It is up to the application layer to set up reader/writer locks, or else just perform all the operations on one thread (e.g., using `MainActor.run` to enqueue operations from a `Task`).
+As a thin layer over a SQLite connection, SkipSQL itself performs no locking or manages threads in any way. It is up to the application layer to set up reader/writer locks, or else just perform all the operations on one thread (e.g., using `MainActor.run` to enqueue operations from a `Task`).
 
 The Sqlite guide on [Locking And Concurrency](https://www.sqlite.org/lockingv3.html) can provide additional guidance.
 
 
 ## Implementation
 
-SkipSQL is a very thin interface atop the low-level SQLite3 C library that is included with all Darwin/iOS/Android operating systems.
+SkipSQL speaks directly to the low-level SQLite3 C library that is included with all Darwin/iOS/Android operating systems.
 On Darwin/iOS, it communicates directly through Swift's C bridging support.
-On Android, it uses the [SkipFFI](http://source.skip.tools/skip-ffi/) module to interact directly with the underlying sqlite installation on Android.
+On Android, it uses the [SkipFFI](https://source.skip.tools/skip-ffi) module to interact directly with the underlying sqlite installation on Android.
 (For performance and a consistent API, SkipSQL eschews Android's `android.database.sqlite` Java wrapper, and uses JNA to directly access the SQLite C API.)
 
 ## SQLite Versions
@@ -179,3 +181,4 @@ Kotlin JUnit tests in the Robolectric Android simulation environment.
 
 Parity testing can be performed with `skip test`,
 which will output a table of the test results for both platforms.
+
