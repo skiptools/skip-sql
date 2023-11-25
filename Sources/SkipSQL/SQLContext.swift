@@ -46,7 +46,7 @@ public final class SQLContext {
     /// Create an in-memory `SQLContext`
     public init() {
         // try! because creating an in-memory context should never fail
-        self.db = try! Self.connect(path: ":memory")!
+        self.db = try! Self.connect(path: ":memory:")!
     }
 
     /// Create a new `SQLContext` with the given options, either in-memory (the default), or on a file path.

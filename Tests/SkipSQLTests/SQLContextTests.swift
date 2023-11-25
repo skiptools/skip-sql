@@ -8,6 +8,7 @@ import OSLog
 import Foundation
 import SkipSQL
 
+
 // SKIP INSERT: @org.junit.runner.RunWith(androidx.test.ext.junit.runners.AndroidJUnit4::class)
 final class SQLiteTests: XCTestCase {
     let logger: Logger = Logger(subsystem: "skip.sql", category: "SQLiteTests")
