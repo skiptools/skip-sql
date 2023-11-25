@@ -24,10 +24,6 @@ public final class SQLContext {
     private var closed = false
     private var updateHook: UpdateHook? = nil
 
-    private lazy var beginTransaction: Result<SQLStatement, Error> = Result { try prepare(sql: "BEGIN TRANSACTION") }
-    private lazy var commitTransaction: Result<SQLStatement, Error> = Result { try prepare(sql: "COMMIT TRANSACTION") }
-    private lazy var rollbackTransaction: Result<SQLStatement, Error> = Result { try prepare(sql: "ROLLBACK TRANSACTION") }
-
     /// The rowid of the most recent successful `INSERT` into a rowid table
     public var lastInsertRowID: Int64 {
         SQLite3.sqlite3_last_insert_rowid(db)
@@ -41,6 +37,14 @@ public final class SQLContext {
     /// The total number of rows inserted, modified or deleted by all [INSERT], [UPDATE] or [DELETE] statements completed since the database connection was opened, including those executed as part of triggers
     public var totalChanges: Int64 {
         SQLite3.sqlite3_total_changes64(db)
+    }
+
+    deinit {
+        #if !SKIP
+        #if DEBUG
+//        assert(isClosed, "SQLContext must be closed before deinit")
+        #endif
+        #endif
     }
 
     /// Create an in-memory `SQLContext`
@@ -81,25 +85,34 @@ public final class SQLContext {
     public func exec(sql: String, parameters: [SQLValue] = []) throws {
         try checkClosed()
         let stmnt = try prepare(sql: sql)
-        defer { stmnt.close() }
-        try stmnt.update(parameters: parameters)
+        var err: Error? = nil
+        do {
+            try stmnt.update(parameters: parameters)
+        } catch let e {
+            err = e
+        }
+        // always close the statements; we don't use a `defer` block because they can't throw
+        try stmnt.close()
+        if let err = err {
+            throw err
+        }
     }
 
     /// See <https://www.sqlite.org/c3ref/interrupt.html>
     public func interrupt() {
-        sqlite3_interrupt(db)
+        SQLite3.sqlite3_interrupt(db)
+    }
+
+    /// True if the context has been closed
+    public var isClosed: Bool {
+        closed
     }
 
     /// Close the connection.
-    public func close() {
+    public func close() throws {
         if !closed {
+            try check(db, code: SQLite3.sqlite3_close(db))
             closed = true
-            do {
-                try check(db, code: SQLite3.sqlite3_close(db))
-            } catch {
-                // warn rather than throw an error on close
-                logger.warning("error closing sqlite database: \(error)")
-            }
         }
     }
 
@@ -135,11 +148,9 @@ public final class SQLContext {
     public func transaction<T>(_ mode: TransactionMode? = .deferred, block: () throws -> T) throws -> T {
         if let mode = mode {
             return try perform(
-                mode == .deferred 
-                    ? beginTransaction.get()
-                    : prepare(sql: "BEGIN \(mode.rawValue) TRANSACTION"),
+                "BEGIN \(mode.rawValue) TRANSACTION",
                 block,
-                commitTransaction.get(), or: rollbackTransaction.get())
+                "COMMIT TRANSACTION", or: "ROLLBACK TRANSACTION")
         } else {
             return try block()
         }
@@ -157,14 +168,14 @@ public final class SQLContext {
     }
 
     /// Performs the given operation in the context of a begin and commit/rollback statement
-    fileprivate func perform<T>(_ begin: SQLStatement, _ block: () throws -> T, _ commit: SQLStatement, or rollback: SQLStatement) throws -> T {
-        try begin.update()
+    fileprivate func perform<T>(_ begin: String, _ block: () throws -> T, _ commit: String, or rollback: String) throws -> T {
+        try exec(sql: begin)
         do {
             let result = try block()
-            try commit.update()
+            try exec(sql: commit)
             return result
         } catch {
-            try rollback.update()
+            try exec(sql: rollback)
             throw error
         }
     }
@@ -182,14 +193,24 @@ public final class SQLContext {
             try stmnt.bind(parameters: parameters)
         }
 
-        defer { stmnt.close() }
+        var err: Error? = nil
+
         var rows: [[SQLValue]] = []
-        while try stmnt.next() {
-            var cols: [SQLValue] = []
-            for i in 0..<stmnt.columnCount {
-                cols.append(stmnt.value(at: i))
+        do {
+            while try stmnt.next() {
+                var cols: [SQLValue] = []
+                for i in 0..<stmnt.columnCount {
+                    cols.append(stmnt.value(at: i))
+                }
+                rows.append(cols)
             }
-            rows.append(cols)
+        } catch let e {
+            err = e
+        }
+
+        try stmnt.close()
+        if let err = err {
+            throw err
         }
         return rows
     }
@@ -262,8 +283,16 @@ public final class SQLContext {
 
 public final class SQLStatement {
     /// The pointer to the SQLite statement
-    private let stmnt: OpaquePointer
-    private var closed = false
+    fileprivate let stmnt: OpaquePointer
+    fileprivate var closed = false
+
+    deinit {
+        #if !SKIP
+        #if DEBUG
+//        assert(isClosed, "SQLStatement must be closed before deinit")
+        #endif
+        #endif
+    }
 
     fileprivate init(stmnt: OpaquePointer) {
         self.stmnt = stmnt
@@ -360,15 +389,19 @@ public final class SQLStatement {
         }
     }
 
-    public func close() {
+    /// True if the statement has been closed
+    public var isClosed: Bool {
+        closed
+    }
+
+    /// The application must close every prepared statement in order to avoid
+    /// resource leaks.  It is a grievous error for the application to try to use
+    /// a prepared statement after it has been closed.
+    public func close() throws {
         if !closed {
+            reset() // need to reset interrupted statemets or an interrupted error will be throws
+            try check(db, code: SQLite3.sqlite3_finalize(stmnt))
             closed = true
-            do {
-                try check(db, code: SQLite3.sqlite3_finalize(stmnt))
-            } catch {
-                // warn rather than throw an error on close
-                logger.warning("error closing sqlite statement: \(error)")
-            }
         }
     }
     
@@ -450,17 +483,19 @@ public final class SQLStatement {
     
     /// Convenience for iterating to the next row and returning the values, optionally closing the statement after the values have been retrieved.
     public func nextValues(close: Bool) throws -> [SQLValue]? {
-        defer {
-            if close {
-                self.close()
-            }
-        }
+        try checkClosed()
 
         if !(try next()) {
             return nil
         }
 
-        return rowValues()
+        let values = rowValues()
+
+        if close {
+            try self.close()
+        }
+
+        return values
     }
 
     /// Returns the values of the current row as an array of strings, coercing if necessary according to https://www.sqlite.org/datatype3.html
@@ -510,8 +545,8 @@ fileprivate func strptr(_ ptr: UnsafePointer<UInt8>?) -> String? {
 }
 #endif
 
-fileprivate func check(_ db: OpaquePointer?, code: Int32) throws {
-    if code != 0 {
+fileprivate func check(_ db: OpaquePointer?, code: Int32, permit: Set<Int32>? = nil) throws {
+    if code != 0 && permit?.contains(code) != true {
         let msg = db == nil ? "Unknown" : String(cString: SQLite3.sqlite3_errmsg(db!))
         throw SQLError(msg: msg, code: code)
     }
@@ -675,6 +710,7 @@ private protocol SQLiteLibrary : com.sun.jna.Library {
     func sqlite3_changes(db: OpaquePointer) -> Int32
     func sqlite3_total_changes64(db: OpaquePointer) -> Int64
     func sqlite3_changes64(db: OpaquePointer) -> Int64
+    func sqlite3_interrupt(db: OpaquePointer)
 
     func sqlite3_exec(db: OpaquePointer, sql: String, callback: OpaquePointer?, pArg: OpaquePointer?, errmsg: UnsafeMutableRawPointer?) -> Int32
     func sqlite3_prepare_v2(db: OpaquePointer, sql: String, nBytes: Int32, ppStmt: UnsafeMutableRawPointer?, tail: UnsafeMutableRawPointer?) -> Int32
