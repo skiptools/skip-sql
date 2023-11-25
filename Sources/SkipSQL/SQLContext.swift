@@ -85,6 +85,11 @@ public final class SQLContext {
         try stmnt.update(parameters: parameters)
     }
 
+    /// See <https://www.sqlite.org/c3ref/interrupt.html>
+    public func interrupt() {
+        sqlite3_interrupt(db)
+    }
+
     /// Close the connection.
     public func close() {
         if !closed {
