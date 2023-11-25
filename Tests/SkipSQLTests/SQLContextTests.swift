@@ -111,17 +111,16 @@ final class SQLiteTests: XCTestCase {
 
         // interrupt a transaction to issue a rollback, an make sure the row wasn't inserted
         try? sqlite.transaction {
-            try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES('ABC', 1.1, 1, 2.2, X'78797A')")
+            try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES('ZZZ', 1.1, 1, 2.2, X'78797A')")
             try sqlite.exec(sql: "skip_sql_throws_error_and_issues_rollback()")
         }
 
         XCTAssertEqual(.integer(1), try count(table: "SQLTYPES"))
 
-
         // now really insert the row and try some more queries
         try sqlite.transaction {
-            try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES('ABC', 1.1, 1, 3.3, X'78797A')")
-            //try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES(?, ?, ?, ?, ?)", parameters: [.text("ABC"), .float(1.1), .integer(1), .float(2.2), .blob(Data())])
+            //try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES('XYZ', 1.1, 1, 3.3, X'78797A')")
+            try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES(?, ?, ?, ?, ?)", parameters: [.text("XYZ"), .float(1.1), .integer(1), .float(3.3), .blob(Data())])
         }
 
         XCTAssertEqual(SQLValue.integer(2), try count(table: "SQLTYPES"))
@@ -140,18 +139,54 @@ final class SQLiteTests: XCTestCase {
         }
 
         do {
+            for value in [
+                SQLValue.integer(Int64(9)),
+                SQLValue.float(9.9),
+                SQLValue.float(Double.pi),
+                SQLValue.text(""),
+                SQLValue.text("ABCXYZ123"),
+                //SQLValue.blob(Data()),
+                SQLValue.blob(Data([UInt8(0x01), UInt8(0x02)])),
+            ] {
+                XCTAssertEqual(value, try sqlite.query(sql: "SELECT ?", parameters: [value]).first?.first)
+            }
+        }
+
+        do {
+            let squery = try sqlite.prepare(sql: "SELECT TXT FROM SQLTYPES")
+            defer { squery.close() }
+            XCTAssertTrue(try squery.next())
+            XCTAssertEqual("ABC", squery.string(at: 0))
+            XCTAssertTrue(try squery.next())
+            XCTAssertEqual("XYZ", squery.string(at: 0))
+        }
+
+        do {
+            let strquery = try sqlite.prepare(sql: "SELECT COUNT(*) FROM SQLTYPES WHERE TXT = ?")
+            defer { strquery.close() }
+
+            try strquery.bind(parameters: [.text("XYZ")])
+            XCTAssertEqual(SQLValue.integer(1), try strquery.nextValues(close: false)?.first)
+
+            strquery.reset()
+            try strquery.bind(parameters: [.text("QRS")])
+            XCTAssertEqual(SQLValue.integer(0), try strquery.nextValues(close: false)?.first)
+
+            strquery.reset()
+            try strquery.bind(parameters: [.text("ABC")])
+            XCTAssertEqual(SQLValue.integer(1), try strquery.nextValues(close: false)?.first)
+
+        }
+
+        do {
             let blbquery = try sqlite.prepare(sql: "SELECT COUNT(*) FROM SQLTYPES WHERE BLB = ?")
 
             try blbquery.bind(.blob(Data()), at: 1)
-            XCTAssertEqual(SQLValue.integer(0), try blbquery.nextValues(close: false)?.first)
+            XCTAssertEqual(SQLValue.integer(1), try blbquery.nextValues(close: false)?.first)
 
             blbquery.reset()
             try blbquery.bind(.blob(Data([UInt8(0x78), UInt8(0x79), UInt8(0x7A)])), at: 1)
-            #if SKIP
-            XCTAssertEqual(SQLValue.integer(2), try blbquery.nextValues(close: false)?.first)
-            #else
-            XCTAssertEqual(SQLValue.integer(0), try blbquery.nextValues(close: false)?.first) // unknown reason why this is 0 on Darwin
-            #endif
+            XCTAssertEqual(SQLValue.integer(1), try blbquery.nextValues(close: false)?.first)
 
             blbquery.reset()
             // bind a 1mb param
@@ -189,9 +224,7 @@ final class SQLiteTests: XCTestCase {
         defer { insert.close() }
         try sqlite.transaction {
             for _ in 1...rows {
-                try insert.bind(.text(UUID().uuidString), at: 1)
-                XCTAssertFalse(try insert.next(), "insert statement should return SQLITE_DONE")
-                insert.reset() // reset for the next one
+                try insert.update(parameters: [.text(UUID().uuidString)])
             }
         }
         let t = Date.now.timeIntervalSince(startTime)

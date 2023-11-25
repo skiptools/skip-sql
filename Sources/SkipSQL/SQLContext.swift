@@ -160,10 +160,13 @@ public final class SQLContext {
         }
     }
     
-    /// Issues a SQL query and return all the strings
-    /// - Returns: an array of rows containing strings with all the column values
-    public func query(sql: String) throws -> [[SQLValue]] {
+    /// Issues a SQL query with the optional parameters and returns all the values
+    public func query(sql: String, parameters: [SQLValue] = []) throws -> [[SQLValue]] {
         let stmnt = try prepare(sql: sql)
+        if !parameters.isEmpty {
+            try stmnt.bind(parameters: parameters)
+        }
+
         defer { stmnt.close() }
         var rows: [[SQLValue]] = []
         while try stmnt.next() {
@@ -280,7 +283,7 @@ public final class SQLStatement {
         case .integer(let int):
             try check(db, code: SQLite3.sqlite3_bind_int64(stmnt, index, int))
         case .text(let str):
-            try check(db, code: SQLite3.sqlite3_bind_text(stmnt, index, str, -1, nil))
+            try check(db, code: SQLite3.sqlite3_bind_text(stmnt, index, str, -1, SQLITE_TRANSIENT))
         case .float(let double):
             try check(db, code: SQLite3.sqlite3_bind_double(stmnt, index, double))
         case .blob(let blob):
@@ -292,10 +295,10 @@ public final class SQLStatement {
                 let buf = java.nio.ByteBuffer.allocateDirect(size)
                 buf.put(blob.kotlin(nocopy: true))
                 let ptr = com.sun.jna.Native.getDirectBufferPointer(buf)
-                try check(db, code: SQLite3.sqlite3_bind_blob(stmnt, index, ptr, size, nil))
+                try check(db, code: SQLite3.sqlite3_bind_blob(stmnt, index, ptr, size, SQLITE_TRANSIENT))
                 #else
                 try blob.withUnsafeBytes { ptr in
-                    try check(db, code: SQLite3.sqlite3_bind_blob(stmnt, index, ptr.baseAddress, size, nil))
+                    try check(db, code: SQLite3.sqlite3_bind_blob(stmnt, index, ptr.baseAddress, size, SQLITE_TRANSIENT))
                 }
                 #endif
             }
@@ -597,6 +600,12 @@ public struct SQLStatementError : Error {
     public let code: Int32
 }
 
+#if !SKIP
+let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+#else
+let SQLITE_TRANSIENT = Int64(-1)
+#endif
+
 #if SKIP
 
 // MARK: SQLiteLibrary JNA
@@ -656,8 +665,8 @@ private protocol SQLiteLibrary : com.sun.jna.Library {
     func sqlite3_bind_int(stmt: OpaquePointer, paramIndex: Int32, value: Int32) -> Int32
     func sqlite3_bind_int64(stmt: OpaquePointer, paramIndex: Int32, value: Int64) -> Int32
     func sqlite3_bind_double(stmt: OpaquePointer, paramIndex: Int32, value: Double) -> Int32
-    func sqlite3_bind_text(stmt: OpaquePointer, paramIndex: Int32, value: String, length: Int32, destructor: OpaquePointer?) -> Int32
-    func sqlite3_bind_blob(stmt: OpaquePointer, paramIndex: Int32, value: OpaquePointer, length: Int32, destructor: OpaquePointer?) -> Int32
+    func sqlite3_bind_text(stmt: OpaquePointer, paramIndex: Int32, value: String, length: Int32, destructor: Int64) -> Int32
+    func sqlite3_bind_blob(stmt: OpaquePointer, paramIndex: Int32, value: OpaquePointer, length: Int32, destructor: Int64?) -> Int32
     func sqlite3_bind_zeroblob(stmt: OpaquePointer, paramIndex: Int32, length: Int32) -> Int32
 
 

@@ -77,9 +77,7 @@ try sqlite.transaction {
 
 ### Schema Migration
 
-There is no built-in support the schema migrations.
-
-Following is a part of a sample of how you might perform migrations in your own app (taken from the [DataBake](https://source.skip.tools/skipapp-databake) sample app). See the full app for details.
+There is no built-in support for schema migrations. Following is a part of a sample of how you might perform migrations in your own app (taken from the [DataBake](https://source.skip.tools/skipapp-databake) sample app). See the full app for details.
 
 
 ```swift
