@@ -43,13 +43,27 @@ public final class SQLContext {
         SQLite3.sqlite3_total_changes64(db)
     }
 
+    /// Create an in-memory `SQLContext`
+    public init() {
+        // try! because creating an in-memory context should never fail
+        self.db = try! Self.connect(path: ":memory")!
+    }
+
     /// Create a new `SQLContext` with the given options, either in-memory (the default), or on a file path.
     /// - Parameters:
     ///   - path: the path to the local file, or ":memory:" for an in-memory database
     ///   - flags: the flags to use to open the database
-    public init(path: String = ":memory:", flags: OpenFlags? = nil, logLevel: OSLogType? = nil) throws {
+    public init(path: String, flags: OpenFlags? = nil, logLevel: OSLogType? = nil) throws {
         self.logLevel = logLevel
 
+        self.db = try Self.connect(path: path, flags: flags)!
+
+        if let logLevel = logLevel {
+            logger.log(level: logLevel, "opened database: \(path)")
+        }
+    }
+
+    private static func connect(path: String, flags: OpenFlags? = nil) throws -> OpaquePointer? {
         var db: OpaquePointer? = nil
 
         try check(db, code: withUnsafeMutablePointer(to: &db) { ptr in
@@ -60,11 +74,7 @@ public final class SQLContext {
             }
         })
 
-        self.db = db!
-
-        if let logLevel = logLevel {
-            logger.log(level: logLevel, "opened database: \(path)")
-        }
+        return db
     }
 
     /// Execute the given SQL statement
@@ -104,7 +114,7 @@ public final class SQLContext {
             throw SQLStatementCreationError()
         }
 
-        return SQLStatement(db: db, stmnt: stmntPtr!)
+        return SQLStatement(stmnt: stmntPtr!)
     }
 
     /// How a transaction is being performed
@@ -247,36 +257,40 @@ public final class SQLContext {
 
 public final class SQLStatement {
     /// The pointer to the SQLite statement
-    private let db: OpaquePointer
     private let stmnt: OpaquePointer
     private var closed = false
 
-    fileprivate init(db: OpaquePointer, stmnt: OpaquePointer) {
-        self.db = db
+    fileprivate init(stmnt: OpaquePointer) {
         self.stmnt = stmnt
+    }
+
+    /// The database pointer that created this statement
+    private var db: OpaquePointer {
+        SQLite3.sqlite3_db_handle(stmnt)
     }
 
     public lazy var columnCount: Int32 = SQLite3.sqlite3_column_count(stmnt)
 
     public lazy var columnNames: [String] = Array((0..<columnCount).map {
-        str(SQLite3.sqlite3_column_name(stmnt, $0))
+        strptr(SQLite3.sqlite3_column_name(stmnt, $0)) ?? ""
     })
 
     public lazy var columnTypes: [String] = Array((0..<columnCount).map {
-        str(SQLite3.sqlite3_column_decltype(stmnt, $0))
+        strptr(SQLite3.sqlite3_column_decltype(stmnt, $0)) ?? ""
     })
 
     // doesn't work in Android
 //    public lazy var columnTables: [String] = Array((0..<columnCount).map {
-//        str(SQLite3.sqlite3_column_table_name(stmnt, $0))
+//        strptr(SQLite3.sqlite3_column_table_name(stmnt, $0))
 //    })
 
     public lazy var columnDatabases: [String] = Array((0..<columnCount).map {
-        str(SQLite3.sqlite3_column_database_name(stmnt, $0))
+        strptr(SQLite3.sqlite3_column_database_name(stmnt, $0)) ?? ""
     })
 
     /// Binds the given value at the index
     public func bind(_ value: SQLValue, at index: Int32) throws {
+        precondition(index >= 1, "bind index in sqlite starts at 1")
         switch value {
         case .null:
             try check(db, code: SQLite3.sqlite3_bind_null(stmnt, index))
@@ -381,10 +395,7 @@ public final class SQLStatement {
 
     /// Returns the string at the given index, coercing if necessary according to https://www.sqlite.org/datatype3.html
     public func string(at idx: Int32) -> String? {
-        guard let ptr = SQLite3.sqlite3_column_text(stmnt, idx) else {
-            return nil
-        }
-        return String(cString: ptr)
+        strptr(SQLite3.sqlite3_column_text(stmnt, idx))
     }
 
     /// Returns the blob Data at the given index, coercing if necessary according to https://www.sqlite.org/datatype3.html
@@ -458,7 +469,41 @@ public final class SQLStatement {
             throw SQLStatementClosedError()
         }
     }
+
+    /// The number of named or indexed parameters in this statement
+    public var sql: String {
+        strptr(SQLite3.sqlite3_sql(stmnt)) ?? ""
+    }
+
+    /// The number of named or indexed parameters in this statement
+    public var parameterCount: Int32 {
+        SQLite3.sqlite3_bind_parameter_count(stmnt)
+    }
+
+    /// The number of named or indexed parameters in this statement
+    public var parameterNames: [String?] {
+        Array((1...parameterCount).map {
+            strptr(SQLite3.sqlite3_bind_parameter_name(stmnt, $0))
+        })
+    }
 }
+
+#if SKIP
+fileprivate func strptr(_ ptr: OpaquePointer?) -> String? {
+    guard let ptr = ptr else { return nil }
+    return String(cString: ptr)
+}
+#else
+fileprivate func strptr(_ ptr: UnsafePointer<CChar>?) -> String? {
+    guard let ptr = ptr else { return nil }
+    return String(cString: ptr)
+}
+
+fileprivate func strptr(_ ptr: UnsafePointer<UInt8>?) -> String? {
+    guard let ptr = ptr else { return nil }
+    return String(cString: ptr)
+}
+#endif
 
 fileprivate func check(_ db: OpaquePointer?, code: Int32) throws {
     if code != 0 {
@@ -466,16 +511,6 @@ fileprivate func check(_ db: OpaquePointer?, code: Int32) throws {
         throw SQLError(msg: msg, code: code)
     }
 }
-
-#if !SKIP
-fileprivate func str(_ ptr: Optional<UnsafePointer<Int8>>) -> String {
-    return ptr == nil ? "" : String(cString: ptr!)
-}
-#else
-fileprivate func str(_ str: String) -> String {
-    return str // JNA handles coersion to Java strings automatically
-}
-#endif
 
 /// An action taken on a row
 public enum SQLAction : Int32 {
@@ -645,20 +680,21 @@ private protocol SQLiteLibrary : com.sun.jna.Library {
     func sqlite3_reset(stmt: OpaquePointer) -> Int32
     func sqlite3_column_count(stmt: OpaquePointer) -> Int32
     func sqlite3_bind_parameter_count(stmnt: OpaquePointer) -> Int32
-    func sqlite3_bind_parameter_name(stmnt: OpaquePointer, columnIndex: Int32) -> String
+    func sqlite3_bind_parameter_name(stmnt: OpaquePointer, columnIndex: Int32) -> OpaquePointer
     func sqlite3_bind_parameter_index(stmnt: OpaquePointer, name: String) -> Int32
     func sqlite3_clear_bindings(stmnt: OpaquePointer) -> Int32
 
-    func sqlite3_column_name(stmt: OpaquePointer!, columnIndex: Int32) -> String
-    func sqlite3_column_database_name(stmt: OpaquePointer, columnIndex: Int32) -> String
+    func sqlite3_column_name(stmt: OpaquePointer!, columnIndex: Int32) -> OpaquePointer
+    func sqlite3_column_database_name(stmt: OpaquePointer, columnIndex: Int32) -> OpaquePointer
 
     // Unavailable in Android's sqlite
-    //func sqlite3_column_table_name(stmt: OpaquePointer, columnIndex: Int32) -> String
+    //func sqlite3_column_table_name(stmt: OpaquePointer, columnIndex: Int32) -> OpaquePointer
 
-    func sqlite3_column_origin_name(stmt: OpaquePointer, columnIndex: Int32) -> String
-    func sqlite3_column_decltype(stmt: OpaquePointer, columnIndex: Int32) -> String
+    func sqlite3_column_origin_name(stmt: OpaquePointer, columnIndex: Int32) -> OpaquePointer
+    func sqlite3_column_decltype(stmt: OpaquePointer, columnIndex: Int32) -> OpaquePointer
 
-    func sqlite3_sql(stmt: OpaquePointer) -> String
+    func sqlite3_sql(stmt: OpaquePointer) -> OpaquePointer
+    func sqlite3_db_handle(stmt: OpaquePointer) -> OpaquePointer
 
     // Parameter Binding
     func sqlite3_bind_null(stmt: OpaquePointer, paramIndex: Int32) -> Int32

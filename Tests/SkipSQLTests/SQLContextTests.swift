@@ -13,7 +13,7 @@ final class SQLiteTests: XCTestCase {
     let logger: Logger = Logger(subsystem: "skip.sql", category: "SQLiteTests")
 
     func testSQLite() throws {
-        let sqlite = try SQLContext()
+        let sqlite = SQLContext()
 
         _ = try sqlite.query(sql: "SELECT 1")
         _ = try sqlite.query(sql: "SELECT CURRENT_TIMESTAMP")
@@ -207,6 +207,42 @@ final class SQLiteTests: XCTestCase {
         sqlite.close() // make sure statements are closed or: "unable to close due to unfinalized statements or unfinished backups"
 
         XCTAssertEqual(3, updates)
+    }
+
+    func testSQLiteNamedParameters() throws {
+        let ctx = SQLContext()
+        defer { ctx.close() }
+
+        do {
+            let stmnt = try ctx.prepare(sql: "SELECT 1")
+            defer { stmnt.close() }
+            XCTAssertEqual("SELECT 1", stmnt.sql)
+
+            XCTAssertEqual(0, stmnt.parameterCount)
+        }
+
+        do {
+            let stmnt = try ctx.prepare(sql: "SELECT ?")
+            defer { stmnt.close() }
+            XCTAssertEqual(1, stmnt.parameterCount)
+        }
+
+        do {
+            let stmnt = try ctx.prepare(sql: "SELECT :q")
+            defer { stmnt.close() }
+            XCTAssertEqual(1, stmnt.parameterCount)
+        }
+
+        do {
+            let stmnt = try ctx.prepare(sql: "SELECT 0, ?, ?2, :AAA, @AAA, $AAA, 'AAA'")
+            defer { stmnt.close() }
+            XCTAssertEqual(5, stmnt.parameterCount)
+            XCTAssertEqual([nil, "?2", ":AAA", "@AAA", "$AAA"], stmnt.parameterNames)
+        }
+
+        do {
+            XCTAssertEqual([SQLValue.text("ONE"), .text("TWO")], try ctx.query(sql: "SELECT ?2, ?1", parameters: [.text("TWO"), .text("ONE")]).first)
+        }
     }
 
     func testSQLitePerformance() throws {
