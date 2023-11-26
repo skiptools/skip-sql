@@ -43,11 +43,9 @@ public protocol SQLiteLibrary : NativeLibrary {
     func sqlite3_last_insert_rowid(_ db: OpaquePointer) -> Int64
     func sqlite3_total_changes(_ db: OpaquePointer) -> Int32
     func sqlite3_changes(_ db: OpaquePointer) -> Int32
-    func sqlite3_total_changes64(_ db: OpaquePointer) -> Int64
-    func sqlite3_changes64(_ db: OpaquePointer) -> Int64
     func sqlite3_interrupt(_ db: OpaquePointer)
 
-    func sqlite3_exec(_ db: OpaquePointer, _ sql: String, _ callback: sqlite3_callback, _ pArg: UnsafeMutableRawPointer?, _ errmsg: sqlite_error_ptr?) -> Int32
+    func sqlite3_exec(_ db: OpaquePointer, _ sql: String, _ callback: sqlite3_callback?, _ pArg: UnsafeMutableRawPointer?, _ errmsg: sqlite_error_ptr?) -> Int32
     func sqlite3_prepare_v2(_ db: OpaquePointer, _ sql: String, _ nBytes: Int32, _ ppStmt: sqlite3_openarg, _ tail: sqlite_tail_ptr?) -> Int32
 
     // Statement API
@@ -61,12 +59,11 @@ public protocol SQLiteLibrary : NativeLibrary {
     func sqlite3_clear_bindings(_ stmnt: OpaquePointer) -> Int32
 
     func sqlite3_column_name(_ stmt: OpaquePointer!, _ columnIndex: Int32) -> sqlite3_cstring_ptr?
-    func sqlite3_column_database_name(_ stmt: OpaquePointer, _ columnIndex: Int32) -> sqlite3_cstring_ptr?
 
     // Unavailable in Android's sqlite build
     //func sqlite3_column_table_name(_ stmt: OpaquePointer, _ columnIndex: Int32) -> sqlite3_cstring_ptr?
 
-    func sqlite3_column_origin_name(_ stmt: OpaquePointer, _ columnIndex: Int32) -> sqlite3_cstring_ptr?
+    //func sqlite3_column_origin_name(_ stmt: OpaquePointer, _ columnIndex: Int32) -> sqlite3_cstring_ptr?
     func sqlite3_column_decltype(_ stmt: OpaquePointer, _ columnIndex: Int32) -> sqlite3_cstring_ptr?
 
     func sqlite3_sql(_ stmt: OpaquePointer) -> sqlite3_cstring_ptr?

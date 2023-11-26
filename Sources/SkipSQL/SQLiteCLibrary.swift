@@ -63,19 +63,11 @@ open class SQLiteCLibrary : SQLiteLibrary {
         SQLite3.sqlite3_changes(db)
     }
 
-    open func sqlite3_total_changes64(_ db: OpaquePointer) -> Int64 {
-        SQLite3.sqlite3_total_changes64(db)
-    }
-
-    open func sqlite3_changes64(_ db: OpaquePointer) -> Int64 {
-        SQLite3.sqlite3_changes64(db)
-    }
-
     open func sqlite3_interrupt(_ db: OpaquePointer) {
         SQLite3.sqlite3_interrupt(db)
     }
 
-    open func sqlite3_exec(_ db: OpaquePointer, _ sql: String, _ callback: sqlite3_callback, _ pArg: UnsafeMutableRawPointer?, _ errmsg: sqlite_error_ptr?) -> Int32 {
+    open func sqlite3_exec(_ db: OpaquePointer, _ sql: String, _ callback: sqlite3_callback?, _ pArg: UnsafeMutableRawPointer?, _ errmsg: sqlite_error_ptr?) -> Int32 {
         SQLite3.sqlite3_exec(db, sql, callback, pArg, errmsg)
     }
 
@@ -117,14 +109,6 @@ open class SQLiteCLibrary : SQLiteLibrary {
 
     open func sqlite3_column_name(_ stmt: OpaquePointer!, _ columnIndex: Int32) -> sqlite3_cstring_ptr? {
         SQLite3.sqlite3_column_name(stmt!, columnIndex)
-    }
-
-    open func sqlite3_column_database_name(_ stmt: OpaquePointer, _ columnIndex: Int32) -> sqlite3_cstring_ptr? {
-        SQLite3.sqlite3_column_database_name(stmt, columnIndex)
-    }
-
-    open func sqlite3_column_origin_name(_ stmt: OpaquePointer, _ columnIndex: Int32) -> sqlite3_cstring_ptr? {
-        SQLite3.sqlite3_column_origin_name(stmt, columnIndex)
     }
 
     open func sqlite3_column_decltype(_ stmt: OpaquePointer, _ columnIndex: Int32) -> sqlite3_cstring_ptr? {

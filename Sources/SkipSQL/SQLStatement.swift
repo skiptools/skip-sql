@@ -50,9 +50,10 @@ public final class SQLStatement {
 //        strptr(SQLite3.sqlite3_column_table_name(stmnt, $0))
 //    })
 
-    public lazy var columnDatabases: [String] = Array((0..<columnCount).map {
-        strptr(SQLite3.sqlite3_column_database_name(stmnt, $0)) ?? ""
-    })
+    // doesn't work in Android
+//    public lazy var columnDatabases: [String] = Array((0..<columnCount).map {
+//        strptr(SQLite3.sqlite3_column_database_name(stmnt, $0)) ?? ""
+//    })
 
     /// Binds the given value at the index
     public func bind(_ value: SQLValue, at index: Int32) throws {

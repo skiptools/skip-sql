@@ -33,13 +33,13 @@ public final class SQLContext {
     }
 
     /// The number of rows modified, inserted or deleted by the most recently completed INSERT, UPDATE or DELETE statement
-    public var changes: Int64 {
-        SQLite3.sqlite3_changes64(db)
+    public var changes: Int32 {
+        SQLite3.sqlite3_changes(db)
     }
 
     /// The total number of rows inserted, modified or deleted by all [INSERT], [UPDATE] or [DELETE] statements completed since the database connection was opened, including those executed as part of triggers
-    public var totalChanges: Int64 {
-        SQLite3.sqlite3_total_changes64(db)
+    public var totalChanges: Int32 {
+        SQLite3.sqlite3_total_changes(db)
     }
 
     deinit {
