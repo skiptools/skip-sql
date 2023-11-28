@@ -165,7 +165,7 @@ public final class SQLContext {
         case immediate = "IMMEDIATE"
         case exclusive = "EXCLUSIVE"
     }
-    
+
     /// Performs the given operation in the context of a transaction.
     ///
     /// Specifying `.none` as the transaction mode will execute the command without a transaction.
