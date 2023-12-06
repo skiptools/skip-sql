@@ -1,5 +1,5 @@
 
-The SkipSQL module is a dual-platform Skip framework that provides access to sqlite databases in Darwin and Android systems.
+The SkipSQL module is a dual-platform Skip framework that provides access to sqlite database in Darwin and Android systems.
 
 ## Usage
 
@@ -77,7 +77,7 @@ try sqlite.transaction {
 
 ### Schema Migration
 
-There is no built-in support for schema migrations. Following is a part of a sample of how you might perform migrations in your own app (taken from the [DataBake](https://source.skip.tools/skipapp-databake) sample app). See the full app for details.
+There is no built-in support for schema migrations. Following is a part of a sample of how you might perform migrations in your own app.
 
 
 ```swift
@@ -89,41 +89,31 @@ var currentVersion = try ctx.query(sql: "SELECT version FROM DB_SCHEMA_VERSION")
 func migrateSchema(v version: Int64, ddl: String) throws {
     if currentVersion < version {
         let startTime = Date.now
-        try ctx.exec(sql: ddl) // perform the DDL operation
-        // then update the schema version
-        try ctx.exec(sql: "UPDATE DB_SCHEMA_VERSION SET version = ?", parameters: [SQLValue.integer(version)])
+        try ctx.transaction {
+            try ctx.exec(sql: ddl) // perform the DDL operation
+            // then update the schema version
+            try ctx.exec(sql: "UPDATE DB_SCHEMA_VERSION SET version = ?", parameters: [SQLValue.integer(version)])
+        }
         currentVersion = version
         logger.log("updated database schema to \(version) in \(startTime.durationToNow)")
     }
 }
 
-let tableName = "TABLE_NAME"
-
 // the initial creation script for a new database
 try migrateSchema(v: 1, ddl: """
-CREATE TABLE \(tableName) (\(DataItem.CodingKeys.id.rawValue) INTEGER PRIMARY KEY AUTOINCREMENT)
+CREATE TABLE DATA_ITEM (ID INTEGER PRIMARY KEY AUTOINCREMENT)
 """)
-
-// incrementally migrate up to the current schema version
-func addDataItemColumn(_ key: DataItem.CodingKeys) -> String {
-    "ALTER TABLE \(tableName) ADD COLUMN \(key.rawValue) \(key.ddl)"
-}
-
-try migrateSchema(v: 2, ddl: addDataItemColumn(.title))
-try migrateSchema(v: 3, ddl: addDataItemColumn(.created))
-try migrateSchema(v: 4, ddl: addDataItemColumn(.modified))
-try migrateSchema(v: 5, ddl: addDataItemColumn(.contents))
-try migrateSchema(v: 6, ddl: addDataItemColumn(.rating))
-try migrateSchema(v: 7, ddl: addDataItemColumn(.thumbnail))
-// future migrations to follow…
-
+// migrate records to have new description column
+try migrateSchema(v: 2, ddl: """
+ALTER TABLE DATA_ITEM ADD COLUMN DESCRIPTION TEXT
+""")
 ```
 
 ### Concurrency
 
-As a thin layer over a SQLite connection, SkipSQL itself performs no locking or manages threads in any way. It is up to the application layer to set up reader/writer locks, or else just perform all the operations on one thread (e.g., using `MainActor.run` to enqueue operations from a `Task`).
+As a thin layer over a SQLite connection, SkipSQL itself performs no locking or manages threads in any way. It is up to the application layer to set up reader/writer locks, or else just perform all the operations in an isolated context (e.g., using an actor).
 
-The Sqlite guide on [Locking And Concurrency](https://www.sqlite.org/lockingv3.html) can provide additional guidance.
+The SQLite guide on [Locking And Concurrency](https://www.sqlite.org/lockingv3.html) can provide additional guidance.
 
 
 ## Implementation
@@ -135,7 +125,7 @@ On Android, it uses the [SkipFFI](https://source.skip.tools/skip-ffi) module to 
 
 ## SQLite Versions
 
-Since SkipSQL just uses the version of SQLite that is shipped with the platform, care should be taken when using recent SQLite features, such as the [`json`](https://sqlite.org/json1.html) function, which is new in SQLite 3.38, in which case it would raise an error on Android versions below 14.0 (API 34) and iOS versions below 16.0.
+Because SkipSQL uses the version of SQLite that is shipped with the platform, care should be taken when using recent SQLite features, such as the [`json`](https://sqlite.org/json1.html) function, which is new in SQLite 3.38. This would raise an error on Android versions below 14.0 (API 34) and iOS versions below 16.0.
 
 Be aware that some very useful SQL features may only have been added to more recent versions of SQLite, such as strict tables (added in 3.37). This may impact the Android API version you can deply back to, so be sure to test your code on the oldest available Android emulator and iOS simulator for your project.
 
