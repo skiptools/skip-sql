@@ -9,11 +9,12 @@ import OSLog
 import SkipFFI
 #endif
 
+/// A database prepared statement.
 public final class SQLStatement {
-    /// The SQLite3 library to use
+    /// The SQLite3 library to use.
     fileprivate let SQLite3: SQLiteLibrary
 
-    /// The pointer to the SQLite statement
+    /// The pointer to the SQLite statement.
     fileprivate let stmnt: OpaquePointer
     fileprivate var closed = false
 
@@ -30,7 +31,7 @@ public final class SQLStatement {
         self.SQLite3 = SQLite3
     }
 
-    /// The database pointer that created this statement
+    /// The database pointer that created this statement.
     private var db: OpaquePointer {
         SQLite3.sqlite3_db_handle(stmnt)
     }
@@ -55,7 +56,7 @@ public final class SQLStatement {
 //        strptr(SQLite3.sqlite3_column_database_name(stmnt, $0)) ?? ""
 //    })
 
-    /// Binds the given value at the index
+    /// Binds the given value at the 1-based index.
     public func bind(_ value: SQLValue, at index: Int32) throws {
         precondition(index >= 1, "bind index in sqlite starts at 1")
         switch value {
@@ -86,7 +87,7 @@ public final class SQLStatement {
         }
     }
     
-    /// Perform an update with the prepared statemement, resetting it once the update is complete
+    /// Perform an update with the prepared statemement, resetting it once the update is complete.
     /// - Parameter params: the parameters to bind to the SQL statement
     public func update(parameters: [SQLValue] = []) throws {
         try checkClosed()
@@ -122,7 +123,7 @@ public final class SQLStatement {
         }
     }
 
-    /// True if the statement has been closed
+    /// True if the statement has been closed.
     public var isClosed: Bool {
         closed
     }
@@ -243,17 +244,17 @@ public final class SQLStatement {
         }
     }
 
-    /// The number of named or indexed parameters in this statement
+    /// The SQL of this statement.
     public var sql: String {
         strptr(SQLite3.sqlite3_sql(stmnt)) ?? ""
     }
 
-    /// The number of named or indexed parameters in this statement
+    /// The number of named or indexed parameters in this statement.
     public var parameterCount: Int32 {
         SQLite3.sqlite3_bind_parameter_count(stmnt)
     }
 
-    /// The number of named or indexed parameters in this statement
+    /// The number of named or indexed parameters in this statement.
     public var parameterNames: [String?] {
         Array((1...parameterCount).map {
             strptr(SQLite3.sqlite3_bind_parameter_name(stmnt, $0))

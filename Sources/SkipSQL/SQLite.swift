@@ -9,7 +9,7 @@ import OSLog
 import SkipFFI
 #endif
 
-/// An action taken on a row
+/// An action taken on a row.
 public enum SQLAction : Int32 {
     case insert = 18 // SQLITE_INSERT
     case delete = 9 // SQLITE_DELETE
@@ -40,6 +40,7 @@ public enum SQLType : Int32, CaseIterable, Hashable {
     case null = 5 // SQLITE_NULL
 }
 
+/// A database value.
 public enum SQLValue : Hashable {
     case integer(Int64)
     case float(Double)

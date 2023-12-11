@@ -9,35 +9,35 @@ import OSLog
 import SkipFFI
 #endif
 
-internal let logger: Logger = Logger(subsystem: "skip.sql", category: "SQL")
+let logger: Logger = Logger(subsystem: "skip.sql", category: "SQL")
 
-/// The default SQLite library to use, which is the library installed with the current host system
+/// The default SQLite library to use, which is the library installed with the current host system.
 public let SQLiteDefaultLibrary: SQLiteLibrary = SQLitePlatformLibrary()
 
 /// A context for performing operations on a SQLite database.
 public final class SQLContext {
-    /// The SQLite3 library to use
+    /// The SQLite3 library to use.
     fileprivate let SQLite3: SQLiteLibrary
 
-    /// The logging level for this context; SQL statements and warnings will be sent to this log
+    /// The logging level for this context; SQL statements and warnings will be sent to this log.
     public var logLevel: OSLogType? = nil
 
-    /// The pointer to the SQLite database
+    /// The pointer to the SQLite database.
     private let db: OpaquePointer
     private var closed = false
     private var updateHook: UpdateHook? = nil
 
-    /// The rowid of the most recent successful `INSERT` into a rowid table
+    /// The rowid of the most recent successful `INSERT` into a rowid table.
     public var lastInsertRowID: Int64 {
         SQLite3.sqlite3_last_insert_rowid(db)
     }
 
-    /// The number of rows modified, inserted or deleted by the most recently completed INSERT, UPDATE or DELETE statement
+    /// The number of rows modified, inserted or deleted by the most recently completed INSERT, UPDATE or DELETE statement.
     public var changes: Int32 {
         SQLite3.sqlite3_changes(db)
     }
 
-    /// The total number of rows inserted, modified or deleted by all [INSERT], [UPDATE] or [DELETE] statements completed since the database connection was opened, including those executed as part of triggers
+    /// The total number of rows inserted, modified or deleted by all [INSERT], [UPDATE] or [DELETE] statements completed since the database connection was opened, including those executed as part of triggers.
     public var totalChanges: Int32 {
         SQLite3.sqlite3_total_changes(db)
     }
@@ -50,7 +50,7 @@ public final class SQLContext {
         #endif
     }
 
-    /// Create an in-memory `SQLContext`
+    /// Create an in-memory `SQLContext`.
     public init(SQLite3: SQLiteLibrary = SQLiteDefaultLibrary) {
         // try! because creating an in-memory context should never fail
         self.SQLite3 = SQLite3
@@ -59,8 +59,8 @@ public final class SQLContext {
 
     /// Create a new `SQLContext` with the given options, either in-memory (the default), or on a file path.
     /// - Parameters:
-    ///   - path: the path to the local file, or ":memory:" for an in-memory database
-    ///   - flags: the flags to use to open the database
+    ///   - path: The path to the local file, or ":memory:" for an in-memory database.
+    ///   - flags: The flags to use to open the database.
     public init(path: String, flags: OpenFlags? = nil, logLevel: OSLogType? = nil, SQLite3: SQLiteLibrary = SQLiteDefaultLibrary) throws {
         self.logLevel = logLevel
         self.SQLite3 = SQLite3
@@ -105,7 +105,7 @@ public final class SQLContext {
     }
 
 
-    /// Execute the given SQL statement
+    /// Execute the given SQL statement.
     public func exec(sql: String, parameters: [SQLValue] = []) throws {
         try checkClosed()
         let stmnt = try prepare(sql: sql)
@@ -127,7 +127,7 @@ public final class SQLContext {
         SQLite3.sqlite3_interrupt(db)
     }
 
-    /// True if the context has been closed
+    /// True if the context has been closed.
     public var isClosed: Bool {
         closed
     }
@@ -159,7 +159,7 @@ public final class SQLContext {
         return SQLStatement(stmnt: stmntPtr!, SQLite3: self.SQLite3)
     }
 
-    /// How a transaction is being performed
+    /// How a transaction is being performed.
     public enum TransactionMode: String {
         case deferred = "DEFERRED"
         case immediate = "IMMEDIATE"
@@ -180,7 +180,7 @@ public final class SQLContext {
         }
     }
 
-    /// Performs the given operation within the databases mutex lock
+    /// Performs the given operation within the databases mutex lock.
     public func mutex<T>(block: () throws -> T) rethrows -> T {
         let lock = SQLite3.sqlite3_db_mutex(db)
         SQLite3.sqlite3_mutex_enter(lock)
@@ -191,7 +191,7 @@ public final class SQLContext {
         return try block()
     }
 
-    /// Performs the given operation in the context of a begin and commit/rollback statement
+    /// Performs the given operation in the context of a begin and commit/rollback statement.
     fileprivate func perform<T>(_ begin: String, _ block: () throws -> T, _ commit: String, or rollback: String) throws -> T {
         try exec(sql: begin)
         do {
@@ -210,7 +210,7 @@ public final class SQLContext {
         }
     }
     
-    /// Issues a SQL query with the optional parameters and returns all the values
+    /// Issues a SQL query with the optional parameters and returns all the values.
     public func query(sql: String, parameters: [SQLValue] = []) throws -> [[SQLValue]] {
         let stmnt = try prepare(sql: sql)
         if !parameters.isEmpty {
@@ -239,10 +239,10 @@ public final class SQLContext {
         return rows
     }
 
-    /// An action that can be registered to receive updates whenever a ROWID table changes
-    public typealias UpdateAction = (_ action: SQLAction, _ rowid: Int64, _ dbname: String, _ tblname: String) -> ()
+    /// An action that can be registered to receive updates whenever a ROWID table changes.
+    public typealias UpdateAction = (_ action: SQLAction, _ rowid: Int64, _ dbname: String, _ tblname: String) -> Void
 
-    /// Registers a function to be invoked whenever a ROWID table is changed
+    /// Registers a function to be invoked whenever a ROWID table is changed.
     ///
     /// As described at https://www.sqlite.org/c3ref/update_hook.html , a given connection can only have a single update hook at a time, so setting this function will replace any pre-existing update hook.
     public func onUpdate(hook: @escaping UpdateAction) {
