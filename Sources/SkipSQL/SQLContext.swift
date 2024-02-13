@@ -268,7 +268,7 @@ public final class SQLContext {
     #if !SKIP
     private typealias UpdateHook = UpdateAction
     #else
-    private class UpdateHook : sqlite3_update_hook {
+    private final class UpdateHook : sqlite3_update_hook {
         let updateAction: UpdateAction
 
         init(action: UpdateAction) {
