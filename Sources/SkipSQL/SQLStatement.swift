@@ -3,11 +3,11 @@
 // This is free software: you can redistribute and/or modify it
 // under the terms of the GNU Lesser General Public License 3.0
 // as published by the Free Software Foundation https://fsf.org
-import Foundation
-import OSLog
 #if SKIP
 import SkipFFI
 #endif
+import Foundation
+import OSLog
 
 /// A database prepared statement.
 public final class SQLStatement {
@@ -73,16 +73,9 @@ public final class SQLStatement {
             if size == 0 {
                 try check(SQLite3, db: db, code: SQLite3.sqlite3_bind_zeroblob(stmnt, index, size))
             } else {
-                #if SKIP
-                let buf = java.nio.ByteBuffer.allocateDirect(size)
-                buf.put(blob.kotlin(nocopy: true))
-                let ptr = com.sun.jna.Native.getDirectBufferPointer(buf)
-                try check(SQLite3, db: db, code: SQLite3.sqlite3_bind_blob(stmnt, index, ptr, size, SQLITE_TRANSIENT))
-                #else
                 try blob.withUnsafeBytes { ptr in
                     try check(SQLite3, db: db, code: SQLite3.sqlite3_bind_blob(stmnt, index, ptr.baseAddress, size, SQLITE_TRANSIENT))
                 }
-                #endif
             }
         }
     }
