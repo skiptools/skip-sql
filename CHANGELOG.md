@@ -1,3 +1,10 @@
+## 0.5.1
+
+Released 2024-02-20
+
+  - Blob statement parameter binding handling
+  - Make UpdateHook class final
+
 ## 0.5.0
 
 Released 2024-02-05
