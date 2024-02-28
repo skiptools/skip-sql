@@ -99,7 +99,8 @@ typedef struct
 /* tomcrypt_cipher.h */
 
 #if defined(LTC_AES_NI) && defined(LTC_AMD64_SSE4_1)
-#define LTC_HAS_AES_NI
+// SkipSQLPlus: manuall disable to prevent build errors
+//#define LTC_HAS_AES_NI
 #endif
 
 void blowfish_enc(ulong32 *data, unsigned long blocks, const symmetric_key *skey);
