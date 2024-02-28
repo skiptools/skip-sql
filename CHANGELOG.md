@@ -1,3 +1,13 @@
+## 0.6.0
+
+Released 2024-02-28
+
+  - Update error messages and add JSON tests
+  - Add SQLite JSON test
+  - Add SQLPlus tests
+  - Add SQLPlus tests
+  - Add SQLPlus module that includes custom build of sqlite 3.44.2 with extensions
+
 ## 0.5.1
 
 Released 2024-02-20
