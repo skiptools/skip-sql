@@ -1,0 +1,9 @@
+# skip.tools per-configuration file
+
+# the blocks to add to the build.gradle.kts
+#build:
+#  contents:
+#    - block: 'dependencies'
+#      contents:
+#        - '// no new dependencies in SkipSQLKtTests'
+# skip.tools per-configuration file

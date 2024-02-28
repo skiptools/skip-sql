@@ -125,6 +125,8 @@ On Android, it uses the [SkipFFI](https://source.skip.tools/skip-ffi) module to 
 
 ## SQLite Versions
 
+### Vendored SQLite Versions
+
 Because SkipSQL uses the version of SQLite that is shipped with the platform, care should be taken when using recent SQLite features, such as the [`json`](https://sqlite.org/json1.html) function, which is new in SQLite 3.38. This would raise an error on Android versions below 14.0 (API 34) and iOS versions below 16.0.
 
 Be aware that some very useful SQL features may only have been added to more recent versions of SQLite, such as strict tables (added in 3.37). This may impact the Android API version you can deply back to, so be sure to test your code on the oldest available Android emulator and iOS simulator for your project.
@@ -132,7 +134,7 @@ Be aware that some very useful SQL features may only have been added to more rec
 Also be aware that the availability of some SQL features are contingent on the compile flags used to build the vendored sqlite implementation provided as part of the OS, such as `SQLITE_ENABLE_JSON1` enabling the various [`json_`](https://www.sqlite.org/json1.html) operations. In the case of Android, be aware that local Robolectric testing will be insufficient to identify any limitations resulting from sqlite compile flags, since local testing will use the local (i.e., macOS-vendored) version of SQLite. Testing against an Android emulator (or device) should be performed when developing new SQL operations.
 
 
-### iOS
+#### iOS
 
 | iOS Version | SQLite Version |
 |-------------|----------------|
@@ -142,9 +144,9 @@ Also be aware that the availability of some SQL features are contingent on the c
 | 16          | 3.39           |
 
 
-### Android
+#### Android
 
-|Android API     |SQLite Version|
+| Android API    |SQLite Version|
 |----------------|--------------|
 | 9 (API 28)     | 3.22         |
 | 10 (API 30)    | 3.28         |
@@ -152,6 +154,25 @@ Also be aware that the availability of some SQL features are contingent on the c
 | 12 (API 32)    | 3.32         |
 | 13 (API 33)    | 3.32         |
 | 14 (API 34)    | 3.39         |
+
+---
+
+### SQLPlus
+
+The `skip-sql` framework includes an additional `SQLPlus` module,
+which creates a local build with the following extensions enabled:
+
+ - Full Text Search (FTS)
+ - Encryption (sqlcipher)
+
+The `SQLPlus` module uses sqlite version 3.44.2, which means
+that it will be safe to use newer sqlite features like
+the [`json`](https://sqlite.org/json1.html) function,
+regardless of the Android API and iOS versions of the 
+deployment platform.
+
+This comes at the cost of additional build time for the native libraries,
+as well as a larger artifact size (around 1MB on iOS and 4MB on Android).
 
 
 ## Building

@@ -20,6 +20,11 @@ final class SQLiteTests: XCTestCase {
         _ = try sqlite.query(sql: "SELECT CURRENT_TIMESTAMP")
         _ = try sqlite.query(sql: "PRAGMA compile_options")
 
+        #if os(macOS)
+        //XCTAssertEqual([SQLValue.text("3.43.2")], try sqlite.query(sql: "SELECT sqlite_version()").first)
+        XCTAssertEqual([SQLValue.text("ATOMIC_INTRINSICS=1")], try sqlite.query(sql: "PRAGMA compile_options").first)
+        #endif
+
         var updates = 0
         sqlite.onUpdate { action, rowid, dbname, tblname in
             self.logger.info("update hook: \(action.rawValue) \(rowid) \(dbname).\(tblname)")

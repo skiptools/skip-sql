@@ -1,0 +1,26 @@
+# This skip.yml file will generate a build.gradle.kts that uses the CMakeLists.txt for a native build.
+#
+# android {
+#     namespace = group as String
+#     compileSdk = libs.versions.android.sdk.compile.get().toInt()
+#     defaultConfig {
+#         minSdk = libs.versions.android.sdk.min.get().toInt()
+#     }
+#     externalNativeBuild {
+#         cmake {
+#             path = file("ext/CMakeLists.txt")
+#         }
+#     }
+# }
+
+# the blocks to add to the build.gradle.kts
+build:
+  contents:
+    - block: 'android'
+      export: false
+      contents:
+        - block: 'externalNativeBuild'
+          contents:
+            - block: 'cmake'
+              contents:
+                - 'path = file("ext/CMakeLists.txt")'
