@@ -69,7 +69,7 @@ public enum SQLType : Int32, CaseIterable, Hashable {
 }
 
 /// A database value.
-public enum SQLValue : Hashable {
+public enum SQLValue : Hashable, CustomStringConvertible {
     case integer(Int64)
     case float(Double)
     case text(String)
@@ -143,7 +143,7 @@ public struct InternalError : Error {
     }
 }
 
-public struct SQLError : Error {
+public struct SQLError : Error, CustomStringConvertible {
     public let msg: String
     public let code: Int32
 
@@ -153,7 +153,11 @@ public struct SQLError : Error {
     }
 
     public var description: String {
-        "SQLite error \(code): \(msg)"
+        "SQLite error code \(code): \(msg)"
+    }
+
+    public var localizedDescription: String {
+        "SQLite error code \(code): \(msg)"
     }
 }
 
@@ -167,7 +171,7 @@ internal func check(_ SQLite3: SQLiteLibrary, db: OpaquePointer?, code: Int32, p
         if let db = db, let msg = SQLite3.sqlite3_errmsg(db) {
             throw SQLError(msg: String(cString: msg), code: code)
         } else {
-            throw SQLError(msg: "Unknown SkipSQL error", code: code)
+            throw SQLError(msg: "Unknown SQLite error", code: code)
         }
     }
 }

@@ -29,7 +29,7 @@ final class SQLPlusTests: XCTestCase {
         try stmnt.close()
 
         // the locally built SQLite version (contrast with the macOS version 3.43.2)
-        XCTAssertEqual([SQLValue.text("3.44.2")], try sqlplus.query(sql: "SELECT sqlite_version();").first)
+        XCTAssertEqual([SQLValue.text("3.44.2")], try sqlplus.query(sql: "SELECT sqlite_version()").first)
         XCTAssertEqual([SQLValue.text("ATOMIC_INTRINSICS=1")], try sqlplus.query(sql: "PRAGMA compile_options").first)
         XCTAssertEqual([SQLValue.text("4.5.6 community")], try sqlplus.query(sql: "PRAGMA cipher_version").first)
         //XCTAssertEqual([SQLValue.text("PRAGMA cipher_default_kdf_iter = 256000;")], try sqlplus.query(sql: "PRAGMA cipher_default_settings").first)
@@ -39,15 +39,18 @@ final class SQLPlusTests: XCTestCase {
 
     func testSQLiteJSON() throws {
         let sqlplus = SQLContext(configuration: .plus)
+        // The $[#] path feature in the JSON functions was added in version 3.31.0
+        XCTAssertEqual([SQLValue.text("3.44.2")], try sqlplus.query(sql: "SELECT sqlite_version()").first)
+
         try sqlplus.exec(sql: #"CREATE TABLE users (id INTEGER PRIMARY KEY, profile JSON)"#)
 
-        try sqlplus.exec(sql: #"INSERT INTO users (id, profile) VALUES (1, '{"name": "Alice", "age": 30}')"#)
-        try sqlplus.exec(sql: #"INSERT INTO users (id, profile) VALUES (2, '{"name": "Bob", "age": 25}')"#)
+        try sqlplus.exec(sql: #"INSERT INTO users (id, profile) VALUES (1, ?)"#, parameters: [.text(#"{"name": "Alice", "age": 30}"#)])
+        try sqlplus.exec(sql: #"INSERT INTO users (id, profile) VALUES (2, ?)"#, parameters: [.text(#"{"name": "Bob", "age": 25}"#)])
 
-        let j1 = try sqlplus.query(sql: #"SELECT json_extract(profile, '$.name') as name FROM users WHERE id = 1"#).first
+        let j1 = try sqlplus.query(sql: "SELECT json_extract(profile, '$.name') as name FROM users WHERE id = ?", parameters: [.integer(1)]).first
         XCTAssertEqual([.text("Alice")], j1)
 
-        let j2 = try sqlplus.query(sql: #"SELECT json_extract(profile, '$.name') as name, json_extract(profile, '$.age') as age FROM users WHERE id = 2"#).first
+        let j2 = try sqlplus.query(sql: "SELECT json_extract(profile, '$.name') as name, json_extract(profile, '$.age') as age FROM users WHERE id = ?", parameters: [.integer(2)]).first
         XCTAssertEqual([.text("Bob"), .integer(25)], j2)
     }
 

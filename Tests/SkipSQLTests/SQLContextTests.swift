@@ -292,8 +292,9 @@ final class SQLiteTests: XCTestCase {
                     XCTAssertNotEqual(0, stmnt.integer(at: 0))
                 }
                 XCTFail("should have been interrupted before iterating over all the rows")
-            } catch let e as SQLStatementError {
+            } catch let e as SQLError {
                 XCTAssertEqual(9, e.code)
+                XCTAssertEqual("interrupted", e.msg)
             }
 
             stmnt.reset() // need to reset before trying the statement again
