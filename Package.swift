@@ -44,7 +44,8 @@ let package = Package(
                 .define("SQLITE_HAS_CODEC"),
                 .define("SQLITE_TEMP_STORE", to: "2"),
                 .define("SQLCIPHER_CRYPTO_LIBTOMCRYPT"),
-                .unsafeFlags(["-Wno-conversion", "-Wno-ambiguous-macro"]),
+                .define("LTC_NO_ASM"),
+                //.unsafeFlags(["-Wno-conversion", "-Wno-ambiguous-macro"]),
             ],
             plugins: [.plugin(name: "skipstone", package: "skip")]),
         

@@ -9,11 +9,6 @@ import Foundation
 import OSLog
 import SkipFFI
 
-/// Mock constructor for a `SQLiteLibrary` instance that uses the built-in sqlite3 library
-public func SQLitePlatformLibrary() -> SQLiteLibrary {
-    return SQLiteJNALibrary.shared
-}
-
 /// The argument to `sqlite3_update_hook`
 public protocol sqlite3_update_hook : NativeCallback {
     func callback(userData: OpaquePointer?, operation: Int32, databaseName: OpaquePointer?, tableName: OpaquePointer?, rowid: Int64)
@@ -21,7 +16,7 @@ public protocol sqlite3_update_hook : NativeCallback {
 
 
 /// A concrete implementation of the `SQLiteLibrary` interface that declares `external` methods to use [JNA Direct Mapping](https://github.com/java-native-access/jna/blob/master/www/DirectMapping.md) to cache native method lookups.
-private final class SQLiteJNALibrary : SQLiteLibrary {
+internal final class SQLiteJNALibrary : SQLiteLibrary {
     static let shared = SQLiteJNALibrary()
 
     private init() {

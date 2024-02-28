@@ -9,6 +9,34 @@ import OSLog
 import SkipFFI
 #endif
 
+/// The SQLite library configuration.
+///
+/// Extending this type can be used to provide alternative build configurations of
+/// the SQLite library to enable extensions and other features.
+///
+/// The default `platform` library uses the vendored sqlite libraries included
+/// with the operating system.
+/// - See: https://skip.tools/docs/modules/skip-sql/#sqlite-versions
+public struct SQLiteConfiguration {
+    public let library: SQLiteLibrary
+
+    public init(library: SQLiteLibrary) {
+        self.library = library
+    }
+
+    /// The platform-provided SQLite library.
+    ///
+    /// This will use the the vendored sqlite libraries that are provided by the operating system.
+    /// The version will vary depending on the OS version.
+    public static let platform: SQLiteConfiguration = {
+        #if SKIP
+        SQLiteConfiguration(library: SQLiteJNALibrary.shared)
+        #else
+        SQLiteConfiguration(library: SQLiteCLibrary.shared)
+        #endif
+    }()
+}
+
 /// An action taken on a row.
 public enum SQLAction : Int32 {
     case insert = 18 // SQLITE_INSERT

@@ -11,9 +11,6 @@ import SkipFFI
 
 let logger: Logger = Logger(subsystem: "skip.sql", category: "SQL")
 
-/// The default SQLite library to use, which is the library installed with the current host system.
-public let SQLiteDefaultLibrary: SQLiteLibrary = SQLitePlatformLibrary()
-
 /// A context for performing operations on a SQLite database.
 public final class SQLContext {
     /// The SQLite3 library to use.
@@ -45,41 +42,40 @@ public final class SQLContext {
     deinit {
         #if !SKIP
         #if DEBUG
-//        assert(isClosed, "SQLContext must be closed before deinit")
+        //assert(isClosed, "SQLContext must be closed before deinit")
         #endif
         #endif
     }
 
     /// Create an in-memory `SQLContext`.
-    public init(SQLite3: SQLiteLibrary = SQLiteDefaultLibrary) {
+    public init(configuration: SQLiteConfiguration = .platform) {
         // try! because creating an in-memory context should never fail
-        self.SQLite3 = SQLite3
-        self.db = try! Self.connect(path: ":memory:", SQLite3: SQLite3)!
+        self.SQLite3 = configuration.library
+        self.db = try! Self.connect(path: ":memory:", configuration: configuration)!
     }
 
     /// Create a new `SQLContext` with the given options, either in-memory (the default), or on a file path.
     /// - Parameters:
     ///   - path: The path to the local file, or ":memory:" for an in-memory database.
     ///   - flags: The flags to use to open the database.
-    public init(path: String, flags: OpenFlags? = nil, logLevel: OSLogType? = nil, SQLite3: SQLiteLibrary = SQLiteDefaultLibrary) throws {
+    public init(path: String, flags: OpenFlags? = nil, logLevel: OSLogType? = nil, configuration: SQLiteConfiguration = .platform) throws {
         self.logLevel = logLevel
-        self.SQLite3 = SQLite3
-
-        self.db = try Self.connect(path: path, flags: flags, SQLite3: SQLite3)!
+        self.SQLite3 = configuration.library
+        self.db = try Self.connect(path: path, flags: flags, configuration: configuration)!
 
         if let logLevel = logLevel {
             logger.log(level: logLevel, "opened database: \(path)")
         }
     }
 
-    private static func connect(path: String, flags: OpenFlags? = nil, SQLite3: SQLiteLibrary) throws -> OpaquePointer? {
+    private static func connect(path: String, flags: OpenFlags? = nil, configuration: SQLiteConfiguration = .platform) throws -> OpaquePointer? {
         var db: OpaquePointer? = nil
-
-        try check(SQLite3, db: db, code: withUnsafeMutablePointer(to: &db) { ptr in
+        let library = configuration.library
+        try check(library, db: db, code: withUnsafeMutablePointer(to: &db) { ptr in
             if let flags = flags {
-                return SQLite3.sqlite3_open_v2(path, ptr, flags.rawValue, nil)
+                return library.sqlite3_open_v2(path, ptr, flags.rawValue, nil)
             } else {
-                return SQLite3.sqlite3_open(path, ptr)
+                return library.sqlite3_open(path, ptr)
             }
         })
 

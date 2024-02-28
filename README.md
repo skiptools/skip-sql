@@ -174,6 +174,51 @@ deployment platform.
 This comes at the cost of additional build time for the native libraries,
 as well as a larger artifact size (around 1MB on iOS and 4MB on Android).
 
+#### Using SQLPlus
+
+The SQLPlus extensions can be used by importing the `SkipSQLPlus` module
+and passing `configuration: .plus` to the `SQLContext` constructor, like so:
+
+```swift
+import SkipSQL
+import SkipSQLPlus
+
+let dbpath = URL.documentsDirectoryURL.appendingPathComponent("db.sqlite")
+let db = try SQLContext(path: dbpath.path, flags: [.create, .readWrite], configuration: .plus)
+// do something with the database
+db.close()
+```
+
+
+#### Encryption
+
+SQLPlus contains the SQLCipher extension, which adds 256 bit AES encryption of database files and other security features like:
+
+- on-the-fly encryption
+- tamper detection
+- memory sanitization
+- strong key derivation
+
+SQLCipher is based on SQLite and stable upstream release features are periodically integrated.
+
+SQLCipher is maintained by Zetetic, LLC, and additional information and documentation is available on the official [SQLCipher site](https://www.zetetic.net/sqlcipher/).
+It is used by many mobile applications like the [Signal](https://github.com/sqlcipher/sqlcipher) iOS and Android app to
+secure local database files.
+
+An example of creating an encryped database:
+
+```swift
+import SkipSQL
+import SkipSQLPlus
+
+let dbpath = URL.documentsDirectoryURL.appendingPathComponent("encrypted.sqlite")
+let db = try SQLContext(path: dbpath.path, flags: [.create, .readWrite], configuration: .plus)
+_ = try db.query(sql: "PRAGMA key = 'password'")
+try db.exec(sql: #"CREATE TABLE SOME_TABLE(col);"#)
+try db.exec(sql: #"INSERT INTO SOME_TABLE(col) VALUES(?);"#, parameters: [.text("SOME SECRET STRING")])
+try db.close()
+```
+
 
 ## Building
 

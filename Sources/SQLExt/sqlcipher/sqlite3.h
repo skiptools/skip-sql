@@ -7381,14 +7381,14 @@ struct sqlite3_module {
   int (*xShadowName)(const char*);
   /* The methods above are in versions 1 through 3 of the sqlite_module object.
   ** Those below are for version 4 and greater. */
-  int (*xIntegrity)(sqlite3_vtab *pVTab, const char *zSchema,
-                    const char *zTabName, int mFlags, char **pzErr);
+//  int (*xIntegrity)(sqlite3_vtab *pVTab, const char *zSchema,
+//                    const char *zTabName, int mFlags, char **pzErr);
 };
 
 /*
 ** CAPI3REF: Virtual Table Indexing Information
 ** KEYWORDS: sqlite3_index_info
-**
+** 
 ** The sqlite3_index_info structure and its substructures is used as part
 ** of the [virtual table] interface to
 ** pass information into and receive the reply from the [xBestIndex]

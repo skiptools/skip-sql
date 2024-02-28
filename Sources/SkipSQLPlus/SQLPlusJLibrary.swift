@@ -10,14 +10,12 @@ import OSLog
 import SkipFFI
 import SkipSQL
 
-/// Mock constructor for a `SQLPlusLibrary` instance that uses the built-in sqlite3 library
-public func SQLPlusLibrary() -> SQLiteLibrary {
-    return SQLiteJNALibrary.shared
-}
-
 /// A concrete implementation of the `SQLiteLibrary` interface that declared `external` methods to use [JNA Direct Mapping](https://github.com/java-native-access/jna/blob/master/www/DirectMapping.md) to cache native method lookups.
-private final class SQLiteJNALibrary : SQLiteLibrary {
-    static let shared = registerNatives(SQLiteJNALibrary(), frameworkName: "SkipSQLPlus", libraryName: "sqlext")
+///
+/// Note that this is identical to the `SkipSQL.SQLLiteJNALibrary`, but it is registered
+/// to the locally-built `sqlext` library.
+internal final class SQLPlusJNALibrary : SQLiteLibrary {
+    static let shared = registerNatives(SQLPlusJNALibrary(), frameworkName: "SkipSQLPlus", libraryName: "sqlext")
 
     /* SKIP INSERT: external */ func sqlite3_sleep(_ duration: Int32) -> Int32
     /* SKIP INSERT: external override */ public func sqlite3_open(_ filename: String, _ ppDb: sqlite3_openarg?) -> Int32
