@@ -8,13 +8,19 @@ import OSLog
 import Foundation
 import SkipSQL
 
+/*
+ This test is shared between SkipSQLTests and SkipSQLPlusTests using a symbolic link.
+
+ It uses the locally defined `SQLiteConfiguration.test` extension to
+ select the SQLite library that should be used for the tests.
+ */
 
 // SKIP INSERT: @org.junit.runner.RunWith(androidx.test.ext.junit.runners.AndroidJUnit4::class)
-final class SQLiteTests: XCTestCase {
+final class SQLContextTests: XCTestCase {
     let logger: Logger = Logger(subsystem: "skip.sql", category: "SQLiteTests")
 
     func testSQLite() throws {
-        let sqlite = SQLContext()
+        let sqlite = SQLContext(configuration: .test)
 
         _ = try sqlite.query(sql: "SELECT 1")
         _ = try sqlite.query(sql: "SELECT CURRENT_TIMESTAMP")
@@ -216,7 +222,7 @@ final class SQLiteTests: XCTestCase {
     }
 
     func testSQLiteNamedParameters() throws {
-        let ctx = SQLContext()
+        let ctx = SQLContext(configuration: .test)
 
         do {
             let stmnt = try ctx.prepare(sql: "SELECT 1")
@@ -264,7 +270,7 @@ final class SQLiteTests: XCTestCase {
     }
 
     func testSQLiteInterrupt() async throws {
-        let ctx = SQLContext()
+        let ctx = SQLContext(configuration: .test)
 
         let stmnt = try ctx.prepare(sql: """
             WITH RECURSIVE SlowQuery AS (
@@ -307,7 +313,7 @@ final class SQLiteTests: XCTestCase {
     func testSQLitePerformance() throws {
         let dir = URL.temporaryDirectory
         let dbpath = dir.appendingPathComponent("testSQLitePerformance-\(UUID().uuidString).db").path
-        let sqlite = try SQLContext(path: dbpath, flags: [.create, .readWrite])
+        let sqlite = try SQLContext(path: dbpath, flags: [.create, .readWrite], configuration: .test)
 
         try sqlite.exec(sql: "CREATE TABLE BIGTABLE (STRING TEXT)")
 

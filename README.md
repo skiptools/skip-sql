@@ -134,26 +134,21 @@ Be aware that some very useful SQL features may only have been added to more rec
 Also be aware that the availability of some SQL features are contingent on the compile flags used to build the vendored sqlite implementation provided as part of the OS, such as `SQLITE_ENABLE_JSON1` enabling the various [`json_`](https://www.sqlite.org/json1.html) operations. In the case of Android, be aware that local Robolectric testing will be insufficient to identify any limitations resulting from sqlite compile flags, since local testing will use the local (i.e., macOS-vendored) version of SQLite. Testing against an Android emulator (or device) should be performed when developing new SQL operations.
 
 
-#### iOS
+| OS Version             | SQLite Version |
+|------------------------|----------------|
+| Android 9 (API 28)     | 3.22           |
+| iOS 13                 | 3.28           |
+| Android 10 (API 30)    | 3.28           |
+| iOS 14                 | 3.32           |
+| Android 11 (API 31)    | 3.32           |
+| Android 12 (API 32)    | 3.32           |
+| Android 13 (API 33)    | 3.32           |
+| iOS 15                 | 3.36           |
+| iOS 16                 | 3.39           |
+| Android 14 (API 34)    | 3.39           |
+| Android 15 (API 35)    | 3.42           |
+| SQLPlus                | 3.44           |
 
-| iOS Version | SQLite Version |
-|-------------|----------------|
-| 13          | 3.28           |
-| 14          | 3.32           |
-| 15          | 3.36           |
-| 16          | 3.39           |
-
-
-#### Android
-
-| Android API    |SQLite Version|
-|----------------|--------------|
-| 9 (API 28)     | 3.22         |
-| 10 (API 30)    | 3.28         |
-| 11 (API 31)    | 3.32         |
-| 12 (API 32)    | 3.32         |
-| 13 (API 33)    | 3.32         |
-| 14 (API 34)    | 3.39         |
 
 ---
 
@@ -213,16 +208,13 @@ assert j2 == [.text("Bob"), .integer(25)]
 
 SQLPlus contains the SQLCipher extension, which adds 256 bit AES encryption of database files and other security features like:
 
-- on-the-fly encryption
-- tamper detection
-- memory sanitization
-- strong key derivation
+- On-the-fly encryption
+- Tamper detection
+- Memory sanitization
+- Strong key derivation
 
-SQLCipher is based on SQLite and stable upstream release features are periodically integrated.
-
-SQLCipher is maintained by Zetetic, LLC, and additional information and documentation is available on the official [SQLCipher site](https://www.zetetic.net/sqlcipher/).
-It is used by many mobile applications like the [Signal](https://github.com/sqlcipher/sqlcipher) iOS and Android app to
-secure local database files.
+SQLCipher is based on SQLite and stable upstream release features are periodically integrated. The extension is documented at the official [SQLCipher site](https://www.zetetic.net/sqlcipher/). It is used by many mobile applications like the [Signal](https://github.com/signalapp/sqlcipher) iOS and Android app to
+secure local database files. Cryptographic algorithms are provided by the [LibTomCrypt](https://github.com/libtom/libtomcrypt) C library, which is included alongside the sqlcipher sources.
 
 An example of creating an encryped database:
 
@@ -233,8 +225,8 @@ import SkipSQLPlus
 let dbpath = URL.documentsDirectoryURL.appendingPathComponent("encrypted.sqlite")
 let db = try SQLContext(path: dbpath.path, flags: [.create, .readWrite], configuration: .plus)
 _ = try db.query(sql: "PRAGMA key = 'password'")
-try db.exec(sql: #"CREATE TABLE SOME_TABLE(col);"#)
-try db.exec(sql: #"INSERT INTO SOME_TABLE(col) VALUES(?);"#, parameters: [.text("SOME SECRET STRING")])
+try db.exec(sql: #"CREATE TABLE SOME_TABLE(col)"#)
+try db.exec(sql: #"INSERT INTO SOME_TABLE(col) VALUES(?)"#, parameters: [.text("SOME SECRET STRING")])
 try db.close()
 ```
 
