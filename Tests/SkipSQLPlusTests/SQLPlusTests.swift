@@ -37,6 +37,20 @@ final class SQLPlusTests: XCTestCase {
         //XCTAssertEqual([SQLValue.text("XXX")], try sqlplus.query(sql: "PRAGMA cipher_provider_version").first)
     }
 
+    func testSQLiteJSON() throws {
+        let sqlplus = SQLContext(configuration: .plus)
+        try sqlplus.exec(sql: #"CREATE TABLE users (id INTEGER PRIMARY KEY, profile JSON)"#)
+
+        try sqlplus.exec(sql: #"INSERT INTO users (id, profile) VALUES (1, '{"name": "Alice", "age": 30}')"#)
+        try sqlplus.exec(sql: #"INSERT INTO users (id, profile) VALUES (2, '{"name": "Bob", "age": 25}')"#)
+
+        let j1 = try sqlplus.query(sql: #"SELECT json_extract(profile, '$.name') as name FROM users WHERE id = 1"#).first
+        XCTAssertEqual([.text("Alice")], j1)
+
+        let j2 = try sqlplus.query(sql: #"SELECT json_extract(profile, '$.name') as name, json_extract(profile, '$.age') as age FROM users WHERE id = 2"#).first
+        XCTAssertEqual([.text("Bob"), .integer(25)], j2)
+    }
+
     func testSQLCipher() throws {
         func createDB(key: String?, string: String) throws -> Data {
             let dbPath = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("db")

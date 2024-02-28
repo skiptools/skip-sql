@@ -189,6 +189,25 @@ let db = try SQLContext(path: dbpath.path, flags: [.create, .readWrite], configu
 db.close()
 ```
 
+#### JSON
+
+SQLPlus enables the [`json`](https://sqlite.org/json1.html) extensions:
+
+
+```swift
+let sqlplus = SQLContext(configuration: .plus)
+try sqlplus.exec(sql: #"CREATE TABLE users (id INTEGER PRIMARY KEY, profile JSON)"#)
+
+try sqlplus.exec(sql: #"INSERT INTO users (id, profile) VALUES (1, '{"name": "Alice", "age": 30}')"#)
+try sqlplus.exec(sql: #"INSERT INTO users (id, profile) VALUES (2, '{"name": "Bob", "age": 25}')"#)
+
+let j1 = try sqlplus.query(sql: #"SELECT json_extract(profile, '$.name') as name FROM users WHERE id = ?"#, parameters: [.integer(1)]).first
+assert j1 == [.text("Alice")]
+
+let j2 = try sqlplus.query(sql: #"SELECT json_extract(profile, '$.name') as name, json_extract(profile, '$.age') as age FROM users WHERE id = ?"#, parameters: [.integer(2)]).first
+assert j2 == [.text("Bob"), .integer(25)]
+```
+
 
 #### Encryption
 
