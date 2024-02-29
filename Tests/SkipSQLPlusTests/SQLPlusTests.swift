@@ -52,6 +52,22 @@ final class SQLPlusTests: XCTestCase {
 
         let j2 = try sqlplus.query(sql: "SELECT json_extract(profile, '$.name') as name, json_extract(profile, '$.age') as age FROM users WHERE id = ?", parameters: [.integer(2)]).first
         XCTAssertEqual([.text("Bob"), .integer(25)], j2)
+
+        XCTAssertEqual([.text("[1]")], try sqlplus.query(sql: "SELECT JSON_QUOTE(JSON('[1]'))").first)
+        XCTAssertEqual([.integer(0)], try sqlplus.query(sql: "SELECT JSON_VALID('{\"x\":35')").first)
+        XCTAssertEqual([.text("array")], try sqlplus.query(sql: "SELECT JSON_TYPE('{\"a\":[2,3.5,true,false,null,\"x\"]}', '$.a')").first)
+        XCTAssertEqual([.text("[1,3,4]")], try sqlplus.query(sql: "SELECT JSON_REMOVE('[0,1,2,3,4]', '$[2]','$[0]')").first)
+        XCTAssertEqual([.text("[1,3,4]")], try sqlplus.query(sql: "SELECT JSON_REMOVE('[0,1,2,3,4]', '$[2]','$[0]')").first)
+        XCTAssertEqual([.text("{\"a\":1,\"b\":2,\"c\":3,\"d\":4}")], try sqlplus.query(sql: "SELECT JSON_PATCH('{\"a\":1,\"b\":2}','{\"c\":3,\"d\":4}')").first)
+        XCTAssertEqual([.text("{\"c\":{\"e\":5}}")], try sqlplus.query(sql: "SELECT JSON_OBJECT('c', JSON('{\"e\":5}'))").first)
+        XCTAssertEqual([.text("{\"a\":99,\"c\":4}")], try sqlplus.query(sql: "SELECT JSON_SET('{\"a\":2,\"c\":4}', '$.a', 99)").first)
+        XCTAssertEqual([.text("{\"a\":99,\"c\":4}")], try sqlplus.query(sql: "SELECT JSON_REPLACE('{\"a\":2,\"c\":4}', '$.a', 99)").first)
+        XCTAssertEqual([.text("[1,2,3,4,99]")], try sqlplus.query(sql: "SELECT JSON_INSERT('[1,2,3,4]','$[#]',99)").first)
+        XCTAssertEqual([.text("[[4,5],2]")], try sqlplus.query(sql: "SELECT JSON_EXTRACT('{\"a\":2,\"c\":[4,5]}','$.c','$.a')").first)
+        XCTAssertEqual([.integer(3)], try sqlplus.query(sql: "SELECT JSON_ARRAY_LENGTH('{\"one\":[1,2,3]}', '$.one')").first)
+        XCTAssertEqual([.integer(4)], try sqlplus.query(sql: "SELECT JSON_ARRAY_LENGTH('[1,2,3,4]')").first)
+        XCTAssertEqual([.text("[1,2,\"3\",4]")], try sqlplus.query(sql: "SELECT JSON_ARRAY(1, 2, '3', 4)").first)
+        XCTAssertEqual([.text("{\"a\":1,\"b\":2,\"c\":3,\"d\":4}")], try sqlplus.query(sql: "SELECT JSON_PATCH('{\"a\":1,\"b\":2}', '{\"c\":3,\"d\":4}')").first)
     }
 
     func testSQLCipher() throws {
