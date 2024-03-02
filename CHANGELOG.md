@@ -1,3 +1,11 @@
+## 0.6.1
+
+Released 2024-03-02
+
+  - Harmonize build options between Android and Darwin
+  - Add JSON tests
+  - Add test cases
+
 ## 0.6.0
 
 Released 2024-02-28
