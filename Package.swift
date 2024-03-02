@@ -66,6 +66,7 @@ let package = Package(
                 .define("SQLITE_ENABLE_SNAPSHOT"),
                 .define("SQLITE_HAS_CODEC"),
                 .define("SQLITE_TEMP_STORE", to: "2"),
+                .define("HAVE_GETHOSTUUID", to: "0"),
                 .define("SQLCIPHER_CRYPTO_LIBTOMCRYPT"),
                 .define("LTC_NO_ASM"),
                 //.unsafeFlags(["-Wno-conversion", "-Wno-ambiguous-macro"]),

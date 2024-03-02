@@ -36,6 +36,7 @@ add_compile_definitions(SQLITE_USE_URI)
 add_compile_definitions(SQLITE_ENABLE_SNAPSHOT)
 add_compile_definitions(SQLITE_HAS_CODEC)
 add_compile_definitions(SQLITE_TEMP_STORE=2)
+add_compile_definitions(HAVE_GETHOSTUUID=0)
 add_compile_definitions(SQLCIPHER_CRYPTO_LIBTOMCRYPT)
 
 
