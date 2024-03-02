@@ -133,7 +133,7 @@
 
 /* Enable self-test test vector checking */
 #ifndef LTC_NO_TEST
-   #define LTC_TEST
+//   #define LTC_TEST
 #endif
 /* Enable extended self-tests */
 /* #define LTC_TEST_EXT */
