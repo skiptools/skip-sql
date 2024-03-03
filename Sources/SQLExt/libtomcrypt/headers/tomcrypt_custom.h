@@ -4,6 +4,16 @@
 #ifndef TOMCRYPT_CUSTOM_H_
 #define TOMCRYPT_CUSTOM_H_
 
+// added for SkipSQLExt
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
+#pragma GCC diagnostic ignored "-Wambiguous-macro"
+
+#define LTC_TEST_EXT
+//#define LTC_TEST_DBG 2
+// end added for SkipSQLExt
+
+
 /* macros for various libc functions you can change for embedded targets */
 #ifndef XMALLOC
 #define XMALLOC  malloc
@@ -133,7 +143,7 @@
 
 /* Enable self-test test vector checking */
 #ifndef LTC_NO_TEST
-//   #define LTC_TEST
+   #define LTC_TEST
 #endif
 /* Enable extended self-tests */
 /* #define LTC_TEST_EXT */

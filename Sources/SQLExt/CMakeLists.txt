@@ -28,7 +28,6 @@ add_compile_definitions(SQLITE_ENABLE_UNLOCK_NOTIFY)
 add_compile_definitions(SQLITE_MAX_VARIABLE_NUMBER=250000)
 add_compile_definitions(SQLITE_LIKE_DOESNT_MATCH_BLOBS)
 add_compile_definitions(SQLITE_OMIT_DEPRECATED)
-add_compile_definitions(SQLITE_OMIT_LOAD_EXTENSION)
 add_compile_definitions(SQLITE_OMIT_SHARED_CACHE)
 add_compile_definitions(SQLITE_SECURE_DELETE)
 add_compile_definitions(SQLITE_THREADSAFE=2)
@@ -38,7 +37,6 @@ add_compile_definitions(SQLITE_HAS_CODEC)
 add_compile_definitions(SQLITE_TEMP_STORE=2)
 add_compile_definitions(HAVE_GETHOSTUUID=0)
 add_compile_definitions(SQLCIPHER_CRYPTO_LIBTOMCRYPT)
-
 
 # we use LTC_NO_ASM in the Package.swift cSettings, but we can enable -maes for android
 # failure to do so results in the compile error:

@@ -35,7 +35,6 @@ let package = Package(
         .target(name: "SQLExt", dependencies: [
             .product(name: "SkipUnit", package: "skip-unit")
         ], sources: ["sqlcipher", "libtomcrypt"],
-            publicHeadersPath: "sqlcipher",
             cSettings: [
                 .headerSearchPath("sqlcipher"),
                 .headerSearchPath("libtomcrypt/headers"),
@@ -58,7 +57,6 @@ let package = Package(
                 .define("SQLITE_MAX_VARIABLE_NUMBER", to: "250000"),
                 .define("SQLITE_LIKE_DOESNT_MATCH_BLOBS"),
                 .define("SQLITE_OMIT_DEPRECATED"),
-                .define("SQLITE_OMIT_LOAD_EXTENSION"),
                 .define("SQLITE_OMIT_SHARED_CACHE"),
                 .define("SQLITE_SECURE_DELETE"),
                 .define("SQLITE_THREADSAFE", to: "2"),
@@ -68,8 +66,7 @@ let package = Package(
                 .define("SQLITE_TEMP_STORE", to: "2"),
                 .define("HAVE_GETHOSTUUID", to: "0"),
                 .define("SQLCIPHER_CRYPTO_LIBTOMCRYPT"),
-                .define("LTC_NO_ASM"),
-                //.unsafeFlags(["-Wno-conversion", "-Wno-ambiguous-macro"]),
+                //.unsafeFlags(["-Wno-shorten-64-to-32", "-Wno-ambiguous-macro"]), // enabled manually in libs
             ],
             plugins: [.plugin(name: "skipstone", package: "skip")]),
         

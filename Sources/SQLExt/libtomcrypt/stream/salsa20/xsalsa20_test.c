@@ -77,7 +77,7 @@ int xsalsa20_test(void)
        if ((err = xsalsa20_setup(&st, key, 32, nonce, 24, rounds))   != CRYPT_OK)  return err;
        if ((err = salsa20_keystream(&st, keystream, keystreamlen))   != CRYPT_OK)  return err;
        if ((err = salsa20_done(&st))                                 != CRYPT_OK)  return err;
-       if ((err = s_sha256(hash, keystream, keystreamlen))            != CRYPT_OK)  return err;
+       if ((err = s_sha256(hash, keystream, (int)keystreamlen))            != CRYPT_OK)  return err;
        if (compare_testvector(hash, sizeof(hash), expecthash, sizeof(expecthash),   "XSALSA20-TV3", 1))  return CRYPT_FAIL_TESTVECTOR;
    }
 #endif
