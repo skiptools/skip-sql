@@ -2,10 +2,9 @@ cmake_minimum_required(VERSION 3.1)
 
 project(sqlext, LANGUAGES C)
 
-file(GLOB_RECURSE SOURCES sqlcipher/*.c libtomcrypt/*.c)
+file(GLOB_RECURSE SOURCES sqlite/*.c)
 add_library(sqlext SHARED ${SOURCES})
-include_directories(sqlext PUBLIC sqlcipher/)
-include_directories(sqlext PUBLIC libtomcrypt/headers/)
+include_directories(sqlext PUBLIC sqlite/)
 
 # these should match the definitions in the Package.swift
 # so the Android build and the Swift build options match
@@ -38,10 +37,38 @@ add_compile_definitions(SQLITE_TEMP_STORE=2)
 add_compile_definitions(HAVE_GETHOSTUUID=0)
 add_compile_definitions(SQLCIPHER_CRYPTO_LIBTOMCRYPT)
 
-# we use LTC_NO_ASM in the Package.swift cSettings, but we can enable -maes for android
-# failure to do so results in the compile error:
-# libtomcrypt/ciphers/aes/aesni.c:150:26: error: always_inline function '_mm_aesimc_si128' requires target feature 'aes', but would be inlined into function 'aesni_setup' that is compiled without support for 'aes'
-#target_compile_options(sqlext PRIVATE -maes)
 
-# sqlcipher has calls to __android_log_print
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -frtti -fexceptions")
+
+#set(CMAKE_FIND_LIBRARY_PREFIXES "lib")
+#set(CMAKE_FIND_LIBRARY_SUFFIXES ".so")
+
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)
+
+set(CMAKE_FIND_DEBUG_MODE ON)
+
+get_filename_component(CMAKE_PARENT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} DIRECTORY)
+message("CMAKE FINDING LIBRARY FOR ABI: ${ANDROID_ABI} in: ${CMAKE_PARENT_SOURCE_DIR}")
+
+find_library(TOMCRYPT
+    NAMES tomcrypt
+    REQUIRED
+    PATHS
+
+    # the output paths for the LibTomCrypt project
+    # it would be nice if we could discover this automatically based on the gradle dependency
+    ${CMAKE_PARENT_SOURCE_DIR}/../LibTomCrypt/build/intermediates/merged_native_libs/debug/out/lib/${ANDROID_ABI}/
+    ${CMAKE_PARENT_SOURCE_DIR}/../LibTomCrypt/build/intermediates/merged_native_libs/release/out/lib/${ANDROID_ABI}/
+
+    NO_DEFAULT_PATH
+    NO_CMAKE_FIND_ROOT_PATH
+)
+
+#message("CMAKE FIND LIBRARY FOR: ${ANDROID_ABI}: ${TOMCRYPT}")
+
+target_link_libraries(sqlext ${TOMCRYPT})
+
+# sqlite has calls to __android_log_print
 target_link_libraries(sqlext log)

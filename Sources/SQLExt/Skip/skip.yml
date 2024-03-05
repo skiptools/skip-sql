@@ -24,3 +24,11 @@ build:
             - block: 'cmake'
               contents:
                 - 'path = file("ext/CMakeLists.txt")'
+        - block: 'defaultConfig'
+          contents:
+            - block: 'externalNativeBuild'
+              contents:
+                - block: 'cmake'
+                  contents:
+                    # activating trace helps diagnose issues with not finding build dependencies
+                    #- 'arguments += listOf("--trace")'

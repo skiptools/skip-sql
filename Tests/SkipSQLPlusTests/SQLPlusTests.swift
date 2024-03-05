@@ -32,7 +32,7 @@ final class SQLPlusTests: XCTestCase {
         XCTAssertEqual([SQLValue.text("3.44.2")], try sqlplus.query(sql: "SELECT sqlite_version()").first)
         XCTAssertEqual([SQLValue.text("ATOMIC_INTRINSICS=1")], try sqlplus.query(sql: "PRAGMA compile_options").first)
         XCTAssertEqual([SQLValue.text("4.5.6 community")], try sqlplus.query(sql: "PRAGMA cipher_version").first)
-        //XCTAssertEqual([SQLValue.text("PRAGMA cipher_default_kdf_iter = 256000;")], try sqlplus.query(sql: "PRAGMA cipher_default_settings").first)
+        //XCTAssertEqual([SQLValue.text("PRAGMA cipher_default_kdf_iter = 256000")], try sqlplus.query(sql: "PRAGMA cipher_default_settings").first)
         //XCTAssertEqual([SQLValue.text("XXX")], try sqlplus.query(sql: "PRAGMA cipher_provider").first)
         //XCTAssertEqual([SQLValue.text("XXX")], try sqlplus.query(sql: "PRAGMA cipher_provider_version").first)
     }
@@ -71,7 +71,7 @@ final class SQLPlusTests: XCTestCase {
     }
 
     func testSQLCipher() throws {
-        func createDB(key: String?, string: String) throws -> Data {
+        func createDB(key: String?, plaintextHeader: Int? = nil, string: String) throws -> Data {
             let dbPath = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("db")
 
             logger.log("testEncryption: checking db: \(dbPath.path)")
@@ -79,13 +79,16 @@ final class SQLPlusTests: XCTestCase {
             if let key = key {
                 _ = try db.query(sql: "PRAGMA key = '\(key)'")
             }
+            if let plaintextHeader = plaintextHeader {
+                _ = try db.query(sql: "PRAGMA cipher_plaintext_header_size = \(plaintextHeader)")
+            }
 
             //_ = try db.query(sql: #"PRAGMA cipher_plaintext_header_size = 32"#)
             //_ = try db.query(sql: #"PRAGMA cipher_salt = "x'01010101010101010101010101010101'""#)
             //_ = try db.query(sql: #"PRAGMA user_version = 1; -- force header write"#)
 
-            try db.exec(sql: #"CREATE TABLE SOME_TABLE(col);"#)
-            try db.exec(sql: #"INSERT INTO SOME_TABLE(col) VALUES(?);"#, parameters: [.text(string)])
+            try db.exec(sql: #"CREATE TABLE SOME_TABLE(col)"#)
+            try db.exec(sql: #"INSERT INTO SOME_TABLE(col) VALUES(?)"#, parameters: [.text(string)])
 
             try db.close()
 
@@ -96,6 +99,7 @@ final class SQLPlusTests: XCTestCase {
         let str = "SOME_STRING"
         let data1 = try createDB(key: nil, string: str)
         let data2 = try createDB(key: "passkey", string: str)
+        let data3 = try createDB(key: "passkey", plaintextHeader: 32, string: str)
 
         // check the header of the database file
         // an encrypted data (that does not use PRAGMA cipher_plaintext_header_size = X) should not contains the standard sqlite header
@@ -104,9 +108,11 @@ final class SQLPlusTests: XCTestCase {
 
         XCTAssertTrue(data1.hex().hasPrefix(sqliteHeader.utf8.hex()), "unencrypted database should have contained the SQLite header")
         XCTAssertFalse(data2.hex().hasPrefix(sqliteHeader.utf8.hex()), "encrypted database should not have contained the SQLite header")
+        XCTAssertTrue(data3.hex().hasPrefix(sqliteHeader.utf8.hex()), "encrypted database should have contained the SQLite header when using cipher_plaintext_header_size")
 
         XCTAssertTrue(data1.hex().contains(str.utf8.hex()), "unencrypted database should have contained the test string")
         XCTAssertFalse(data2.hex().contains(str.utf8.hex()), "encrypted database should not have contained the test string")
+        XCTAssertFalse(data3.hex().contains(str.utf8.hex()), "encrypted database should not have contained the test string")
 
 
     }
