@@ -1,3 +1,12 @@
+## 0.6.2
+
+Released 2024-03-05
+
+  - Link to external skip-ltc module for SQLExt
+  - Add algorithm tests
+  - Disable HAVE_GETHOSTUUID since it is disallowed on iOS
+  - Ignore -Wconversion to reduce warnings
+
 ## 0.6.1
 
 Released 2024-03-02
