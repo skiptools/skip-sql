@@ -50,7 +50,22 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)
 set(CMAKE_FIND_DEBUG_MODE ON)
 
 get_filename_component(CMAKE_PARENT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} DIRECTORY)
-message("CMAKE FINDING LIBRARY FOR ABI: ${ANDROID_ABI} in: ${CMAKE_PARENT_SOURCE_DIR}")
+message("CMAKE FINDING LIBRARY FOR ABI: ${ANDROID_ABI} in: ${CMAKE_PARENT_SOURCE_DIR} for build type: ${CMAKE_BUILD_TYPE}")
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(BUILD_MODE "Release")
+elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    set(BUILD_MODE "Release")
+elseif(CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
+    set(BUILD_MODE "Release")
+elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(BUILD_MODE "Debug")
+else()
+    message(WARNING "CMAKE_BUILD_TYPE is set to an unsupported value: ${CMAKE_BUILD_TYPE}. Defaulting to Debug.")
+    set(BUILD_MODE "Debug")
+endif()
+
+string(TOLOWER "${BUILD_MODE}" BUILD_MODE_LOWER)
 
 find_library(TOMCRYPT
     NAMES tomcrypt
@@ -60,10 +75,8 @@ find_library(TOMCRYPT
     # the output paths for the LibTomCrypt project
     # it would be nice if we could discover this automatically based on the gradle dependency
     # after updating to the android-gradle-plugin 8.5.0, the output has moved to mergeDebugNativeLibs/mergeReleaseNativeLibs
-    ${CMAKE_PARENT_SOURCE_DIR}/../LibTomCrypt/build/intermediates/merged_native_libs/debug/out/lib/${ANDROID_ABI}/
-    ${CMAKE_PARENT_SOURCE_DIR}/../LibTomCrypt/build/intermediates/merged_native_libs/debug/mergeDebugNativeLibs/out/lib/${ANDROID_ABI}/
-    ${CMAKE_PARENT_SOURCE_DIR}/../LibTomCrypt/build/intermediates/merged_native_libs/release/out/lib/${ANDROID_ABI}/
-    ${CMAKE_PARENT_SOURCE_DIR}/../LibTomCrypt/build/intermediates/merged_native_libs/release/mergeReleaseNativeLibs/out/lib/${ANDROID_ABI}/
+    #${CMAKE_PARENT_SOURCE_DIR}/../LibTomCrypt/build/intermediates/merged_native_libs/${BUILD_MODE_LOWER}/out/lib/${ANDROID_ABI}/
+    ${CMAKE_PARENT_SOURCE_DIR}/../LibTomCrypt/build/intermediates/merged_native_libs/${BUILD_MODE_LOWER}/merge${BUILD_MODE}NativeLibs/out/lib/${ANDROID_ABI}/
 
     NO_DEFAULT_PATH
     NO_CMAKE_FIND_ROOT_PATH

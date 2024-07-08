@@ -1,3 +1,11 @@
+## 0.6.3
+
+Released 2024-07-08
+
+  - Update search paths for tomcrypt to point to intermediates/merged_native_libs/debug/mergeDebugNativeLibs/out/lib to accommodate change in android gradle plugin 8.5.0
+  - Update README
+  - ci: update workflow actions location
+
 ## 0.6.2
 
 Released 2024-03-05
