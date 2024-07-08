@@ -59,8 +59,11 @@ find_library(TOMCRYPT
 
     # the output paths for the LibTomCrypt project
     # it would be nice if we could discover this automatically based on the gradle dependency
+    # after updating to the android-gradle-plugin 8.5.0, the output has moved to mergeDebugNativeLibs/mergeReleaseNativeLibs
     ${CMAKE_PARENT_SOURCE_DIR}/../LibTomCrypt/build/intermediates/merged_native_libs/debug/out/lib/${ANDROID_ABI}/
+    ${CMAKE_PARENT_SOURCE_DIR}/../LibTomCrypt/build/intermediates/merged_native_libs/debug/mergeDebugNativeLibs/out/lib/${ANDROID_ABI}/
     ${CMAKE_PARENT_SOURCE_DIR}/../LibTomCrypt/build/intermediates/merged_native_libs/release/out/lib/${ANDROID_ABI}/
+    ${CMAKE_PARENT_SOURCE_DIR}/../LibTomCrypt/build/intermediates/merged_native_libs/release/mergeReleaseNativeLibs/out/lib/${ANDROID_ABI}/
 
     NO_DEFAULT_PATH
     NO_CMAKE_FIND_ROOT_PATH

@@ -6,7 +6,7 @@ let package = Package(
     defaultLocalization: "en",
     platforms: [.iOS(.v16), .macOS(.v13), .tvOS(.v16), .watchOS(.v9), .macCatalyst(.v16)],
     products: [
-        .library(name: "SkipSQL", targets: ["SkipSQL"]),
+        .library(name: "SkipSQL", type: .dynamic, targets: ["SkipSQL"]),
         .library(name: "SkipSQLPlus", type: .dynamic, targets: ["SkipSQLPlus"]),
     ],
     dependencies: [
