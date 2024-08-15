@@ -7,7 +7,7 @@ let package = Package(
     platforms: [.iOS(.v16), .macOS(.v13), .tvOS(.v16), .watchOS(.v9), .macCatalyst(.v16)],
     products: [
         .library(name: "SkipSQL", targets: ["SkipSQL"]),
-        .library(name: "SkipSQLPlus", targets: ["SkipSQLPlus"]),
+        .library(name: "SkipSQLPlus", type: .dynamic, targets: ["SkipSQLPlus"]),
     ],
     dependencies: [
         .package(url: "https://source.skip.tools/skip.git", from: "1.0.4"),
