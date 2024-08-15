@@ -6,15 +6,15 @@ let package = Package(
     defaultLocalization: "en",
     platforms: [.iOS(.v16), .macOS(.v13), .tvOS(.v16), .watchOS(.v9), .macCatalyst(.v16)],
     products: [
-        .library(name: "SkipSQL", type: .dynamic, targets: ["SkipSQL"]),
-        .library(name: "SkipSQLPlus", type: .dynamic, targets: ["SkipSQLPlus"]),
+        .library(name: "SkipSQL", targets: ["SkipSQL"]),
+        .library(name: "SkipSQLPlus", targets: ["SkipSQLPlus"]),
     ],
     dependencies: [
-        .package(url: "https://source.skip.tools/skip.git", from: "0.9.4"),
-        .package(url: "https://source.skip.tools/skip-foundation.git", from: "0.7.0"),
-        .package(url: "https://source.skip.tools/skip-ffi.git", from: "0.3.3"),
-        .package(url: "https://source.skip.tools/skip-ltc.git", from: "0.0.3"),
-        .package(url: "https://source.skip.tools/skip-unit.git", from: "0.8.1"),
+        .package(url: "https://source.skip.tools/skip.git", from: "1.0.4"),
+        .package(url: "https://source.skip.tools/skip-foundation.git", from: "1.0.0"),
+        .package(url: "https://source.skip.tools/skip-unit.git", from: "1.0.0"),
+        .package(url: "https://source.skip.tools/skip-ffi.git", "0.0.0"..<"2.0.0"),
+        .package(url: "https://source.skip.tools/skip-ltc.git", "0.0.0"..<"2.0.0"),
     ],
     targets: [
         .target(name: "SkipSQL", dependencies: [
