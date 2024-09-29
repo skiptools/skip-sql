@@ -7,7 +7,7 @@ The SkipSQL module is a dual-platform Skip framework that provides access to sql
 
 To connect 
 ```swift
-let dbpath = URL.documentsDirectoryURL.appendingPathComponent("db.sqlite")
+let dbpath = URL.documentsDirectory.appendingPathComponent("db.sqlite")
 
 let ctx = try SQLContext(path: dbpath, flags: [.create, .readWrite])
 defer { ctx.close() }
@@ -178,7 +178,7 @@ and passing `configuration: .plus` to the `SQLContext` constructor, like so:
 import SkipSQL
 import SkipSQLPlus
 
-let dbpath = URL.documentsDirectoryURL.appendingPathComponent("db.sqlite")
+let dbpath = URL.documentsDirectory.appendingPathComponent("db.sqlite")
 let db = try SQLContext(path: dbpath.path, flags: [.create, .readWrite], configuration: .plus)
 // do something with the database
 db.close()
@@ -222,7 +222,7 @@ An example of creating an encryped database:
 import SkipSQL
 import SkipSQLPlus
 
-let dbpath = URL.documentsDirectoryURL.appendingPathComponent("encrypted.sqlite")
+let dbpath = URL.documentsDirectory.appendingPathComponent("encrypted.sqlite")
 let db = try SQLContext(path: dbpath.path, flags: [.create, .readWrite], configuration: .plus)
 _ = try db.query(sql: "PRAGMA key = 'password'")
 try db.exec(sql: #"CREATE TABLE SOME_TABLE(col)"#)
