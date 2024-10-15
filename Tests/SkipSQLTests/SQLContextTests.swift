@@ -15,7 +15,6 @@ import SkipSQL
  select the SQLite library that should be used for the tests.
  */
 
-// SKIP INSERT: @org.junit.runner.RunWith(androidx.test.ext.junit.runners.AndroidJUnit4::class)
 final class SQLContextTests: XCTestCase {
     let logger: Logger = Logger(subsystem: "skip.sql", category: "SQLiteTests")
 
