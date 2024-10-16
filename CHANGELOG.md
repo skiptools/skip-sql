@@ -1,3 +1,11 @@
+## 0.7.2
+
+Released 2024-10-16
+
+  - Bump cmake_minimum_required to 3.3 to fix skip export error
+  - Eliminate redundant import of AndroidJUnit4 test runner
+  - Fix reference to URL.documentsDirectory in README
+
 ## 0.7.1
 
 Released 2024-08-15
