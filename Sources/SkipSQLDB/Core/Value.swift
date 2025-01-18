@@ -1,4 +1,11 @@
+// Copyright 2025 Skip
 //
+// This is free software: you can redistribute and/or modify it
+// under the terms of the GNU Lesser General Public License 3.0
+// as published by the Free Software Foundation https://fsf.org
+
+// This code is adapted from the SQLite.swift project, with the following license:
+
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -45,8 +52,12 @@ public protocol Value: Expressible { // extensions cannot have inheritance claus
 
 }
 
+#if !SKIP // SkipSQLDB TODO
 extension Double: Number, Value {
+}
+#endif
 
+extension Double {
     public static let declaredDatatype = "REAL"
 
     public static func fromDatatypeValue(_ datatypeValue: Double) -> Double {
@@ -59,8 +70,12 @@ extension Double: Number, Value {
 
 }
 
+#if !SKIP // SkipSQLDB TODO
 extension Int64: Number, Value {
+}
+#endif
 
+extension Int64 {
     public static let declaredDatatype = "INTEGER"
 
     public static func fromDatatypeValue(_ datatypeValue: Int64) -> Int64 {
@@ -73,8 +88,12 @@ extension Int64: Number, Value {
 
 }
 
+#if !SKIP // SkipSQLDB TODO
 extension String: Binding, Value {
+}
+#endif
 
+extension String {
     public static let declaredDatatype = "TEXT"
 
     public static func fromDatatypeValue(_ datatypeValue: String) -> String {
@@ -87,8 +106,12 @@ extension String: Binding, Value {
 
 }
 
+#if !SKIP // SkipSQLDB TODO
 extension Blob: Binding, Value {
+}
+#endif
 
+extension Blob {
     public static let declaredDatatype = "BLOB"
 
     public static func fromDatatypeValue(_ datatypeValue: Blob) -> Blob {
@@ -103,8 +126,12 @@ extension Blob: Binding, Value {
 
 // MARK: -
 
+#if !SKIP // SkipSQLDB TODO
 extension Bool: Binding, Value {
+}
+#endif
 
+extension Bool {
     public static var declaredDatatype = Int64.declaredDatatype
 
     public static func fromDatatypeValue(_ datatypeValue: Int64) -> Bool {
@@ -117,8 +144,12 @@ extension Bool: Binding, Value {
 
 }
 
+#if !SKIP // SkipSQLDB TODO
 extension Int: Number, Value {
+}
+#endif
 
+extension Int {
     public static var declaredDatatype = Int64.declaredDatatype
 
     public static func fromDatatypeValue(_ datatypeValue: Int64) -> Int {

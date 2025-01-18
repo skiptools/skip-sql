@@ -1,4 +1,11 @@
+// Copyright 2025 Skip
 //
+// This is free software: you can redistribute and/or modify it
+// under the terms of the GNU Lesser General Public License 3.0
+// as published by the Free Software Foundation https://fsf.org
+
+// This code is adapted from the SQLite.swift project, with the following license:
+
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -30,10 +37,12 @@ public struct Blob {
         self.bytes = bytes
     }
 
+    #if !SKIP // SkipSQLDB TODO
     public init(bytes: UnsafeRawPointer, length: Int) {
         let i8bufptr = UnsafeBufferPointer(start: bytes.assumingMemoryBound(to: UInt8.self), count: length)
         self.init(bytes: [UInt8](i8bufptr))
     }
+    #endif
 
     public func toHex() -> String {
         bytes.map {
@@ -51,6 +60,10 @@ extension Blob: CustomStringConvertible {
 extension Blob: Equatable {
 }
 
+
+#if !SKIP // SkipSQLDB TODO
 public func ==(lhs: Blob, rhs: Blob) -> Bool {
     lhs.bytes == rhs.bytes
 }
+#endif
+

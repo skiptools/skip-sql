@@ -1,4 +1,11 @@
+// Copyright 2025 Skip
 //
+// This is free software: you can redistribute and/or modify it
+// under the terms of the GNU Lesser General Public License 3.0
+// as published by the Free Software Foundation https://fsf.org
+
+// This code is adapted from the SQLite.swift project, with the following license:
+
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -24,7 +31,12 @@
 
 import Foundation
 
+#if !SKIP // SkipSQLDB TODO
 extension Data: Value {
+}
+#endif
+
+extension Data {
 
     public static var declaredDatatype: String {
         Blob.declaredDatatype
@@ -42,7 +54,12 @@ extension Data: Value {
 
 }
 
+#if !SKIP // SkipSQLDB TODO
 extension Date: Value {
+}
+#endif
+
+extension Date {
 
     public static var declaredDatatype: String {
         String.declaredDatatype
@@ -69,7 +86,12 @@ public var dateFormatter: DateFormatter = {
     return formatter
 }()
 
+#if !SKIP // SkipSQLDB TODO
 extension UUID: Value {
+}
+#endif
+
+extension UUID {
 
     public static var declaredDatatype: String {
         String.declaredDatatype
@@ -85,7 +107,12 @@ extension UUID: Value {
 
 }
 
+#if !SKIP // SkipSQLDB TODO
 extension URL: Value {
+}
+#endif
+
+extension URL {
 
     public static var declaredDatatype: String {
         String.declaredDatatype

@@ -1,4 +1,11 @@
+// Copyright 2025 Skip
 //
+// This is free software: you can redistribute and/or modify it
+// under the terms of the GNU Lesser General Public License 3.0
+// as published by the Free Software Foundation https://fsf.org
+
+// This code is adapted from the SQLite.swift project, with the following license:
+
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -21,6 +28,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+
+#if false // SkipSQLDB TODO
 
 public extension Connection {
 
@@ -137,6 +146,7 @@ public extension Connection {
 
     // MARK: -
 
+
     fileprivate func createFunction<Z: Value>(_ function: String, _ argumentCount: UInt, _ deterministic: Bool,
                                               _ block: @escaping ([Binding?]) -> Z) throws
     -> ([Expressible]) -> SQLExpression<Z> {
@@ -158,5 +168,6 @@ public extension Connection {
             function.quote().wrap(", ".join(arguments))
         }
     }
-
 }
+
+#endif
