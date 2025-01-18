@@ -89,6 +89,7 @@ class SchemaChangerTests: SQLiteTestCase {
         XCTAssertFalse(columns.contains("age"))
     }
 
+    #if !SKIP // SkipSQLDB TODO
     func test_drop_column_legacy() throws {
         schemaChanger = .init(connection: db, version: .init(major: 3, minor: 24)) // DROP COLUMN introduced in 3.35.0
 
@@ -98,6 +99,7 @@ class SchemaChangerTests: SQLiteTestCase {
         let columns = try schema.columnDefinitions(table: "users").map(\.name)
         XCTAssertFalse(columns.contains("age"))
     }
+    #endif
 
     func test_rename_column() throws {
         try schemaChanger.alter(table: "users") { table in
@@ -109,6 +111,7 @@ class SchemaChangerTests: SQLiteTestCase {
         XCTAssertTrue(columns.contains("age2"))
     }
 
+    #if !SKIP // SkipSQLDB TODO
     func test_rename_column_legacy() throws {
         schemaChanger = .init(connection: db, version: .init(major: 3, minor: 24)) // RENAME COLUMN introduced in 3.25.0
 
@@ -137,6 +140,7 @@ class SchemaChangerTests: SQLiteTestCase {
 
         XCTAssertEqual(try db.pluck(users.select(column))?[column], "foo")
     }
+    #endif
 
     func test_add_column_primary_key_fails() throws {
         let newColumn = ColumnDefinition(name: "new_column",

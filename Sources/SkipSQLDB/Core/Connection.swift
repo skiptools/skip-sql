@@ -32,6 +32,9 @@
 import Foundation
 import Dispatch
 import SkipSQL
+#if SKIP
+import SkipFFI
+#endif
 
 /// A connection to SQLite.
 public final class Connection {
@@ -104,10 +107,12 @@ public final class Connection {
     /// - Returns: A new database connection.
     public init(_ location: Location = .inMemory, readonly: Bool = false) throws {
         let flags = readonly ? SQLITE_OPEN_READONLY : (SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE)
-        try check(SQLite3.sqlite3_open_v2(location.description,
-                                  &_handle,
-                                  flags | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_URI,
-                                  nil))
+        try check(withUnsafeMutablePointer(to: &_handle) { ptr in
+            SQLite3.sqlite3_open_v2(location.description,
+                                    ptr,
+                                    flags | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_URI,
+                                    nil)
+        })
         #if !SKIP // SkipSQLDB TODO
         queue.setSpecific(key: Connection.queueKey, value: queueContext)
         #endif
@@ -128,7 +133,7 @@ public final class Connection {
     ///
     /// - Returns: A new database connection.
     public convenience init(_ filename: String, readonly: Bool = false) throws {
-        try self.init(.uri(filename), readonly: readonly)
+        try self.init(Location.uri(filename), readonly: readonly)
     }
 
     deinit {
@@ -687,12 +692,13 @@ public final class Connection {
         throw error
     }
 
-
+    #if !SKIP // SkipSQLDB TODO
     fileprivate var queue = DispatchQueue(label: "SQLite.Database", attributes: [])
 
     fileprivate static let queueKey = DispatchSpecificKey<Int>()
 
     fileprivate lazy var queueContext: Int = unsafeBitCast(self, to: Int.self)
+    #endif
 
 }
 

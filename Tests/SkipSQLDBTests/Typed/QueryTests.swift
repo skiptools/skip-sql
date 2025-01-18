@@ -99,12 +99,12 @@ class QueryTests: XCTestCase {
     func test_join_withExplicitType_compilesJoinClauseWithType() {
         assertSQL(
             "SELECT * FROM \"users\" LEFT OUTER JOIN \"posts\" ON (\"posts\".\"user_id\" = \"users\".\"id\")",
-            users.join(.leftOuter, posts, on: posts[userId] == users[id])
+            users.join(JoinType.leftOuter, posts, on: posts[userId] == users[id])
         )
 
         assertSQL(
             "SELECT * FROM \"users\" CROSS JOIN \"posts\" ON (\"posts\".\"user_id\" = \"users\".\"id\")",
-            users.join(.cross, posts, on: posts[userId] == users[id])
+            users.join(JoinType.cross, posts, on: posts[userId] == users[id])
         )
     }
 
@@ -406,13 +406,14 @@ class QueryTests: XCTestCase {
     }
     #endif
 
+    struct InsertAndSearchForUUIDTest: Codable {
+        var uuid: UUID
+        var string: String
+    }
+
     func test_insert_and_search_for_UUID() throws {
-        struct Test: Codable {
-            var uuid: UUID
-            var string: String
-        }
         let testUUID = UUID()
-        let testValue = Test(uuid: testUUID, string: "value")
+        let testValue = InsertAndSearchForUUIDTest(uuid: testUUID, string: "value")
         let db = try Connection(.temporary)
         try db.run(table.create { t in
             t.column(uuid)
@@ -425,7 +426,7 @@ class QueryTests: XCTestCase {
 
         let fQuery = table.filter(uuid == testUUID)
         if let result = try db.pluck(fQuery) {
-            let testValueReturned = Test(uuid: result[uuid], string: result[string])
+            let testValueReturned = InsertAndSearchForUUIDTest(uuid: result[uuid], string: result[string])
             XCTAssertEqual(testUUID, testValueReturned.uuid)
         } else {
             XCTFail("Search for uuid failed")
@@ -534,7 +535,7 @@ class QueryTests: XCTestCase {
             sql.index(sql.startIndex, offsetBy: expectedPrefix.count) ..<
             sql.index(sql.endIndex, offsetBy: -expectedSuffix.count)
         ])
-        let decodedJSON = try JSONDecoder().decode(TestCodable.self, from: extractedJSON.data(using: .utf8)!)
+        let decodedJSON = try JSONDecoder().decode(TestCodable.self, from: extractedJSON.data(using: String.Encoding.utf8)!)
         XCTAssertEqual(decodedJSON, value1)
     }
 

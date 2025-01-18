@@ -36,7 +36,11 @@ public protocol ExpressionType: Expressible, CustomStringConvertible { // extens
     var template: String { get }
     var bindings: [Binding?] { get }
 
+    #if !SKIP // SkipSQLDB TODO: Kotlin cannot satisfy a protocol init requirement with a generic constructor
     init(_ template: String, _ bindings: [Binding?])
+    #else
+    init(_ template: String, _ bindings: [Binding?], _ type: UnderlyingType.self)
+    #endif
 
 }
 
@@ -61,10 +65,11 @@ extension ExpressionType {
     }
 }
 
+
+#if !SKIP // SkipSQLDB TODO: Kotlin cannot satisfy a protocol init requirement with a generic constructor
+
 @available(*, deprecated, renamed: "SQLExpression")
 public typealias Expression<T> = SQLExpression<T>
-
-#if !SKIP // SkipSQLDB TODO
 
 /// An `Expression` represents a raw SQL fragment and any associated bindings.
 public struct SQLExpression<Datatype>: ExpressionType {
@@ -74,14 +79,20 @@ public struct SQLExpression<Datatype>: ExpressionType {
     public var template: String
     public var bindings: [Binding?]
 
+    #if !SKIP // SkipSQLDB TODO: Kotlin cannot satisfy a protocol init requirement with a generic constructor
     public init(_ template: String, _ bindings: [Binding?]) {
         self.template = template
         self.bindings = bindings
     }
-
+    #else
+    public init(_ template: String, _ bindings: [Binding?], _ type: T.self) {
+        self.template = template
+        self.bindings = bindings
+    }
+    #endif
 }
-
 #endif
+
 
 public protocol Expressible {
 

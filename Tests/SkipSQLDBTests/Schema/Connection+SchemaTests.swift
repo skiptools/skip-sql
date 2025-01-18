@@ -63,6 +63,7 @@ class ConnectionSchemaTests: SQLiteTestCase {
         XCTAssert(results.isEmpty)
     }
 
+    #if !SKIP // SkipSQLDB TODO
     func test_partial_integrityCheck_table() throws {
         guard db.supports(.partialIntegrityCheck) else { return }
         let results = try db.integrityCheck(table: "users")
@@ -79,4 +80,5 @@ class ConnectionSchemaTests: SQLiteTestCase {
             XCTAssertEqual(message, "no such table: xxx")
         }
     }
+    #endif
 }

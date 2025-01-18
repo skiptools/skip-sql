@@ -44,11 +44,13 @@ public struct Blob {
     }
     #endif
 
+    #if !SKIP // SkipSQLDB TODO
     public func toHex() -> String {
         bytes.map {
            ($0 < 16 ? "0" : "") + String($0, radix: 16, uppercase: false)
         }.joined(separator: "")
     }
+    #endif
 }
 
 extension Blob: CustomStringConvertible {

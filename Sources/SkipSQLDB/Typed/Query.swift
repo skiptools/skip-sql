@@ -516,7 +516,7 @@ extension QueryType {
         " ".join([
             SQLExpression<Void>(literal:
                             clauses.select.distinct ? "SELECT DISTINCT" : "SELECT"),
-           ", ".join(clauses.select.columns),
+           ", ".join(clauses.select.selectColumns),
            SQLExpression<Void>(literal: "FROM"),
            tableName(alias: true)
        ])
@@ -1042,7 +1042,7 @@ extension Connection {
 
     private func columnNamesForQuery(_ query: QueryType) throws -> [String: Int] {
         var (columnNames, idx) = ([String: Int](), 0)
-        column: for each in query.clauses.select.columns {
+        column: for each in query.clauses.select.selectColumns {
             var names = each.expression.template.split { $0 == "." }.map(String.init)
             let column = names.removeLast()
             let namespace = names.joined(separator: ".")
@@ -1285,7 +1285,7 @@ public enum OnConflict: String {
 
 public struct QueryClauses {
 
-    var select = (distinct: false, columns: [SQLExpression<Void>(literal: "*") as Expressible])
+    var select = (distinct: false, selectColumns: [SQLExpression<Void>(literal: "*") as Expressible])
 
     var from: (name: String, alias: String?, database: String?)
 

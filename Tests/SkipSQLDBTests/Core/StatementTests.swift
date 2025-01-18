@@ -38,6 +38,7 @@ class StatementTests: SQLiteTestCase {
         try createUsersTable()
     }
 
+    #if !SKIP // SkipSQLDB TODO
     func test_cursor_to_blob() throws {
         try insertUsers("alice")
         let statement = try db.prepare("SELECT email FROM users")
@@ -54,6 +55,7 @@ class StatementTests: SQLiteTestCase {
         let blobValue = try db.scalar(blobs.select(blobColumn).limit(1, offset: 0))
         XCTAssertEqual([], blobValue.bytes)
     }
+    #endif
 
     func test_prepareRowIterator() throws {
         let names = ["a", "b", "c"]
