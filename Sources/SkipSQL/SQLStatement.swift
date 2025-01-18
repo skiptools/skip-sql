@@ -4,7 +4,9 @@
 import SkipFFI
 #endif
 import Foundation
+#if canImport(OSLog)
 import OSLog
+#endif
 
 /// A database prepared statement.
 public final class SQLStatement {

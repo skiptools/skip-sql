@@ -48,6 +48,10 @@ final class SQLiteCLibrary : SQLiteLibrary {
         SQLite3.sqlite3_errmsg(db)
     }
 
+    func sqlite3_extended_errcode(_ db: OpaquePointer) -> Int32 {
+        SQLite3.sqlite3_extended_errcode(db)
+    }
+
     func sqlite3_last_insert_rowid(_ db: OpaquePointer) -> Int64 {
         SQLite3.sqlite3_last_insert_rowid(db)
     }
@@ -62,6 +66,10 @@ final class SQLiteCLibrary : SQLiteLibrary {
 
     func sqlite3_interrupt(_ db: OpaquePointer) {
         SQLite3.sqlite3_interrupt(db)
+    }
+
+    func sqlite3_db_filename(_ db: OpaquePointer, _ zDbName: sqlite3_cstring_ptr?) -> sqlite3_cstring_ptr? {
+        SQLite3.sqlite3_db_filename(db, zDbName)
     }
 
     func sqlite3_exec(_ db: OpaquePointer, _ sql: String, _ callback: sqlite3_callback?, _ pArg: UnsafeMutableRawPointer?, _ errmsg: sqlite_error_ptr?) -> Int32 {

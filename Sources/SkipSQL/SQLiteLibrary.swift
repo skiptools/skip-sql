@@ -34,20 +34,22 @@ public protocol SQLiteLibrary : NativeLibrary {
     // Database Connection API
     func sqlite3_open(_ filename: String, _ ppDb: sqlite3_openarg?) -> Int32
     func sqlite3_open_v2(_ filename: String, _ ppDb: sqlite3_openarg?, _ flags: Int32, _ vfs: String?) -> Int32
-    func sqlite3_close(_ db: OpaquePointer) -> Int32
+    @discardableResult func sqlite3_close(_ db: OpaquePointer) -> Int32
     func sqlite3_errcode(_ db: OpaquePointer) -> Int32
     func sqlite3_errmsg(_ db: OpaquePointer) -> sqlite3_cstring_ptr?
+    func sqlite3_extended_errcode(_ db: OpaquePointer) -> Int32
     func sqlite3_last_insert_rowid(_ db: OpaquePointer) -> Int64
     func sqlite3_total_changes(_ db: OpaquePointer) -> Int32
     func sqlite3_changes(_ db: OpaquePointer) -> Int32
     func sqlite3_interrupt(_ db: OpaquePointer)
+    func sqlite3_db_filename(_ db: OpaquePointer, _ zDbName: sqlite3_cstring_ptr?) -> sqlite3_cstring_ptr?
 
     func sqlite3_exec(_ db: OpaquePointer, _ sql: String, _ callback: sqlite3_callback?, _ pArg: UnsafeMutableRawPointer?, _ errmsg: sqlite_error_ptr?) -> Int32
     func sqlite3_prepare_v2(_ db: OpaquePointer, _ sql: String, _ nBytes: Int32, _ ppStmt: sqlite3_openarg, _ tail: sqlite_tail_ptr?) -> Int32
 
     // Statement API
     func sqlite3_step(_ stmt: OpaquePointer) -> Int32
-    func sqlite3_finalize(_ stmt: OpaquePointer) -> Int32
+    @discardableResult func sqlite3_finalize(_ stmt: OpaquePointer) -> Int32
     func sqlite3_reset(_ stmt: OpaquePointer) -> Int32
     func sqlite3_column_count(_ stmt: OpaquePointer) -> Int32
     func sqlite3_bind_parameter_count(_ stmnt: OpaquePointer) -> Int32
@@ -67,13 +69,13 @@ public protocol SQLiteLibrary : NativeLibrary {
     func sqlite3_db_handle(_ stmt: OpaquePointer) -> OpaquePointer
 
     // Parameter Binding
-    func sqlite3_bind_null(_ stmt: OpaquePointer, _ paramIndex: Int32) -> Int32
-    func sqlite3_bind_int(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: Int32) -> Int32
-    func sqlite3_bind_int64(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: Int64) -> Int32
-    func sqlite3_bind_double(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: Double) -> Int32
-    func sqlite3_bind_text(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: String, _ length: Int32, _ destructor: sqlite3_destructor_type) -> Int32
-    func sqlite3_bind_blob(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: UnsafeRawPointer?, _ length: Int32, _ destructor: sqlite3_destructor_type) -> Int32
-    func sqlite3_bind_zeroblob(_ stmt: OpaquePointer, _ paramIndex: Int32, _ length: Int32) -> Int32
+    @discardableResult func sqlite3_bind_null(_ stmt: OpaquePointer, _ paramIndex: Int32) -> Int32
+    @discardableResult func sqlite3_bind_int(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: Int32) -> Int32
+    @discardableResult func sqlite3_bind_int64(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: Int64) -> Int32
+    @discardableResult func sqlite3_bind_double(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: Double) -> Int32
+    @discardableResult func sqlite3_bind_text(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: String, _ length: Int32, _ destructor: sqlite3_destructor_type) -> Int32
+    @discardableResult func sqlite3_bind_blob(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: UnsafeRawPointer?, _ length: Int32, _ destructor: sqlite3_destructor_type) -> Int32
+    @discardableResult func sqlite3_bind_zeroblob(_ stmt: OpaquePointer, _ paramIndex: Int32, _ length: Int32) -> Int32
 
 
     // Column Value API
@@ -93,10 +95,10 @@ public protocol SQLiteLibrary : NativeLibrary {
     func sqlite3_backup_pagecount(_ backup: OpaquePointer) -> Int32
 
     // Other Functions
-    func sqlite3_initialize() -> Int32
-    func sqlite3_shutdown() -> Int32
+    @discardableResult func sqlite3_initialize() -> Int32
+    @discardableResult func sqlite3_shutdown() -> Int32
     //func sqlite3_config(option: Int32, values: Object...) -> Int32
-    func sqlite3_extended_result_codes(_ db: OpaquePointer, _ on: Int32) -> Int32
+    @discardableResult func sqlite3_extended_result_codes(_ db: OpaquePointer, _ on: Int32) -> Int32
 
     // Locks
     func sqlite3_db_mutex(_ db: OpaquePointer?) -> OpaquePointer?
