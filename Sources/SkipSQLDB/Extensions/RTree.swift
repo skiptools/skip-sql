@@ -1,4 +1,11 @@
+// Copyright 2025 Skip
 //
+// This is free software: you can redistribute and/or modify it
+// under the terms of the GNU Lesser General Public License 3.0
+// as published by the Free Software Foundation https://fsf.org
+
+// This code is adapted from the SQLite.swift project, with the following license:
+
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -22,6 +29,8 @@
 // THE SOFTWARE.
 //
 
+#if !SKIP // SkipSQLDB TODO
+
 extension Module {
     public static func RTree<T: Value, U: Value>(_ primaryKey: SQLExpression<T>,
                                                  _ pairs: (SQLExpression<U>, SQLExpression<U>)...)
@@ -35,3 +44,5 @@ extension Module {
         return Module(name: "rtree", arguments: arguments)
     }
 }
+
+#endif

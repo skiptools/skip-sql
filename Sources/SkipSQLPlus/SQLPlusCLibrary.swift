@@ -73,107 +73,107 @@ internal final class SQLPlusCLibrary : SQLiteLibrary {
         SQLExt.sqlite3_prepare_v2(db, sql, nBytes, ppStmt, tail)
     }
 
-    func sqlite3_step(_ stmt: OpaquePointer) -> Int32 {
+    func sqlite3_step(_ stmt: OpaquePointer?) -> Int32 {
         SQLExt.sqlite3_step(stmt)
     }
 
-    func sqlite3_finalize(_ stmt: OpaquePointer) -> Int32 {
+    func sqlite3_finalize(_ stmt: OpaquePointer?) -> Int32 {
         SQLExt.sqlite3_finalize(stmt)
     }
 
-    func sqlite3_reset(_ stmt: OpaquePointer) -> Int32 {
+    func sqlite3_reset(_ stmt: OpaquePointer?) -> Int32 {
         SQLExt.sqlite3_reset(stmt)
     }
 
-    func sqlite3_column_count(_ stmt: OpaquePointer) -> Int32 {
+    func sqlite3_column_count(_ stmt: OpaquePointer?) -> Int32 {
         SQLExt.sqlite3_column_count(stmt)
     }
 
-    func sqlite3_bind_parameter_count(_ stmnt: OpaquePointer) -> Int32 {
-        SQLExt.sqlite3_bind_parameter_count(stmnt)
+    func sqlite3_bind_parameter_count(_ stmt: OpaquePointer?) -> Int32 {
+        SQLExt.sqlite3_bind_parameter_count(stmt)
     }
 
-    func sqlite3_bind_parameter_name(_ stmnt: OpaquePointer, _ columnIndex: Int32) -> sqlite3_cstring_ptr? {
-        SQLExt.sqlite3_bind_parameter_name(stmnt, columnIndex)
+    func sqlite3_bind_parameter_name(_ stmt: OpaquePointer?, _ columnIndex: Int32) -> sqlite3_cstring_ptr? {
+        SQLExt.sqlite3_bind_parameter_name(stmt, columnIndex)
     }
 
-    func sqlite3_bind_parameter_index(_ stmnt: OpaquePointer, _ name: String) -> Int32 {
-        SQLExt.sqlite3_bind_parameter_index(stmnt, name)
+    func sqlite3_bind_parameter_index(_ stmt: OpaquePointer?, _ name: String) -> Int32 {
+        SQLExt.sqlite3_bind_parameter_index(stmt, name)
     }
 
-    func sqlite3_clear_bindings(_ stmnt: OpaquePointer) -> Int32 {
-        SQLExt.sqlite3_clear_bindings(stmnt)
+    func sqlite3_clear_bindings(_ stmt: OpaquePointer?) -> Int32 {
+        SQLExt.sqlite3_clear_bindings(stmt)
     }
 
-    func sqlite3_column_name(_ stmt: OpaquePointer!, _ columnIndex: Int32) -> sqlite3_cstring_ptr? {
+    func sqlite3_column_name(_ stmt: OpaquePointer?, _ columnIndex: Int32) -> sqlite3_cstring_ptr? {
         SQLExt.sqlite3_column_name(stmt!, columnIndex)
     }
 
-    func sqlite3_column_decltype(_ stmt: OpaquePointer, _ columnIndex: Int32) -> sqlite3_cstring_ptr? {
+    func sqlite3_column_decltype(_ stmt: OpaquePointer?, _ columnIndex: Int32) -> sqlite3_cstring_ptr? {
         SQLExt.sqlite3_column_decltype(stmt, columnIndex)
     }
 
-    func sqlite3_sql(_ stmt: OpaquePointer) -> sqlite3_cstring_ptr? {
+    func sqlite3_sql(_ stmt: OpaquePointer?) -> sqlite3_cstring_ptr? {
         SQLExt.sqlite3_sql(stmt)
     }
 
-    func sqlite3_db_handle(_ stmt: OpaquePointer) -> OpaquePointer {
+    func sqlite3_db_handle(_ stmt: OpaquePointer?) -> OpaquePointer {
         SQLExt.sqlite3_db_handle(stmt)
     }
 
-    func sqlite3_bind_null(_ stmt: OpaquePointer, _ paramIndex: Int32) -> Int32 {
+    func sqlite3_bind_null(_ stmt: OpaquePointer?, _ paramIndex: Int32) -> Int32 {
         SQLExt.sqlite3_bind_null(stmt, paramIndex)
     }
 
-    func sqlite3_bind_int(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: Int32) -> Int32 {
+    func sqlite3_bind_int(_ stmt: OpaquePointer?, _ paramIndex: Int32, _ value: Int32) -> Int32 {
         SQLExt.sqlite3_bind_int(stmt, paramIndex, value)
     }
 
-    func sqlite3_bind_int64(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: Int64) -> Int32 {
+    func sqlite3_bind_int64(_ stmt: OpaquePointer?, _ paramIndex: Int32, _ value: Int64) -> Int32 {
         SQLExt.sqlite3_bind_int64(stmt, paramIndex, value)
     }
 
-    func sqlite3_bind_double(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: Double) -> Int32 {
+    func sqlite3_bind_double(_ stmt: OpaquePointer?, _ paramIndex: Int32, _ value: Double) -> Int32 {
         SQLExt.sqlite3_bind_double(stmt, paramIndex, value)
     }
 
-    func sqlite3_bind_text(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: String, _ length: Int32, _ destructor: sqlite3_destructor_type) -> Int32 {
+    func sqlite3_bind_text(_ stmt: OpaquePointer?, _ paramIndex: Int32, _ value: String, _ length: Int32, _ destructor: sqlite3_destructor_type) -> Int32 {
         SQLExt.sqlite3_bind_text(stmt, paramIndex, value, length, destructor)
     }
 
-    func sqlite3_bind_blob(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: UnsafeRawPointer?, _ length: Int32, _ destructor: sqlite3_destructor_type) -> Int32 {
+    func sqlite3_bind_blob(_ stmt: OpaquePointer?, _ paramIndex: Int32, _ value: UnsafeRawPointer?, _ length: Int32, _ destructor: sqlite3_destructor_type) -> Int32 {
         SQLExt.sqlite3_bind_blob(stmt, paramIndex, value, length, destructor)
     }
 
-    func sqlite3_bind_zeroblob(_ stmt: OpaquePointer, _ paramIndex: Int32, _ length: Int32) -> Int32 {
+    func sqlite3_bind_zeroblob(_ stmt: OpaquePointer?, _ paramIndex: Int32, _ length: Int32) -> Int32 {
         SQLExt.sqlite3_bind_zeroblob(stmt, paramIndex, length)
     }
 
-    func sqlite3_column_type(_ stmt: OpaquePointer, _ columnIndex: Int32) -> Int32 {
+    func sqlite3_column_type(_ stmt: OpaquePointer?, _ columnIndex: Int32) -> Int32 {
         SQLExt.sqlite3_column_type(stmt, columnIndex)
     }
 
-    func sqlite3_column_int(_ stmt: OpaquePointer, _ columnIndex: Int32) -> Int32 {
+    func sqlite3_column_int(_ stmt: OpaquePointer?, _ columnIndex: Int32) -> Int32 {
         SQLExt.sqlite3_column_int(stmt, columnIndex)
     }
 
-    func sqlite3_column_int64(_ stmt: OpaquePointer, _ columnIndex: Int32) -> Int64 {
+    func sqlite3_column_int64(_ stmt: OpaquePointer?, _ columnIndex: Int32) -> Int64 {
         SQLExt.sqlite3_column_int64(stmt, columnIndex)
     }
 
-    func sqlite3_column_double(_ stmt: OpaquePointer, _ columnIndex: Int32) -> Double {
+    func sqlite3_column_double(_ stmt: OpaquePointer?, _ columnIndex: Int32) -> Double {
         SQLExt.sqlite3_column_double(stmt, columnIndex)
     }
 
-    func sqlite3_column_text(_ stmt: OpaquePointer, _ columnIndex: Int32) -> sqlite3_uint8_ptr? {
+    func sqlite3_column_text(_ stmt: OpaquePointer?, _ columnIndex: Int32) -> sqlite3_uint8_ptr? {
         SQLExt.sqlite3_column_text(stmt, columnIndex)
     }
 
-    func sqlite3_column_blob(_ stmt: OpaquePointer, _ columnIndex: Int32) -> UnsafeRawPointer? {
+    func sqlite3_column_blob(_ stmt: OpaquePointer?, _ columnIndex: Int32) -> UnsafeRawPointer? {
         SQLExt.sqlite3_column_blob(stmt, columnIndex)
     }
 
-    func sqlite3_column_bytes(_ stmt: OpaquePointer, _ columnIndex: Int32) -> Int32 {
+    func sqlite3_column_bytes(_ stmt: OpaquePointer?, _ columnIndex: Int32) -> Int32 {
         SQLExt.sqlite3_column_bytes(stmt, columnIndex)
     }
 

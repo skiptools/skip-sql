@@ -1,3 +1,33 @@
+// Copyright 2025 Skip
+//
+// This is free software: you can redistribute and/or modify it
+// under the terms of the GNU Lesser General Public License 3.0
+// as published by the Free Software Foundation https://fsf.org
+
+// This code is adapted from the SQLite.swift project, with the following license:
+
+// SQLite.swift
+// https://github.com/stephencelis/SQLite.swift
+// Copyright © 2014-2015 Stephen Celis.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
 import Foundation
 
 /*
@@ -52,10 +82,18 @@ public class SchemaChanger: CustomStringConvertible {
             switch self {
             case .addColumn(let definition):
                 return "ALTER TABLE \(table.quote()) ADD COLUMN \(definition.toSQL())"
-            case .renameColumn(let from, let to) where SQLiteFeature.renameColumn.isSupported(by: version):
-                return "ALTER TABLE \(table.quote()) RENAME COLUMN \(from.quote()) TO \(to.quote())"
-            case .dropColumn(let column) where SQLiteFeature.dropColumn.isSupported(by: version):
-                return "ALTER TABLE \(table.quote()) DROP COLUMN \(column.quote())"
+            case .renameColumn(let from, let to):
+                if SQLiteFeature.renameColumn.isSupported(by: version) {
+                    return "ALTER TABLE \(table.quote()) RENAME COLUMN \(from.quote()) TO \(to.quote())"
+                } else {
+                    return nil
+                }
+            case .dropColumn(let column):
+                if SQLiteFeature.dropColumn.isSupported(by: version) {
+                    return "ALTER TABLE \(table.quote()) DROP COLUMN \(column.quote())"
+                } else {
+                    return nil
+                }
             default: return nil
             }
         }
@@ -261,8 +299,9 @@ extension IndexDefinition {
 
 extension TableDefinition {
     func apply(_ operation: SchemaChanger.Operation?) -> TableDefinition {
+        guard let operation else { return self }
+
         switch operation {
-        case .none: return self
         case .addColumn: fatalError("Use 'ALTER TABLE ADD COLUMN (...)'")
         case .dropColumn(let column):
             return TableDefinition(name: name,

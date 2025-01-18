@@ -1,4 +1,11 @@
+// Copyright 2025 Skip
 //
+// This is free software: you can redistribute and/or modify it
+// under the terms of the GNU Lesser General Public License 3.0
+// as published by the Free Software Foundation https://fsf.org
+
+// This code is adapted from the SQLite.swift project, with the following license:
+
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -22,15 +29,7 @@
 // THE SOFTWARE.
 //
 
-#if SQLITE_SWIFT_STANDALONE
-import sqlite3
-#elseif SQLITE_SWIFT_SQLCIPHER
-import SQLCipher
-#elseif os(Linux) || os(Windows) || os(Android)
-import CSQLite
-#else
-import SQLite3
-#endif
+import SkipSQL
 
 /// A single SQL statement.
 public final class Statement {
@@ -41,17 +40,19 @@ public final class Statement {
 
     init(_ connection: Connection, _ SQL: String) throws {
         self.connection = connection
-        try connection.check(sqlite3_prepare_v2(connection.handle, SQL, -1, &handle, nil))
+        try connection.check(SQLite3.sqlite3_prepare_v2(connection.handle, SQL, -1, &handle, nil))
     }
 
     deinit {
-        sqlite3_finalize(handle)
+        if let handle {
+            SQLite3.sqlite3_finalize(handle)
+        }
     }
 
-    public lazy var columnCount: Int = Int(sqlite3_column_count(handle))
+    public lazy var columnCount: Int = Int(SQLite3.sqlite3_column_count(handle))
 
     public lazy var columnNames: [String] = (0..<Int32(columnCount)).map {
-        String(cString: sqlite3_column_name(handle, $0))
+        String(cString: SQLite3.sqlite3_column_name(handle, $0)!)
     }
 
     /// A cursor pointing to the current row.
@@ -74,8 +75,8 @@ public final class Statement {
     public func bind(_ values: [Binding?]) -> Statement {
         if values.isEmpty { return self }
         reset()
-        guard values.count == Int(sqlite3_bind_parameter_count(handle)) else {
-            fatalError("\(sqlite3_bind_parameter_count(handle)) values expected, \(values.count) passed")
+        guard values.count == Int(SQLite3.sqlite3_bind_parameter_count(handle)) else {
+            fatalError("\(SQLite3.sqlite3_bind_parameter_count(handle)) values expected, \(values.count) passed")
         }
         for idx in 1...values.count { bind(values[idx - 1], atIndex: idx) }
         return self
@@ -90,7 +91,7 @@ public final class Statement {
     public func bind(_ values: [String: Binding?]) -> Statement {
         reset()
         for (name, value) in values {
-            let idx = sqlite3_bind_parameter_index(handle, name)
+            let idx = SQLite3.sqlite3_bind_parameter_index(handle, name)
             guard idx > 0 else {
                 fatalError("parameter not found: \(name)")
             }
@@ -100,24 +101,28 @@ public final class Statement {
     }
 
     fileprivate func bind(_ value: Binding?, atIndex idx: Int) {
+        guard let value else {
+            SQLite3.sqlite3_bind_null(handle, Int32(idx))
+            return
+        }
         switch value {
-        case .none:
-            sqlite3_bind_null(handle, Int32(idx))
-        case let value as Blob where value.bytes.count == 0:
-            sqlite3_bind_zeroblob(handle, Int32(idx), 0)
         case let value as Blob:
-            sqlite3_bind_blob(handle, Int32(idx), value.bytes, Int32(value.bytes.count), SQLITE_TRANSIENT)
+            if value.bytes.count == 0 {
+                SQLite3.sqlite3_bind_zeroblob(handle, Int32(idx), 0)
+            } else {
+                SQLite3.sqlite3_bind_blob(handle, Int32(idx), value.bytes, Int32(value.bytes.count), SQLITE_TRANSIENT)
+            }
         case let value as Double:
-            sqlite3_bind_double(handle, Int32(idx), value)
+            SQLite3.sqlite3_bind_double(handle, Int32(idx), value)
         case let value as Int64:
-            sqlite3_bind_int64(handle, Int32(idx), value)
+            SQLite3.sqlite3_bind_int64(handle, Int32(idx), value)
         case let value as String:
-            sqlite3_bind_text(handle, Int32(idx), value, -1, SQLITE_TRANSIENT)
+            SQLite3.sqlite3_bind_text(handle, Int32(idx), value, -1, SQLITE_TRANSIENT)
         case let value as Int:
             self.bind(value.datatypeValue, atIndex: idx)
         case let value as Bool:
             self.bind(value.datatypeValue, atIndex: idx)
-        case .some(let value):
+        default:
             fatalError("tried to bind unexpected value \(value)")
         }
     }
@@ -185,7 +190,7 @@ public final class Statement {
     }
 
     public func step() throws -> Bool {
-        try connection.sync { try connection.check(sqlite3_step(handle)) == SQLITE_ROW }
+        try connection.sync { try connection.check(SQLite3.sqlite3_step(handle)) == SQLITE_ROW }
     }
 
     public func reset() {
@@ -193,8 +198,8 @@ public final class Statement {
     }
 
     fileprivate func reset(clearBindings shouldClear: Bool) {
-        sqlite3_reset(handle)
-        if shouldClear { sqlite3_clear_bindings(handle) }
+        SQLite3.sqlite3_reset(handle)
+        if shouldClear { SQLite3.sqlite3_clear_bindings(handle) }
     }
 
 }
@@ -220,12 +225,14 @@ extension FailableIterator {
 }
 
 extension Array {
+    #if !SKIP // SkipSQLDB TODO
     public init<I: FailableIterator>(_ failableIterator: I) throws where I.Element == Element {
         self.init()
         while let row = try failableIterator.failableNext() {
             append(row)
         }
     }
+    #endif
 }
 
 extension Statement: FailableIterator {
@@ -253,7 +260,7 @@ extension Statement {
 extension Statement: CustomStringConvertible {
 
     public var description: String {
-        String(cString: sqlite3_sql(handle))
+        String(cString: SQLite3.sqlite3_sql(handle)!)
     }
 
 }
@@ -270,20 +277,24 @@ public struct Cursor {
     }
 
     public subscript(idx: Int) -> Double {
-        sqlite3_column_double(handle, Int32(idx))
+        SQLite3.sqlite3_column_double(handle, Int32(idx))
     }
 
     public subscript(idx: Int) -> Int64 {
-        sqlite3_column_int64(handle, Int32(idx))
+        SQLite3.sqlite3_column_int64(handle, Int32(idx))
     }
 
+    #if !SKIP // SkipSQLDB TODO
     public subscript(idx: Int) -> String {
-        String(cString: UnsafePointer(sqlite3_column_text(handle, Int32(idx))))
+        String(cString: UnsafePointer(SQLite3.sqlite3_column_text(handle, Int32(idx))!))
     }
+    #endif
+
+    #if !SKIP // SkipSQLDB TODO
 
     public subscript(idx: Int) -> Blob {
-        if let pointer = sqlite3_column_blob(handle, Int32(idx)) {
-            let length = Int(sqlite3_column_bytes(handle, Int32(idx)))
+        if let pointer = SQLite3.sqlite3_column_blob(handle, Int32(idx)) {
+            let length = Int(SQLite3.sqlite3_column_bytes(handle, Int32(idx)))
             return Blob(bytes: pointer, length: length)
         } else {
             // The return value from sqlite3_column_blob() for a zero-length BLOB is a NULL pointer.
@@ -302,13 +313,16 @@ public struct Cursor {
         Int.fromDatatypeValue(self[idx])
     }
 
+    #endif
 }
+
+#if !SKIP // SkipSQLDB TODO
 
 /// Cursors provide direct access to a statement’s current row.
 extension Cursor: Sequence {
 
     public subscript(idx: Int) -> Binding? {
-        switch sqlite3_column_type(handle, Int32(idx)) {
+        switch SQLite3.sqlite3_column_type(handle, Int32(idx)) {
         case SQLITE_BLOB:
             return self[idx] as Blob
         case SQLITE_FLOAT:
@@ -337,3 +351,4 @@ extension Cursor: Sequence {
     }
 
 }
+#endif

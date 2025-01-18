@@ -1,4 +1,11 @@
+// Copyright 2025 Skip
 //
+// This is free software: you can redistribute and/or modify it
+// under the terms of the GNU Lesser General Public License 3.0
+// as published by the Free Software Foundation https://fsf.org
+
+// This code is adapted from the SQLite.swift project, with the following license:
+
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -21,6 +28,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+
+#if !SKIP // SkipSQLDB TODO
 
 precedencegroup ColumnAssignment {
     associativity: left
@@ -280,3 +289,6 @@ public postfix func --<V: Value>(column: SQLExpression<V>) -> Setter where V.Dat
 public postfix func --<V: Value>(column: SQLExpression<V?>) -> Setter where V.Datatype == Int64 {
     SQLExpression<Int>(column) -= 1
 }
+
+#endif
+

@@ -1,4 +1,11 @@
+// Copyright 2025 Skip
 //
+// This is free software: you can redistribute and/or modify it
+// under the terms of the GNU Lesser General Public License 3.0
+// as published by the Free Software Foundation https://fsf.org
+
+// This code is adapted from the SQLite.swift project, with the following license:
+
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -24,15 +31,7 @@
 
 import Foundation
 import Dispatch
-#if SQLITE_SWIFT_STANDALONE
-import sqlite3
-#elseif SQLITE_SWIFT_SQLCIPHER
-import SQLCipher
-#elseif os(Linux) || os(Windows) || os(Android)
-import CSQLite
-#else
-import SQLite3
-#endif
+import SkipSQL
 
 /// A connection to SQLite.
 public final class Connection {
@@ -105,11 +104,13 @@ public final class Connection {
     /// - Returns: A new database connection.
     public init(_ location: Location = .inMemory, readonly: Bool = false) throws {
         let flags = readonly ? SQLITE_OPEN_READONLY : (SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE)
-        try check(sqlite3_open_v2(location.description,
+        try check(SQLite3.sqlite3_open_v2(location.description,
                                   &_handle,
                                   flags | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_URI,
                                   nil))
+        #if !SKIP // SkipSQLDB TODO
         queue.setSpecific(key: Connection.queueKey, value: queueContext)
+        #endif
     }
 
     /// Initializes a new connection to a database.
@@ -131,35 +132,37 @@ public final class Connection {
     }
 
     deinit {
-        sqlite3_close(handle)
+        SQLite3.sqlite3_close(handle)
     }
 
     // MARK: -
 
+    #if false // SkipSQLDB TODO
     /// Whether or not the database was opened in a read-only state.
-    public var readonly: Bool { sqlite3_db_readonly(handle, nil) == 1 }
+    public var readonly: Bool { SQLite3.sqlite3_db_readonly(handle, nil) == 1 }
+    #endif
 
     /// The last rowid inserted into the database via this connection.
     public var lastInsertRowid: Int64 {
-        sqlite3_last_insert_rowid(handle)
+        SQLite3.sqlite3_last_insert_rowid(handle)
     }
 
     /// The last number of changes (inserts, updates, or deletes) made to the
     /// database via this connection.
     public var changes: Int {
-        Int(sqlite3_changes(handle))
+        Int(SQLite3.sqlite3_changes(handle))
     }
 
     /// The total number of changes (inserts, updates, or deletes) made to the
     /// database via this connection.
     public var totalChanges: Int {
-        Int(sqlite3_total_changes(handle))
+        Int(SQLite3.sqlite3_total_changes(handle))
     }
 
     /// Whether or not the database will return extended error codes when errors are handled.
     public var usesExtendedErrorCodes: Bool = false {
         didSet {
-            sqlite3_extended_result_codes(handle, usesExtendedErrorCodes ? 1 : 0)
+            SQLite3.sqlite3_extended_result_codes(handle, usesExtendedErrorCodes ? 1 : 0)
         }
     }
 
@@ -172,7 +175,7 @@ public final class Connection {
     ///
     /// - Throws: `Result.Error` if query execution fails.
     public func execute(_ SQL: String) throws {
-        _ = try sync { try check(sqlite3_exec(handle, SQL, nil, nil, nil)) }
+        _ = try sync { try check(SQLite3.sqlite3_exec(handle, SQL, nil, nil, nil)) }
     }
 
     // MARK: - Prepare
@@ -394,16 +397,18 @@ public final class Connection {
 
     /// Interrupts any long-running queries.
     public func interrupt() {
-        sqlite3_interrupt(handle)
+        SQLite3.sqlite3_interrupt(handle)
     }
 
     // MARK: - Handlers
+
+    #if false // SkipSQLDB TODO
 
     /// The number of seconds a connection will attempt to retry a statement
     /// after encountering a busy signal (lock).
     public var busyTimeout: Double = 0 {
         didSet {
-            sqlite3_busy_timeout(handle, Int32(busyTimeout * 1_000))
+            SQLite3.sqlite3_busy_timeout(handle, Int32(busyTimeout * 1_000))
         }
     }
 
@@ -415,13 +420,13 @@ public final class Connection {
     ///   try again. If it returns `false`, no further attempts will be made.
     public func busyHandler(_ callback: ((_ tries: Int) -> Bool)?) {
         guard let callback else {
-            sqlite3_busy_handler(handle, nil, nil)
+            SQLite3.sqlite3_busy_handler(handle, nil, nil)
             busyHandler = nil
             return
         }
 
         let box: BusyHandler = { callback(Int($0)) ? 1 : 0 }
-        sqlite3_busy_handler(handle, { callback, tries in
+        SQLite3.sqlite3_busy_handler(handle, { callback, tries in
             unsafeBitCast(callback, to: BusyHandler.self)(tries)
         }, unsafeBitCast(box, to: UnsafeMutableRawPointer.self))
         busyHandler = box
@@ -444,7 +449,7 @@ public final class Connection {
     fileprivate func trace_v2(_ callback: ((String) -> Void)?) {
         guard let callback else {
             // If the X callback is NULL or if the M mask is zero, then tracing is disabled.
-            sqlite3_trace_v2(handle, 0 /* mask */, nil /* xCallback */, nil /* pCtx */)
+            SQLite3.sqlite3_trace_v2(handle, 0 /* mask */, nil /* xCallback */, nil /* pCtx */)
             trace = nil
             return
         }
@@ -452,7 +457,7 @@ public final class Connection {
         let box: Trace = { (pointer: UnsafeRawPointer) in
             callback(String(cString: pointer.assumingMemoryBound(to: UInt8.self)))
         }
-        sqlite3_trace_v2(handle, UInt32(SQLITE_TRACE_STMT) /* mask */, {
+        SQLite3.sqlite3_trace_v2(handle, UInt32(SQLITE_TRACE_STMT) /* mask */, {
                  // A trace callback is invoked with four arguments: callback(T,C,P,X).
                  // The T argument is one of the SQLITE_TRACE constants to indicate why the
                  // callback was invoked. The C argument is a copy of the context pointer.
@@ -481,7 +486,7 @@ public final class Connection {
     ///   rowid.
     public func updateHook(_ callback: ((_ operation: Operation, _ db: String, _ table: String, _ rowid: Int64) -> Void)?) {
         guard let callback else {
-            sqlite3_update_hook(handle, nil, nil)
+            SQLite3.sqlite3_update_hook(handle, nil, nil)
             updateHook = nil
             return
         }
@@ -494,7 +499,7 @@ public final class Connection {
                 $3
             )
         }
-        sqlite3_update_hook(handle, { callback, operation, db, table, rowid in
+        SQLite3.sqlite3_update_hook(handle, { callback, operation, db, table, rowid in
             unsafeBitCast(callback, to: UpdateHook.self)(operation, db!, table!, rowid)
         }, unsafeBitCast(box, to: UnsafeMutableRawPointer.self))
         updateHook = box
@@ -509,7 +514,7 @@ public final class Connection {
     ///   back.
     public func commitHook(_ callback: (() throws -> Void)?) {
         guard let callback else {
-            sqlite3_commit_hook(handle, nil, nil)
+            SQLite3.sqlite3_commit_hook(handle, nil, nil)
             commitHook = nil
             return
         }
@@ -522,7 +527,7 @@ public final class Connection {
             }
             return 0
         }
-        sqlite3_commit_hook(handle, { callback in
+        SQLite3.sqlite3_commit_hook(handle, { callback in
             unsafeBitCast(callback, to: CommitHook.self)()
         }, unsafeBitCast(box, to: UnsafeMutableRawPointer.self))
         commitHook = box
@@ -536,13 +541,13 @@ public final class Connection {
     ///   back.
     public func rollbackHook(_ callback: (() -> Void)?) {
         guard let callback else {
-            sqlite3_rollback_hook(handle, nil, nil)
+            SQLite3.sqlite3_rollback_hook(handle, nil, nil)
             rollbackHook = nil
             return
         }
 
         let box: RollbackHook = { callback() }
-        sqlite3_rollback_hook(handle, { callback in
+        SQLite3.sqlite3_rollback_hook(handle, { callback in
             unsafeBitCast(callback, to: RollbackHook.self)()
         }, unsafeBitCast(box, to: UnsafeMutableRawPointer.self))
         rollbackHook = box
@@ -620,7 +625,7 @@ public final class Connection {
             let rstr = String(cString: rhs.assumingMemoryBound(to: UInt8.self))
             return Int32(block(lstr, rstr).rawValue)
         }
-        try check(sqlite3_create_collation_v2(handle, collation, SQLITE_UTF8,
+        try check(SQLite3.sqlite3_create_collation_v2(handle, collation, SQLITE_UTF8,
             unsafeBitCast(box, to: UnsafeMutableRawPointer.self), { (callback: UnsafeMutableRawPointer?, _,
                                                                      lhs: UnsafeRawPointer?, _, rhs: UnsafeRawPointer?) in /* xCompare */
             if let lhs, let rhs {
@@ -658,14 +663,20 @@ public final class Connection {
                    targetName: targetDatabaseName)
     }
 
+    #endif
+
     // MARK: - Error Handling
 
     func sync<T>(_ block: () throws -> T) rethrows -> T {
+        #if !SKIP // SkipSQLDB TODO
         if DispatchQueue.getSpecific(key: Connection.queueKey) == queueContext {
             return try block()
         } else {
             return try queue.sync(execute: block)
         }
+        #else
+        return try block()
+        #endif
     }
 
     @discardableResult func check(_ resultCode: Int32, statement: Statement? = nil) throws -> Int32 {
@@ -675,6 +686,7 @@ public final class Connection {
 
         throw error
     }
+
 
     fileprivate var queue = DispatchQueue(label: "SQLite.Database", attributes: [])
 
@@ -687,7 +699,7 @@ public final class Connection {
 extension Connection: CustomStringConvertible {
 
     public var description: String {
-        String(cString: sqlite3_db_filename(handle, nil))
+        String(cString: SQLite3.sqlite3_db_filename(handle, nil)!)
     }
 
 }
@@ -717,44 +729,53 @@ extension Connection.Location: CustomStringConvertible {
 }
 
 typealias Context = OpaquePointer?
+
+#if false // SkipSQLDB TODO
+
 extension Context {
     func set(result: Binding?) {
         switch result {
         case let blob as Blob:
-            sqlite3_result_blob(self, blob.bytes, Int32(blob.bytes.count), nil)
+            SQLite3.sqlite3_result_blob(self, blob.bytes, Int32(blob.bytes.count), nil)
         case let double as Double:
-            sqlite3_result_double(self, double)
+            SQLite3.sqlite3_result_double(self, double)
         case let int as Int64:
-            sqlite3_result_int64(self, int)
+            SQLite3.sqlite3_result_int64(self, int)
         case let string as String:
-            sqlite3_result_text(self, string, Int32(string.lengthOfBytes(using: .utf8)), SQLITE_TRANSIENT)
+            SQLite3.sqlite3_result_text(self, string, Int32(string.lengthOfBytes(using: .utf8)), SQLITE_TRANSIENT)
         case .none:
-            sqlite3_result_null(self)
+            SQLite3.sqlite3_result_null(self)
         default:
             fatalError("unsupported result type: \(String(describing: result))")
         }
     }
 }
+#endif
 
 typealias Argv = UnsafeMutablePointer<OpaquePointer?>?
+
+#if false // SkipSQLDB TODO
+
 extension Argv {
     func getBindings(argc: Int32) -> [Binding?] {
         (0..<Int(argc)).map { idx in
             let value = self![idx]
-            switch sqlite3_value_type(value) {
+            switch SQLite3.sqlite3_value_type(value) {
             case SQLITE_BLOB:
-                return Blob(bytes: sqlite3_value_blob(value), length: Int(sqlite3_value_bytes(value)))
+                return Blob(bytes: SQLite3.sqlite3_value_blob(value), length: Int(sqlite3_value_bytes(value)))
             case SQLITE_FLOAT:
-                return sqlite3_value_double(value)
+                return SQLite3.sqlite3_value_double(value)
             case SQLITE_INTEGER:
-                return sqlite3_value_int64(value)
+                return SQLite3.sqlite3_value_int64(value)
             case SQLITE_NULL:
                 return nil
             case SQLITE_TEXT:
-                return String(cString: UnsafePointer(sqlite3_value_text(value)))
+                return String(cString: UnsafePointer(SQLite3.sqlite3_value_text(value)))
             case let type:
                 fatalError("unsupported value type: \(type)")
             }
         }
     }
 }
+#endif
+

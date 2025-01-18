@@ -1,4 +1,11 @@
+// Copyright 2025 Skip
 //
+// This is free software: you can redistribute and/or modify it
+// under the terms of the GNU Lesser General Public License 3.0
+// as published by the Free Software Foundation https://fsf.org
+
+// This code is adapted from the SQLite.swift project, with the following license:
+
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -35,6 +42,7 @@ public protocol ExpressionType: Expressible, CustomStringConvertible { // extens
 
 extension ExpressionType {
 
+    #if !SKIP // SkipSQLDB TODO
     public init(literal: String) {
         self.init(literal, [])
     }
@@ -46,6 +54,7 @@ extension ExpressionType {
     public init<U: ExpressionType>(_ expression: U) {
         self.init(expression.template, expression.bindings)
     }
+    #endif
 
     public var description: String {
         asSQL()
@@ -54,6 +63,8 @@ extension ExpressionType {
 
 @available(*, deprecated, renamed: "SQLExpression")
 public typealias Expression<T> = SQLExpression<T>
+
+#if !SKIP // SkipSQLDB TODO
 
 /// An `Expression` represents a raw SQL fragment and any associated bindings.
 public struct SQLExpression<Datatype>: ExpressionType {
@@ -69,6 +80,8 @@ public struct SQLExpression<Datatype>: ExpressionType {
     }
 
 }
+
+#endif
 
 public protocol Expressible {
 
@@ -110,6 +123,8 @@ extension ExpressionType {
 
 }
 
+#if !SKIP // SkipSQLDB TODO
+
 extension ExpressionType where UnderlyingType: Value {
 
     public init(value: UnderlyingType) {
@@ -129,6 +144,8 @@ extension ExpressionType where UnderlyingType: _OptionalType, UnderlyingType.Wra
     }
 
 }
+
+#endif
 
 extension Value {
 

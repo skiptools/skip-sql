@@ -1,13 +1,37 @@
+// Copyright 2025 Skip
+//
+// This is free software: you can redistribute and/or modify it
+// under the terms of the GNU Lesser General Public License 3.0
+// as published by the Free Software Foundation https://fsf.org
+
+// This code is adapted from the SQLite.swift project, with the following license:
+
+// SQLite.swift
+// https://github.com/stephencelis/SQLite.swift
+// Copyright © 2014-2015 Stephen Celis.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
 import Foundation
-#if SQLITE_SWIFT_STANDALONE
-import sqlite3
-#elseif SQLITE_SWIFT_SQLCIPHER
-import SQLCipher
-#elseif os(Linux) || os(Windows) || os(Android)
-import CSQLite
-#else
-import SQLite3
-#endif
+import SkipSQL
+
+#if false // SkipSQLDB TODO
 
 extension Connection {
     private typealias Aggregate = @convention(block) (Int, Context, Int32, Argv) -> Void
@@ -51,7 +75,7 @@ extension Connection {
         let argc = argumentCount.map { Int($0) } ?? -1
         let box: Aggregate = { (stepFlag: Int, context: Context, argc: Int32, argv: Argv) in
             let nBytes = Int32(MemoryLayout<UnsafeMutablePointer<Int64>>.size)
-            guard let aggregateContext = sqlite3_aggregate_context(context, nBytes) else {
+            guard let aggregateContext = SQLite3.sqlite3_aggregate_context(context, nBytes) else {
                 fatalError("Could not get aggregate context")
             }
             let mutablePointer = aggregateContext.assumingMemoryBound(to: UnsafeMutableRawPointer.self)
@@ -68,15 +92,15 @@ extension Connection {
         }
 
         func xStep(context: Context, argc: Int32, value: Argv) {
-            unsafeBitCast(sqlite3_user_data(context), to: Aggregate.self)(1, context, argc, value)
+            unsafeBitCast(SQLite3.sqlite3_user_data(context), to: Aggregate.self)(1, context, argc, value)
         }
 
         func xFinal(context: Context) {
-            unsafeBitCast(sqlite3_user_data(context), to: Aggregate.self)(0, context, 0, nil)
+            unsafeBitCast(SQLite3.sqlite3_user_data(context), to: Aggregate.self)(0, context, 0, nil)
         }
 
         let flags = SQLITE_UTF8 | (deterministic ? SQLITE_DETERMINISTIC : 0)
-        let resultCode = sqlite3_create_function_v2(
+        let resultCode = SQLite3.sqlite3_create_function_v2(
             handle,
             functionName,
             Int32(argc),
@@ -153,3 +177,5 @@ extension Connection {
     }
 
 }
+
+#endif

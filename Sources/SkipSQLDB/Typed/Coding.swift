@@ -1,4 +1,11 @@
+// Copyright 2025 Skip
 //
+// This is free software: you can redistribute and/or modify it
+// under the terms of the GNU Lesser General Public License 3.0
+// as published by the Free Software Foundation https://fsf.org
+
+// This code is adapted from the SQLite.swift project, with the following license:
+
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -463,7 +470,7 @@ private class SQLiteDecoder: Decoder {
                     throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath,
                                                                                  debugDescription: "an unsupported type was found"))
                 }
-                guard let data = JSONString.data(using: .utf8) else {
+                guard let data = JSONString.data(using: String.Encoding.utf8) else {
                     throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: codingPath,
                                                                             debugDescription: "invalid utf8 data found"))
                 }
@@ -507,7 +514,7 @@ private class SQLiteDecoder: Decoder {
                 guard let JSONString = try row.get(SQLExpression<String?>(key.stringValue)) else {
                     return nil
                 }
-                guard let data = JSONString.data(using: .utf8) else {
+                guard let data = JSONString.data(using: String.Encoding.utf8) else {
                     throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: codingPath,
                                                                             debugDescription: "invalid utf8 data found"))
                 }

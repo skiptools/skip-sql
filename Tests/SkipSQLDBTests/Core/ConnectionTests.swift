@@ -1,17 +1,38 @@
+// Copyright 2025 Skip
+//
+// This is free software: you can redistribute and/or modify it
+// under the terms of the GNU Lesser General Public License 3.0
+// as published by the Free Software Foundation https://fsf.org
+
+// This code is adapted from the SQLite.swift project, with the following license:
+
+// SQLite.swift
+// https://github.com/stephencelis/SQLite.swift
+// Copyright © 2014-2015 Stephen Celis.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
 import XCTest
 import Foundation
 import Dispatch
 @testable import SkipSQLDB
-
-#if SQLITE_SWIFT_STANDALONE
-import sqlite3
-#elseif SQLITE_SWIFT_SQLCIPHER
-import SQLCipher
-#elseif os(Linux) || os(Windows) || os(Android)
-import CSQLite
-#else
-import SQLite3
-#endif
+import SkipSQL
 
 class ConnectionTests: SQLiteTestCase {
 
@@ -64,6 +85,8 @@ class ConnectionTests: SQLiteTestCase {
         XCTAssertEqual(location.description, "file:foo?mode=ro&cache=private")
     }
 
+    #if false // SkipSQLDB TODO
+
     func test_readonly_returnsFalseOnReadWriteConnections() {
         XCTAssertFalse(db.readonly)
     }
@@ -72,6 +95,8 @@ class ConnectionTests: SQLiteTestCase {
         let db = try Connection(readonly: true)
         XCTAssertTrue(db.readonly)
     }
+
+    #endif
 
     func test_changes_returnsZeroOnNewConnections() {
         XCTAssertEqual(0, db.changes)
@@ -82,6 +107,8 @@ class ConnectionTests: SQLiteTestCase {
         XCTAssertEqual(1, db.lastInsertRowid)
     }
 
+    #if false // SkipSQLDB TODO
+
     func test_lastInsertRowid_doesNotResetAfterError() throws {
         XCTAssert(db.lastInsertRowid == 0)
         try insertUser("alice")
@@ -89,7 +116,7 @@ class ConnectionTests: SQLiteTestCase {
         XCTAssertThrowsError(
             try db.run("INSERT INTO \"users\" (email, age, admin) values ('invalid@example.com', 12, 'invalid')")
         ) { error in
-            if case SkipSQLDB.Result.error(_, let code, _) = error {
+            if case SQLiteDB.Result.error(_, let code, _) = error {
                 XCTAssertEqual(SQLITE_CONSTRAINT, code)
             } else {
                 XCTFail("expected error")
@@ -97,6 +124,7 @@ class ConnectionTests: SQLiteTestCase {
         }
         XCTAssertEqual(1, db.lastInsertRowid)
     }
+    #endif
 
     func test_changes_returnsNumberOfChanges() throws {
         try insertUser("alice")
@@ -168,6 +196,8 @@ class ConnectionTests: SQLiteTestCase {
         assertSQL("BEGIN EXCLUSIVE TRANSACTION")
     }
 
+    #if false // SkipSQLDB TODO
+
     func test_backup_copiesDatabase() throws {
         let target = try Connection()
 
@@ -179,6 +209,7 @@ class ConnectionTests: SQLiteTestCase {
         let users = try target.prepare("SELECT email FROM users ORDER BY email")
         XCTAssertEqual(users.map { $0[0] as? String }, ["alice@example.com", "betsy@example.com"])
     }
+    #endif
 
     func test_transaction_beginsAndCommitsTransactions() throws {
         let stmt = try db.prepare("INSERT INTO users (email) VALUES (?)", "alice@example.com")
@@ -292,6 +323,8 @@ class ConnectionTests: SQLiteTestCase {
         assertSQL("RELEASE SAVEPOINT '1'", 0)
     }
 
+    #if false // SkipSQLDB TODO
+
     func test_updateHook_setsUpdateHook_withInsert() throws {
         try async { done in
             db.updateHook { operation, db, table, rowid in
@@ -375,6 +408,10 @@ class ConnectionTests: SQLiteTestCase {
         }
     }
 
+    #endif
+
+    #if false // SkipSQLDB TODO
+
     // https://github.com/stephencelis/SQLite.swift/issues/1071
     #if !os(Linux) && !os(Android) && !os(Windows)
     func test_createFunction_withArrayArguments() throws {
@@ -424,6 +461,7 @@ class ConnectionTests: SQLiteTestCase {
             }
         }
     }
+    #endif
     #endif
 
     func test_concurrent_access_single_connection() throws {

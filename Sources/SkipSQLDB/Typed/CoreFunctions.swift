@@ -1,4 +1,11 @@
+// Copyright 2025 Skip
 //
+// This is free software: you can redistribute and/or modify it
+// under the terms of the GNU Lesser General Public License 3.0
+// as published by the Free Software Foundation https://fsf.org
+
+// This code is adapted from the SQLite.swift project, with the following license:
+
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -128,6 +135,8 @@ extension ExpressionType where UnderlyingType == Double? {
 
 }
 
+#if !SKIP // SkipSQLDB TODO
+
 extension ExpressionType where UnderlyingType: Value, UnderlyingType.Datatype == Int64 {
 
     /// Builds an expression representing the `random` function.
@@ -180,6 +189,7 @@ extension ExpressionType where UnderlyingType == Data {
     }
 
 }
+#endif
 
 extension ExpressionType where UnderlyingType == Data? {
 
@@ -735,6 +745,8 @@ extension String {
 
 }
 
+#if !SKIP // SkipSQLDB TODO
+
 /// Builds a copy of the given expressions wrapped with the `ifnull` function.
 ///
 ///     let name = SQLExpression<String?>("name")
@@ -793,3 +805,6 @@ public func ??<V: Value>(optional: SQLExpression<V?>, defaultValue: SQLExpressio
 public func ??<V: Value>(optional: SQLExpression<V?>, defaultValue: SQLExpression<V?>) -> SQLExpression<V> {
     Function.ifnull.wrap([optional, defaultValue])
 }
+
+#endif
+

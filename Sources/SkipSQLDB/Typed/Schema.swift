@@ -1,4 +1,11 @@
+// Copyright 2025 Skip
 //
+// This is free software: you can redistribute and/or modify it
+// under the terms of the GNU Lesser General Public License 3.0
+// as published by the Free Software Foundation https://fsf.org
+
+// This code is adapted from the SQLite.swift project, with the following license:
+
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -78,6 +85,8 @@ extension Table {
     public func addColumn<V: Value>(_ name: SQLExpression<V?>, check: SQLExpression<Bool?>, defaultValue: V? = nil) -> String {
         addColumn(definition(name, V.declaredDatatype, nil, true, false, check, defaultValue, nil, nil))
     }
+
+#if !SKIP // SkipSQLDB TODO
 
     public func addColumn<V: Value>(_ name: SQLExpression<V>, unique: Bool = false, check: SQLExpression<Bool>? = nil,
                                     references table: QueryType, _ other: SQLExpression<V>) -> String where V.Datatype == Int64 {
@@ -168,8 +177,9 @@ extension Table {
 
         return database(namespace: index)
     }
-
+    #endif
 }
+
 
 extension View {
 
@@ -268,6 +278,8 @@ public final class TableBuilder {
                                  defaultValue: V) {
         column(name, V.declaredDatatype, nil, true, unique, check, defaultValue, nil, nil)
     }
+
+    #if !SKIP // SkipSQLDB TODO
 
     public func column<V: Value>(_ name: SQLExpression<V>, primaryKey: Bool, check: SQLExpression<Bool>? = nil,
                                  defaultValue: SQLExpression<V>? = nil) {
@@ -385,6 +397,7 @@ public final class TableBuilder {
                             _ references: (QueryType, Expressible)?, _ collate: Collation?) {
         definitions.append(definition(name, datatype, primaryKey, null, unique, check, defaultValue, references, collate))
     }
+    #endif
 
     // MARK: -
 

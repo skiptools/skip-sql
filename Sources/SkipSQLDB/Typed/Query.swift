@@ -1,4 +1,11 @@
+// Copyright 2025 Skip
 //
+// This is free software: you can redistribute and/or modify it
+// under the terms of the GNU Lesser General Public License 3.0
+// as published by the Free Software Foundation https://fsf.org
+
+// This code is adapted from the SQLite.swift project, with the following license:
+
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -847,13 +854,13 @@ extension QueryType {
     }
 
     func database(namespace name: String) -> Expressible {
-        let name = SQLExpression<Void>(name)
+        let nameExpression = SQLExpression<Void>(name)
 
         guard let database = clauses.from.database else {
-            return name
+            return nameExpression
         }
 
-        return ".".join([SQLExpression<Void>(database), name])
+        return ".".join([SQLExpression<Void>(database), nameExpression])
     }
 
     public var expression: SQLExpression<Void> {
@@ -927,6 +934,8 @@ public struct ScalarQuery<V>: QueryType {
 
 // TODO: decide: simplify the below with a boxed type instead
 
+#if !SKIP // SkipSQLDB TODO
+
 public struct Select<T>: ExpressionType {
 
     public var template: String
@@ -938,6 +947,8 @@ public struct Select<T>: ExpressionType {
     }
 
 }
+
+#endif
 
 public struct Insert: ExpressionType {
 
