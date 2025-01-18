@@ -37,6 +37,10 @@ internal final class SQLPlusCLibrary : SQLiteLibrary {
         SQLExt.sqlite3_errmsg(db)
     }
 
+    func sqlite3_extended_errcode(_ db: OpaquePointer) -> Int32 {
+        SQLExt.sqlite3_extended_errcode(db)
+    }
+
     func sqlite3_last_insert_rowid(_ db: OpaquePointer) -> Int64 {
         SQLExt.sqlite3_last_insert_rowid(db)
     }
@@ -51,6 +55,10 @@ internal final class SQLPlusCLibrary : SQLiteLibrary {
 
     func sqlite3_interrupt(_ db: OpaquePointer) {
         SQLExt.sqlite3_interrupt(db)
+    }
+
+    func sqlite3_db_filename(_ db: OpaquePointer, _ zDbName: sqlite3_cstring_ptr?) -> sqlite3_cstring_ptr? {
+        SQLExt.sqlite3_db_filename(db, zDbName)
     }
 
     func sqlite3_exec(_ db: OpaquePointer, _ sql: String, _ callback: sqlite3_callback?, _ pArg: UnsafeMutableRawPointer?, _ errmsg: sqlite_error_ptr?) -> Int32 {
