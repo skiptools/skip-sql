@@ -8,6 +8,7 @@ let package = Package(
     products: [
         .library(name: "SkipSQL", targets: ["SkipSQL"]),
         .library(name: "SkipSQLPlus", type: .dynamic, targets: ["SkipSQLPlus"]),
+        .library(name: "SkipSQLDB", type: .dynamic, targets: ["SkipSQLDB"]),
     ],
     dependencies: [
         .package(url: "https://source.skip.tools/skip.git", from: "1.1.11"),
@@ -33,6 +34,13 @@ let package = Package(
             "SkipSQLPlus",
             .product(name: "SkipTest", package: "skip")
         ], plugins: [.plugin(name: "skipstone", package: "skip")]),
+        .target(name: "SkipSQLDB", dependencies: [
+            "SkipSQL",
+        ], plugins: [/*.plugin(name: "skipstone", package: "skip")*/]),
+        .testTarget(name: "SkipSQLDBTests", dependencies: [
+            "SkipSQLDB",
+            .product(name: "SkipTest", package: "skip")
+        ], resources: [.process("Resources")], plugins: [/*.plugin(name: "skipstone", package: "skip")*/]),
         .target(name: "SQLExt", dependencies: [
             .product(name: "SkipLTC", package: "skip-ltc"),
             .product(name: "SkipUnit", package: "skip-unit")
