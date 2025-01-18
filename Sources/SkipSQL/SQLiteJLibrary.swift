@@ -51,7 +51,7 @@ internal final class SQLiteJNALibrary : SQLiteLibrary {
     /* SKIP INSERT: external */ func sqlite3_bind_parameter_name(_ stmt: OpaquePointer?, _ columnIndex: Int32) -> sqlite3_cstring_ptr?
     /* SKIP INSERT: external */ func sqlite3_bind_parameter_index(_ stmt: OpaquePointer?, _ name: String) -> Int32
     /* SKIP INSERT: external */ func sqlite3_clear_bindings(_ stmt: OpaquePointer?) -> Int32
-    /* SKIP INSERT: external */ func sqlite3_column_name(_ stmt: OpaquePointer?!, _ columnIndex: Int32) -> sqlite3_cstring_ptr?
+    /* SKIP INSERT: external */ func sqlite3_column_name(_ stmt: OpaquePointer?, _ columnIndex: Int32) -> sqlite3_cstring_ptr?
     // /* SKIP INSERT: external */ func sqlite3_column_database_name(_ stmt: OpaquePointer?, _ columnIndex: Int32) -> sqlite3_cstring_ptr? // unavailable on Android
     // /* SKIP INSERT: external */ func sqlite3_column_origin_name(_ stmt: OpaquePointer?, _ columnIndex: Int32) -> sqlite3_cstring_ptr?
     /* SKIP INSERT: external */ func sqlite3_column_decltype(_ stmt: OpaquePointer?, _ columnIndex: Int32) -> sqlite3_cstring_ptr?

@@ -58,12 +58,14 @@ class BlobTests: XCTestCase {
         XCTAssertEqual(blob.bytes, [42, 43, 44])
     }
 
+    #if !SKIP // SkipSQLDB TODO
     func test_init_unsafeRawPointer() {
         let pointer = UnsafeMutablePointer<UInt8>.allocate(capacity: 3)
         pointer.initialize(repeating: 42, count: 3)
         let blob = Blob(bytes: pointer, length: 3)
         XCTAssertEqual(blob.bytes, [42, 42, 42])
     }
+    #endif
 
     func test_equality() {
         let blob1 = Blob(bytes: [42, 42, 42])

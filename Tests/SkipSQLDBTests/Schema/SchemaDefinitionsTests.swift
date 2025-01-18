@@ -166,6 +166,8 @@ class AffinityTests: XCTestCase {
     }
 }
 
+#if !SKIP // SkipSQLDB TODO
+
 class IndexDefinitionTests: XCTestCase {
     var definition: IndexDefinition!
     var expected: String!
@@ -271,6 +273,8 @@ class IndexDefinitionTests: XCTestCase {
     }
 }
 
+#endif
+
 class ForeignKeyDefinitionTests: XCTestCase {
     func test_toSQL() {
         XCTAssertEqual(
@@ -349,12 +353,14 @@ class PrimaryKeyTests: XCTestCase {
         )
     }
 
+    #if !SKIP // SkipSQLDB TODO
     func test_toSQL_on_conflict() {
         XCTAssertEqual(
             ColumnDefinition.PrimaryKey(autoIncrement: false, onConflict: .ROLLBACK).toSQL(),
             "PRIMARY KEY ON CONFLICT ROLLBACK"
         )
     }
+    #endif
 
     func test_fromSQL() {
         XCTAssertEqual(
@@ -374,12 +380,14 @@ class PrimaryKeyTests: XCTestCase {
         )
     }
 
+    #if !SKIP // SkipSQLDB TODO
     func test_fromSQL_on_conflict() {
         XCTAssertEqual(
             ColumnDefinition.PrimaryKey(sql: "PRIMARY KEY ON CONFLICT ROLLBACK"),
             ColumnDefinition.PrimaryKey(autoIncrement: false, onConflict: .ROLLBACK)
         )
     }
+    #endif
 }
 
 class LiteralValueTests: XCTestCase {

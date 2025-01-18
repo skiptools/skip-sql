@@ -303,6 +303,7 @@ class OperatorsTests: XCTestCase {
         assertSQL("(1 <= \"boolOptional\")", true <= boolOptional)
     }
 
+    #if !SKIP // SkipSQLDB TODO
     func test_patternMatchingOperator_withComparableCountableClosedRange_buildsBetweenBooleanExpression() {
         assertSQL("\"int\" BETWEEN 0 AND 5", 0...5 ~= int)
         assertSQL("\"intOptional\" BETWEEN 0 AND 5", 0...5 ~= intOptional)
@@ -337,6 +338,7 @@ class OperatorsTests: XCTestCase {
         assertSQL("\"string\" BETWEEN 'a' AND 'b'", "a"..."b" ~= string)
         assertSQL("\"stringOptional\" BETWEEN 'a' AND 'b'", "a"..."b" ~= stringOptional)
     }
+    #endif
 
     func test_doubleAndOperator_withBooleanExpressions_buildsCompoundExpression() {
         assertSQL("(\"bool\" AND \"bool\")", bool && bool)
@@ -399,6 +401,7 @@ class OperatorsTests: XCTestCase {
         assertSQL("(\"date\" <= '1970-01-01T00:00:00.000')", date <= begin)
     }
 
+    #if !SKIP // SkipSQLDB TODO
     func test_dateExpressionRange() {
         let begin = Date(timeIntervalSince1970: 0)
         let end = Date(timeIntervalSince1970: 5000)
@@ -416,5 +419,6 @@ class OperatorsTests: XCTestCase {
             (begin...end) ~= date
         )
     }
+    #endif
 
 }

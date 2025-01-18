@@ -174,12 +174,13 @@ class QueryIntegrationTests: SQLiteTestCase {
          XCTAssertEqual(values.count, 2)
     }
 
+    struct TestTypeWithOptionalArray: Codable {
+        var myInt: Int
+        var myString: String
+        var myOptionalArray: [Int]?
+    }
+
     func test_insert_custom_encodable_type() throws {
-        struct TestTypeWithOptionalArray: Codable {
-            var myInt: Int
-            var myString: String
-            var myOptionalArray: [Int]?
-        }
 
         let table = Table("custom_codable")
         try db.run(table.create { builder in
@@ -266,6 +267,7 @@ class QueryIntegrationTests: SQLiteTestCase {
         }
     }
 
+    #if !SKIP // SkipSQLDB TODO
     func test_catchConstraintError() throws {
         try db.run(users.insert(email <- "alice@example.com"))
         do {
@@ -290,6 +292,7 @@ class QueryIntegrationTests: SQLiteTestCase {
             XCTFail("unexpected error: \(error)")
         }
     }
+    #endif
 
     // https://github.com/stephencelis/SQLite.swift/issues/285
     func test_order_by_random() throws {

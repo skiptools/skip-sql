@@ -78,6 +78,7 @@ class SQLiteTestCase: XCTestCase {
                    "\(name)@example.com", age?.datatypeValue, admin.datatypeValue)
     }
 
+    #if !SKIP // SkipSQLDB TODO
     func assertSQL(_ SQL: String, _ executions: Int = 1, _ message: String? = nil, file: StaticString = #file, line: UInt = #line) {
         #if false // SkipSQLDB TODO
         XCTAssertEqual(
@@ -87,12 +88,22 @@ class SQLiteTestCase: XCTestCase {
         )
         #endif
     }
+    #else
+    func assertSQL(_ SQL: String, _ executions: Int = 1, _ message: String? = nil) {
+    }
+    #endif
 
+    #if !SKIP // SkipSQLDB TODO
     func assertSQL(_ SQL: String, _ statement: Statement, _ message: String? = nil, file: StaticString = #file, line: UInt = #line) throws {
         try statement.run()
         assertSQL(SQL, 1, message, file: file, line: line)
         if let count = trace[SQL] { trace[SQL] = count - 1 }
     }
+    #else
+    func assertSQL(_ SQL: String, _ statement: Statement, _ message: String? = nil) throws {
+        try statement.run()
+    }
+    #endif
 
 //    func AssertSQL(SQL: String, _ query: Query, _ message: String? = nil, file: String = __FILE__, line: UInt = __LINE__) {
 //        for _ in query {}
@@ -134,10 +145,13 @@ let uuidOptional = SQLExpression<UUID?>("uuidOptional")
 
 let testUUIDValue = UUID(uuidString: "E621E1F8-C36C-495A-93FC-0C247A3E6E5F")!
 
+
+#if !SKIP // SkipSQLDB TODO
 func assertSQL(_ expression1: @autoclosure () -> String, _ expression2: @autoclosure () -> Expressible,
                file: StaticString = #file, line: UInt = #line) {
     XCTAssertEqual(expression1(), expression2().asSQL(), file: file, line: line)
 }
+#endif
 
 func extractAndReplace(_ value: String, regex: String, with replacement: String) -> (String, String) {
     // We cannot use `Regex` because it is not available before iOS 16 :(

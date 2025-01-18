@@ -114,6 +114,7 @@ class SetterTests: XCTestCase {
         assertSQL("\"intOptional\" = (\"intOptional\" % 1)", intOptional %= 1)
     }
 
+    #if !SKIP // SkipSQLDB TODO
     func test_leftShiftEquals_withIntegerExpression_buildsSetter() {
         assertSQL("\"int\" = (\"int\" << \"int\")", int <<= int)
         assertSQL("\"int\" = (\"int\" << 1)", int <<= 1)
@@ -163,5 +164,5 @@ class SetterTests: XCTestCase {
         assertSQL("\"int\" = (\"int\" - 1)", int--)
         assertSQL("\"intOptional\" = (\"intOptional\" - 1)", intOptional--)
     }
-
+    #endif
 }

@@ -464,6 +464,7 @@ class ConnectionTests: SQLiteTestCase {
     #endif
     #endif
 
+    #if !SKIP // SkipSQLDB TODO
     func test_concurrent_access_single_connection() throws {
         // test can fail on iOS/tvOS 9.x: SQLite compile-time differences?
         guard #available(iOS 10.0, OSX 10.10, tvOS 10.0, watchOS 2.2, *) else { return }
@@ -484,4 +485,5 @@ class ConnectionTests: SQLiteTestCase {
         }
         semaphores.forEach { $0.wait() }
     }
+    #endif
 }

@@ -52,6 +52,7 @@ class ResultTests: XCTestCase {
         XCTAssertNil(Result(errorCode: SQLITE_DONE, connection: connection, statement: nil) as Result?)
     }
 
+    #if !SKIP // SkipSQLDB TODO
     func test_init_with_other_code_returns_error() {
         if case .some(.error(let message, let code, let statement)) =
             Result(errorCode: SQLITE_MISUSE, connection: connection, statement: nil) {
@@ -63,6 +64,7 @@ class ResultTests: XCTestCase {
             XCTFail("no error")
         }
     }
+    #endif
 
     func test_description_contains_error_code() {
         XCTAssertEqual("not an error (code: 21)",
@@ -75,6 +77,7 @@ class ResultTests: XCTestCase {
             Result(errorCode: SQLITE_MISUSE, connection: connection, statement: statement)?.description)
     }
 
+    #if !SKIP // SkipSQLDB TODO
     func test_init_extended_with_other_code_returns_error() {
         connection.usesExtendedErrorCodes = true
         if case .some(.extendedError(let message, let extendedCode, let statement)) =
@@ -87,4 +90,5 @@ class ResultTests: XCTestCase {
             XCTFail("no error")
         }
     }
+    #endif
 }
