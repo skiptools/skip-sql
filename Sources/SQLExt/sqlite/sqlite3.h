@@ -13201,11 +13201,11 @@ struct Fts5ExtensionApi {
   void (*xPhraseNextColumn)(Fts5Context*, Fts5PhraseIter*, int *piCol);
 
   /* Below this point are iVersion>=3 only */
-  int (*xQueryToken)(Fts5Context*,
-      int iPhrase, int iToken,
-      const char **ppToken, int *pnToken
-  );
-  int (*xInstToken)(Fts5Context*, int iIdx, int iToken, const char**, int*);
+  //int (*xQueryToken)(Fts5Context*,
+  //    int iPhrase, int iToken,
+  //    const char **ppToken, int *pnToken
+  //);
+  //int (*xInstToken)(Fts5Context*, int iIdx, int iToken, const char**, int*);
 };
 
 /*
