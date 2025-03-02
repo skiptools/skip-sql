@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -28,6 +29,20 @@
 import XCTest
 @testable import SkipSQLDB
 import SkipSQL
+=======
+import XCTest
+@testable import SkipSQLDB
+
+#if SQLITE_SWIFT_STANDALONE
+import sqlite3
+#elseif SQLITE_SWIFT_SQLCIPHER
+import SQLCipher
+#elseif os(Linux) || os(Windows) || os(Android)
+import CSQLite
+#else
+import SQLite3
+#endif
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
 class StatementTests: SQLiteTestCase {
     override func setUpWithError() throws {
@@ -35,7 +50,10 @@ class StatementTests: SQLiteTestCase {
         try createUsersTable()
     }
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     func test_cursor_to_blob() throws {
         try insertUsers("alice")
         let statement = try db.prepare("SELECT email FROM users")
@@ -52,7 +70,10 @@ class StatementTests: SQLiteTestCase {
         let blobValue = try db.scalar(blobs.select(blobColumn).limit(1, offset: 0))
         XCTAssertEqual([], blobValue.bytes)
     }
+<<<<<<< HEAD
     #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
     func test_prepareRowIterator() throws {
         let names = ["a", "b", "c"]

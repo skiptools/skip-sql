@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
 // This code is adapted from the SQLite.swift project, with the following license:
 
+=======
+//
+>>>>>>> d0c842f (Add SkipSQLDB module)
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -249,11 +253,18 @@ extension ExpressionType where UnderlyingType: _OptionalType, UnderlyingType.Wra
 
 extension ExpressionType where UnderlyingType == Int {
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO
     static func count(_ star: Star) -> SQLExpression<UnderlyingType> {
         Function.count.wrap(star(nil, nil))
     }
     #endif
+=======
+    static func count(_ star: Star) -> SQLExpression<UnderlyingType> {
+        Function.count.wrap(star(nil, nil))
+    }
+
+>>>>>>> d0c842f (Add SkipSQLDB module)
 }
 
 /// Builds an expression representing `count(*)` (when called with the `*`

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -26,6 +27,8 @@
 // THE SOFTWARE.
 //
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 #if SQLITE_SWIFT_SQLCIPHER
 import SQLCipher
 

@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
 // This code is adapted from the SQLite.swift project, with the following license:
 
+=======
+//
+>>>>>>> d0c842f (Add SkipSQLDB module)
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -26,8 +30,11 @@
 // THE SOFTWARE.
 //
 
+<<<<<<< HEAD
 #if false // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 public extension Connection {
 
     /// Creates or redefines a custom SQL function.
@@ -143,7 +150,10 @@ public extension Connection {
 
     // MARK: -
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     fileprivate func createFunction<Z: Value>(_ function: String, _ argumentCount: UInt, _ deterministic: Bool,
                                               _ block: @escaping ([Binding?]) -> Z) throws
     -> ([Expressible]) -> SQLExpression<Z> {
@@ -165,6 +175,11 @@ public extension Connection {
             function.quote().wrap(", ".join(arguments))
         }
     }
+<<<<<<< HEAD
 }
 
 #endif
+=======
+
+}
+>>>>>>> d0c842f (Add SkipSQLDB module)

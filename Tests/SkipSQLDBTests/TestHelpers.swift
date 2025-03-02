@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -25,6 +26,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 import XCTest
 @testable import SkipSQLDB
 
@@ -38,12 +41,18 @@ class SQLiteTestCase: XCTestCase {
         db = try Connection()
         trace = [String: Int]()
 
+<<<<<<< HEAD
         #if false // SkipSQLDB TODO
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
         db.trace { SQL in
             // print("SQL: \(SQL)")
             self.trace[SQL, default: 0] += 1
         }
+<<<<<<< HEAD
         #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     }
 
     func createUsersTable() throws {
@@ -75,14 +84,19 @@ class SQLiteTestCase: XCTestCase {
                    "\(name)@example.com", age?.datatypeValue, admin.datatypeValue)
     }
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO
     func assertSQL(_ SQL: String, _ executions: Int = 1, _ message: String? = nil, file: StaticString = #file, line: UInt = #line) {
         #if false // SkipSQLDB TODO
+=======
+    func assertSQL(_ SQL: String, _ executions: Int = 1, _ message: String? = nil, file: StaticString = #file, line: UInt = #line) {
+>>>>>>> d0c842f (Add SkipSQLDB module)
         XCTAssertEqual(
             executions, trace[SQL] ?? 0,
             message ?? SQL,
             file: file, line: line
         )
+<<<<<<< HEAD
         #endif
     }
     #else
@@ -91,16 +105,23 @@ class SQLiteTestCase: XCTestCase {
     #endif
 
     #if !SKIP // SkipSQLDB TODO
+=======
+    }
+
+>>>>>>> d0c842f (Add SkipSQLDB module)
     func assertSQL(_ SQL: String, _ statement: Statement, _ message: String? = nil, file: StaticString = #file, line: UInt = #line) throws {
         try statement.run()
         assertSQL(SQL, 1, message, file: file, line: line)
         if let count = trace[SQL] { trace[SQL] = count - 1 }
     }
+<<<<<<< HEAD
     #else
     func assertSQL(_ SQL: String, _ statement: Statement, _ message: String? = nil) throws {
         try statement.run()
     }
     #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
 //    func AssertSQL(SQL: String, _ query: Query, _ message: String? = nil, file: String = __FILE__, line: UInt = __LINE__) {
 //        for _ in query {}
@@ -142,13 +163,19 @@ let uuidOptional = SQLExpression<UUID?>("uuidOptional")
 
 let testUUIDValue = UUID(uuidString: "E621E1F8-C36C-495A-93FC-0C247A3E6E5F")!
 
+<<<<<<< HEAD
 
 #if !SKIP // SkipSQLDB TODO
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 func assertSQL(_ expression1: @autoclosure () -> String, _ expression2: @autoclosure () -> Expressible,
                file: StaticString = #file, line: UInt = #line) {
     XCTAssertEqual(expression1(), expression2().asSQL(), file: file, line: line)
 }
+<<<<<<< HEAD
 #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
 func extractAndReplace(_ value: String, regex: String, with replacement: String) -> (String, String) {
     // We cannot use `Regex` because it is not available before iOS 16 :(

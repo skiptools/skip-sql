@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
 // This code is adapted from the SQLite.swift project, with the following license:
 
+=======
+//
+>>>>>>> d0c842f (Add SkipSQLDB module)
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -28,12 +32,16 @@
 
 import Foundation
 
+<<<<<<< HEAD
 #if !SKIP // SkipSQLDB TODO
 extension Data: Value {
 }
 #endif
 
 extension Data {
+=======
+extension Data: Value {
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
     public static var declaredDatatype: String {
         Blob.declaredDatatype
@@ -51,12 +59,16 @@ extension Data {
 
 }
 
+<<<<<<< HEAD
 #if !SKIP // SkipSQLDB TODO
 extension Date: Value {
 }
 #endif
 
 extension Date {
+=======
+extension Date: Value {
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
     public static var declaredDatatype: String {
         String.declaredDatatype
@@ -83,12 +95,16 @@ public var dateFormatter: DateFormatter = {
     return formatter
 }()
 
+<<<<<<< HEAD
 #if !SKIP // SkipSQLDB TODO
 extension UUID: Value {
 }
 #endif
 
 extension UUID {
+=======
+extension UUID: Value {
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
     public static var declaredDatatype: String {
         String.declaredDatatype
@@ -104,12 +120,16 @@ extension UUID {
 
 }
 
+<<<<<<< HEAD
 #if !SKIP // SkipSQLDB TODO
 extension URL: Value {
 }
 #endif
 
 extension URL {
+=======
+extension URL: Value {
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
     public static var declaredDatatype: String {
         String.declaredDatatype

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -25,6 +26,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 import XCTest
 import SkipSQLDB
 
@@ -55,14 +58,20 @@ class BlobTests: XCTestCase {
         XCTAssertEqual(blob.bytes, [42, 43, 44])
     }
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     func test_init_unsafeRawPointer() {
         let pointer = UnsafeMutablePointer<UInt8>.allocate(capacity: 3)
         pointer.initialize(repeating: 42, count: 3)
         let blob = Blob(bytes: pointer, length: 3)
         XCTAssertEqual(blob.bytes, [42, 42, 42])
     }
+<<<<<<< HEAD
     #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
     func test_equality() {
         let blob1 = Blob(bytes: [42, 42, 42])

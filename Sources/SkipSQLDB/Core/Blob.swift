@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
 // This code is adapted from the SQLite.swift project, with the following license:
 
+=======
+//
+>>>>>>> d0c842f (Add SkipSQLDB module)
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -34,20 +38,30 @@ public struct Blob {
         self.bytes = bytes
     }
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     public init(bytes: UnsafeRawPointer, length: Int) {
         let i8bufptr = UnsafeBufferPointer(start: bytes.assumingMemoryBound(to: UInt8.self), count: length)
         self.init(bytes: [UInt8](i8bufptr))
     }
+<<<<<<< HEAD
     #endif
 
     #if !SKIP // SkipSQLDB TODO
+=======
+
+>>>>>>> d0c842f (Add SkipSQLDB module)
     public func toHex() -> String {
         bytes.map {
            ($0 < 16 ? "0" : "") + String($0, radix: 16, uppercase: false)
         }.joined(separator: "")
     }
+<<<<<<< HEAD
     #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 }
 
 extension Blob: CustomStringConvertible {
@@ -59,6 +73,7 @@ extension Blob: CustomStringConvertible {
 extension Blob: Equatable {
 }
 
+<<<<<<< HEAD
 
 #if !SKIP // SkipSQLDB TODO
 public func ==(lhs: Blob, rhs: Blob) -> Bool {
@@ -66,3 +81,8 @@ public func ==(lhs: Blob, rhs: Blob) -> Bool {
 }
 #endif
 
+=======
+public func ==(lhs: Blob, rhs: Blob) -> Bool {
+    lhs.bytes == rhs.bytes
+}
+>>>>>>> d0c842f (Add SkipSQLDB module)

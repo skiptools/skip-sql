@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -25,13 +26,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 import XCTest
 import Foundation
 import Dispatch
 @testable import SkipSQLDB
+<<<<<<< HEAD
 import SkipSQL
 
 #if false // SkipSQLDB TODO
+=======
+
+#if SQLITE_SWIFT_STANDALONE
+import sqlite3
+#elseif SQLITE_SWIFT_SQLCIPHER
+import SQLCipher
+#elseif os(Linux) || os(Windows) || os(Android)
+import CSQLite
+#else
+import SQLite3
+#endif
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
 // https://github.com/stephencelis/SQLite.swift/issues/1071
 #if !os(Linux) && !os(Android) && !os(Windows)
@@ -180,6 +196,9 @@ class TestObject {
         TestObject.deinits += 1
     }
 }
+<<<<<<< HEAD
 
 #endif
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)

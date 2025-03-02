@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -26,6 +27,17 @@
 // THE SOFTWARE.
 //
 import SkipSQL
+=======
+#if SQLITE_SWIFT_STANDALONE
+import sqlite3
+#elseif SQLITE_SWIFT_SQLCIPHER
+import SQLCipher
+#elseif os(Linux) || os(Windows) || os(Android)
+import CSQLite
+#else
+import SQLite3
+#endif
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
 public enum Result: Error {
 
@@ -52,14 +64,22 @@ public enum Result: Error {
     init?(errorCode: Int32, connection: Connection, statement: Statement? = nil) {
         guard !Result.successCodes.contains(errorCode) else { return nil }
 
+<<<<<<< HEAD
         let message = String(cString: SQLite3.sqlite3_errmsg(connection.handle)!)
+=======
+        let message = String(cString: sqlite3_errmsg(connection.handle))
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
         guard connection.usesExtendedErrorCodes else {
             self = .error(message: message, code: errorCode, statement: statement)
             return
         }
 
+<<<<<<< HEAD
         let extendedErrorCode = SQLite3.sqlite3_extended_errcode(connection.handle)
+=======
+        let extendedErrorCode = sqlite3_extended_errcode(connection.handle)
+>>>>>>> d0c842f (Add SkipSQLDB module)
         self = .extendedError(message: message, extendedCode: extendedErrorCode, statement: statement)
     }
 

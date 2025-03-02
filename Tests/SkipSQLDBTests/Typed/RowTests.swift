@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -25,6 +26,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 import XCTest
 @testable import SkipSQLDB
 
@@ -115,6 +118,27 @@ class RowTests: XCTestCase {
 
     public func test_get_datatype_throws() {
         // swiftlint:disable nesting
+<<<<<<< HEAD
+=======
+        struct MyType: Value {
+            enum MyError: Error {
+                case failed
+            }
+
+            public static var declaredDatatype: String {
+                Blob.declaredDatatype
+            }
+
+            public static func fromDatatypeValue(_ dataValue: Blob) throws -> Data {
+                throw MyError.failed
+            }
+
+            public var datatypeValue: Blob {
+                return Blob(bytes: [])
+            }
+        }
+
+>>>>>>> d0c842f (Add SkipSQLDB module)
         let row = Row(["\"foo\"": 0], [Blob(bytes: [])])
         XCTAssertThrowsError(try row.get(SQLExpression<MyType>("foo"))) { error in
             if case MyType.MyError.failed = error {
@@ -124,6 +148,7 @@ class RowTests: XCTestCase {
             }
         }
     }
+<<<<<<< HEAD
 
     struct MyType: Value {
         enum MyError: Error {
@@ -142,4 +167,6 @@ class RowTests: XCTestCase {
             return Blob(bytes: [])
         }
     }
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 }

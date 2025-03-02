@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -30,6 +31,11 @@ import SkipSQLDB
 
 #if false // SkipSQLDB TODO
 
+=======
+import XCTest
+import SkipSQLDB
+
+>>>>>>> d0c842f (Add SkipSQLDB module)
 class FTS4Tests: XCTestCase {
 
     func test_create_onVirtualTable_withFTS4_compilesCreateVirtualTableExpression() {
@@ -217,6 +223,9 @@ class FTS4ConfigTests: XCTestCase {
         virtualTable.create(.FTS4(config))
     }
 }
+<<<<<<< HEAD
 
 #endif
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)

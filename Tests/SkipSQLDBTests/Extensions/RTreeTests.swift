@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -30,6 +31,11 @@ import SkipSQLDB
 
 #if false // SkipSQLDB TODO
 
+=======
+import XCTest
+import SkipSQLDB
+
+>>>>>>> d0c842f (Add SkipSQLDB module)
 class RTreeTests: XCTestCase {
 
     func test_create_onVirtualTable_withRTree_createVirtualTableExpression() {
@@ -44,5 +50,8 @@ class RTreeTests: XCTestCase {
     }
 
 }
+<<<<<<< HEAD
 #endif
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)

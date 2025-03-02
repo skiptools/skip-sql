@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -29,6 +30,21 @@ import XCTest
 import Foundation
 @testable import SkipSQLDB
 import SkipSQL
+=======
+import XCTest
+import Foundation
+@testable import SkipSQLDB
+
+#if SQLITE_SWIFT_STANDALONE
+import sqlite3
+#elseif SQLITE_SWIFT_SQLCIPHER
+import SQLCipher
+#elseif os(Linux) || os(Windows) || os(Android)
+import CSQLite
+#else
+import SQLite3
+#endif
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
 class ConnectionAttachTests: SQLiteTestCase {
     func test_attach_detach_memory_database() throws {

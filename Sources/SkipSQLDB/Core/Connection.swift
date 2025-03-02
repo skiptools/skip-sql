@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
 // This code is adapted from the SQLite.swift project, with the following license:
 
+=======
+//
+>>>>>>> d0c842f (Add SkipSQLDB module)
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -28,9 +32,20 @@
 
 import Foundation
 import Dispatch
+<<<<<<< HEAD
 import SkipSQL
 #if SKIP
 import SkipFFI
+=======
+#if SQLITE_SWIFT_STANDALONE
+import sqlite3
+#elseif SQLITE_SWIFT_SQLCIPHER
+import SQLCipher
+#elseif os(Linux) || os(Windows) || os(Android)
+import CSQLite
+#else
+import SQLite3
+>>>>>>> d0c842f (Add SkipSQLDB module)
 #endif
 
 /// A connection to SQLite.
@@ -104,6 +119,7 @@ public final class Connection {
     /// - Returns: A new database connection.
     public init(_ location: Location = .inMemory, readonly: Bool = false) throws {
         let flags = readonly ? SQLITE_OPEN_READONLY : (SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE)
+<<<<<<< HEAD
         try check(withUnsafeMutablePointer(to: &_handle) { ptr in
             SQLite3.sqlite3_open_v2(location.description,
                                     ptr,
@@ -113,6 +129,13 @@ public final class Connection {
         #if !SKIP // SkipSQLDB TODO
         queue.setSpecific(key: Connection.queueKey, value: queueContext)
         #endif
+=======
+        try check(sqlite3_open_v2(location.description,
+                                  &_handle,
+                                  flags | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_URI,
+                                  nil))
+        queue.setSpecific(key: Connection.queueKey, value: queueContext)
+>>>>>>> d0c842f (Add SkipSQLDB module)
     }
 
     /// Initializes a new connection to a database.
@@ -130,15 +153,24 @@ public final class Connection {
     ///
     /// - Returns: A new database connection.
     public convenience init(_ filename: String, readonly: Bool = false) throws {
+<<<<<<< HEAD
         try self.init(Location.uri(filename), readonly: readonly)
     }
 
     deinit {
         SQLite3.sqlite3_close(handle)
+=======
+        try self.init(.uri(filename), readonly: readonly)
+    }
+
+    deinit {
+        sqlite3_close(handle)
+>>>>>>> d0c842f (Add SkipSQLDB module)
     }
 
     // MARK: -
 
+<<<<<<< HEAD
     #if false // SkipSQLDB TODO
     /// Whether or not the database was opened in a read-only state.
     public var readonly: Bool { SQLite3.sqlite3_db_readonly(handle, nil) == 1 }
@@ -147,24 +179,44 @@ public final class Connection {
     /// The last rowid inserted into the database via this connection.
     public var lastInsertRowid: Int64 {
         SQLite3.sqlite3_last_insert_rowid(handle)
+=======
+    /// Whether or not the database was opened in a read-only state.
+    public var readonly: Bool { sqlite3_db_readonly(handle, nil) == 1 }
+
+    /// The last rowid inserted into the database via this connection.
+    public var lastInsertRowid: Int64 {
+        sqlite3_last_insert_rowid(handle)
+>>>>>>> d0c842f (Add SkipSQLDB module)
     }
 
     /// The last number of changes (inserts, updates, or deletes) made to the
     /// database via this connection.
     public var changes: Int {
+<<<<<<< HEAD
         Int(SQLite3.sqlite3_changes(handle))
+=======
+        Int(sqlite3_changes(handle))
+>>>>>>> d0c842f (Add SkipSQLDB module)
     }
 
     /// The total number of changes (inserts, updates, or deletes) made to the
     /// database via this connection.
     public var totalChanges: Int {
+<<<<<<< HEAD
         Int(SQLite3.sqlite3_total_changes(handle))
+=======
+        Int(sqlite3_total_changes(handle))
+>>>>>>> d0c842f (Add SkipSQLDB module)
     }
 
     /// Whether or not the database will return extended error codes when errors are handled.
     public var usesExtendedErrorCodes: Bool = false {
         didSet {
+<<<<<<< HEAD
             SQLite3.sqlite3_extended_result_codes(handle, usesExtendedErrorCodes ? 1 : 0)
+=======
+            sqlite3_extended_result_codes(handle, usesExtendedErrorCodes ? 1 : 0)
+>>>>>>> d0c842f (Add SkipSQLDB module)
         }
     }
 
@@ -177,7 +229,11 @@ public final class Connection {
     ///
     /// - Throws: `Result.Error` if query execution fails.
     public func execute(_ SQL: String) throws {
+<<<<<<< HEAD
         _ = try sync { try check(SQLite3.sqlite3_exec(handle, SQL, nil, nil, nil)) }
+=======
+        _ = try sync { try check(sqlite3_exec(handle, SQL, nil, nil, nil)) }
+>>>>>>> d0c842f (Add SkipSQLDB module)
     }
 
     // MARK: - Prepare
@@ -399,18 +455,29 @@ public final class Connection {
 
     /// Interrupts any long-running queries.
     public func interrupt() {
+<<<<<<< HEAD
         SQLite3.sqlite3_interrupt(handle)
+=======
+        sqlite3_interrupt(handle)
+>>>>>>> d0c842f (Add SkipSQLDB module)
     }
 
     // MARK: - Handlers
 
+<<<<<<< HEAD
     #if false // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     /// The number of seconds a connection will attempt to retry a statement
     /// after encountering a busy signal (lock).
     public var busyTimeout: Double = 0 {
         didSet {
+<<<<<<< HEAD
             SQLite3.sqlite3_busy_timeout(handle, Int32(busyTimeout * 1_000))
+=======
+            sqlite3_busy_timeout(handle, Int32(busyTimeout * 1_000))
+>>>>>>> d0c842f (Add SkipSQLDB module)
         }
     }
 
@@ -422,13 +489,21 @@ public final class Connection {
     ///   try again. If it returns `false`, no further attempts will be made.
     public func busyHandler(_ callback: ((_ tries: Int) -> Bool)?) {
         guard let callback else {
+<<<<<<< HEAD
             SQLite3.sqlite3_busy_handler(handle, nil, nil)
+=======
+            sqlite3_busy_handler(handle, nil, nil)
+>>>>>>> d0c842f (Add SkipSQLDB module)
             busyHandler = nil
             return
         }
 
         let box: BusyHandler = { callback(Int($0)) ? 1 : 0 }
+<<<<<<< HEAD
         SQLite3.sqlite3_busy_handler(handle, { callback, tries in
+=======
+        sqlite3_busy_handler(handle, { callback, tries in
+>>>>>>> d0c842f (Add SkipSQLDB module)
             unsafeBitCast(callback, to: BusyHandler.self)(tries)
         }, unsafeBitCast(box, to: UnsafeMutableRawPointer.self))
         busyHandler = box
@@ -451,7 +526,11 @@ public final class Connection {
     fileprivate func trace_v2(_ callback: ((String) -> Void)?) {
         guard let callback else {
             // If the X callback is NULL or if the M mask is zero, then tracing is disabled.
+<<<<<<< HEAD
             SQLite3.sqlite3_trace_v2(handle, 0 /* mask */, nil /* xCallback */, nil /* pCtx */)
+=======
+            sqlite3_trace_v2(handle, 0 /* mask */, nil /* xCallback */, nil /* pCtx */)
+>>>>>>> d0c842f (Add SkipSQLDB module)
             trace = nil
             return
         }
@@ -459,7 +538,11 @@ public final class Connection {
         let box: Trace = { (pointer: UnsafeRawPointer) in
             callback(String(cString: pointer.assumingMemoryBound(to: UInt8.self)))
         }
+<<<<<<< HEAD
         SQLite3.sqlite3_trace_v2(handle, UInt32(SQLITE_TRACE_STMT) /* mask */, {
+=======
+        sqlite3_trace_v2(handle, UInt32(SQLITE_TRACE_STMT) /* mask */, {
+>>>>>>> d0c842f (Add SkipSQLDB module)
                  // A trace callback is invoked with four arguments: callback(T,C,P,X).
                  // The T argument is one of the SQLITE_TRACE constants to indicate why the
                  // callback was invoked. The C argument is a copy of the context pointer.
@@ -488,7 +571,11 @@ public final class Connection {
     ///   rowid.
     public func updateHook(_ callback: ((_ operation: Operation, _ db: String, _ table: String, _ rowid: Int64) -> Void)?) {
         guard let callback else {
+<<<<<<< HEAD
             SQLite3.sqlite3_update_hook(handle, nil, nil)
+=======
+            sqlite3_update_hook(handle, nil, nil)
+>>>>>>> d0c842f (Add SkipSQLDB module)
             updateHook = nil
             return
         }
@@ -501,7 +588,11 @@ public final class Connection {
                 $3
             )
         }
+<<<<<<< HEAD
         SQLite3.sqlite3_update_hook(handle, { callback, operation, db, table, rowid in
+=======
+        sqlite3_update_hook(handle, { callback, operation, db, table, rowid in
+>>>>>>> d0c842f (Add SkipSQLDB module)
             unsafeBitCast(callback, to: UpdateHook.self)(operation, db!, table!, rowid)
         }, unsafeBitCast(box, to: UnsafeMutableRawPointer.self))
         updateHook = box
@@ -516,7 +607,11 @@ public final class Connection {
     ///   back.
     public func commitHook(_ callback: (() throws -> Void)?) {
         guard let callback else {
+<<<<<<< HEAD
             SQLite3.sqlite3_commit_hook(handle, nil, nil)
+=======
+            sqlite3_commit_hook(handle, nil, nil)
+>>>>>>> d0c842f (Add SkipSQLDB module)
             commitHook = nil
             return
         }
@@ -529,7 +624,11 @@ public final class Connection {
             }
             return 0
         }
+<<<<<<< HEAD
         SQLite3.sqlite3_commit_hook(handle, { callback in
+=======
+        sqlite3_commit_hook(handle, { callback in
+>>>>>>> d0c842f (Add SkipSQLDB module)
             unsafeBitCast(callback, to: CommitHook.self)()
         }, unsafeBitCast(box, to: UnsafeMutableRawPointer.self))
         commitHook = box
@@ -543,13 +642,21 @@ public final class Connection {
     ///   back.
     public func rollbackHook(_ callback: (() -> Void)?) {
         guard let callback else {
+<<<<<<< HEAD
             SQLite3.sqlite3_rollback_hook(handle, nil, nil)
+=======
+            sqlite3_rollback_hook(handle, nil, nil)
+>>>>>>> d0c842f (Add SkipSQLDB module)
             rollbackHook = nil
             return
         }
 
         let box: RollbackHook = { callback() }
+<<<<<<< HEAD
         SQLite3.sqlite3_rollback_hook(handle, { callback in
+=======
+        sqlite3_rollback_hook(handle, { callback in
+>>>>>>> d0c842f (Add SkipSQLDB module)
             unsafeBitCast(callback, to: RollbackHook.self)()
         }, unsafeBitCast(box, to: UnsafeMutableRawPointer.self))
         rollbackHook = box
@@ -627,7 +734,11 @@ public final class Connection {
             let rstr = String(cString: rhs.assumingMemoryBound(to: UInt8.self))
             return Int32(block(lstr, rstr).rawValue)
         }
+<<<<<<< HEAD
         try check(SQLite3.sqlite3_create_collation_v2(handle, collation, SQLITE_UTF8,
+=======
+        try check(sqlite3_create_collation_v2(handle, collation, SQLITE_UTF8,
+>>>>>>> d0c842f (Add SkipSQLDB module)
             unsafeBitCast(box, to: UnsafeMutableRawPointer.self), { (callback: UnsafeMutableRawPointer?, _,
                                                                      lhs: UnsafeRawPointer?, _, rhs: UnsafeRawPointer?) in /* xCompare */
             if let lhs, let rhs {
@@ -665,20 +776,29 @@ public final class Connection {
                    targetName: targetDatabaseName)
     }
 
+<<<<<<< HEAD
     #endif
 
     // MARK: - Error Handling
 
     func sync<T>(_ block: () throws -> T) rethrows -> T {
         #if !SKIP // SkipSQLDB TODO
+=======
+    // MARK: - Error Handling
+
+    func sync<T>(_ block: () throws -> T) rethrows -> T {
+>>>>>>> d0c842f (Add SkipSQLDB module)
         if DispatchQueue.getSpecific(key: Connection.queueKey) == queueContext {
             return try block()
         } else {
             return try queue.sync(execute: block)
         }
+<<<<<<< HEAD
         #else
         return try block()
         #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     }
 
     @discardableResult func check(_ resultCode: Int32, statement: Statement? = nil) throws -> Int32 {
@@ -689,20 +809,30 @@ public final class Connection {
         throw error
     }
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     fileprivate var queue = DispatchQueue(label: "SQLite.Database", attributes: [])
 
     fileprivate static let queueKey = DispatchSpecificKey<Int>()
 
     fileprivate lazy var queueContext: Int = unsafeBitCast(self, to: Int.self)
+<<<<<<< HEAD
     #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
 }
 
 extension Connection: CustomStringConvertible {
 
     public var description: String {
+<<<<<<< HEAD
         String(cString: SQLite3.sqlite3_db_filename(handle, nil)!)
+=======
+        String(cString: sqlite3_db_filename(handle, nil))
+>>>>>>> d0c842f (Add SkipSQLDB module)
     }
 
 }
@@ -732,13 +862,17 @@ extension Connection.Location: CustomStringConvertible {
 }
 
 typealias Context = OpaquePointer?
+<<<<<<< HEAD
 
 #if false // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 extension Context {
     func set(result: Binding?) {
         switch result {
         case let blob as Blob:
+<<<<<<< HEAD
             SQLite3.sqlite3_result_blob(self, blob.bytes, Int32(blob.bytes.count), nil)
         case let double as Double:
             SQLite3.sqlite3_result_double(self, double)
@@ -748,21 +882,38 @@ extension Context {
             SQLite3.sqlite3_result_text(self, string, Int32(string.lengthOfBytes(using: .utf8)), SQLITE_TRANSIENT)
         case .none:
             SQLite3.sqlite3_result_null(self)
+=======
+            sqlite3_result_blob(self, blob.bytes, Int32(blob.bytes.count), nil)
+        case let double as Double:
+            sqlite3_result_double(self, double)
+        case let int as Int64:
+            sqlite3_result_int64(self, int)
+        case let string as String:
+            sqlite3_result_text(self, string, Int32(string.lengthOfBytes(using: .utf8)), SQLITE_TRANSIENT)
+        case .none:
+            sqlite3_result_null(self)
+>>>>>>> d0c842f (Add SkipSQLDB module)
         default:
             fatalError("unsupported result type: \(String(describing: result))")
         }
     }
 }
+<<<<<<< HEAD
 #endif
 
 typealias Argv = UnsafeMutablePointer<OpaquePointer?>?
 
 #if false // SkipSQLDB TODO
 
+=======
+
+typealias Argv = UnsafeMutablePointer<OpaquePointer?>?
+>>>>>>> d0c842f (Add SkipSQLDB module)
 extension Argv {
     func getBindings(argc: Int32) -> [Binding?] {
         (0..<Int(argc)).map { idx in
             let value = self![idx]
+<<<<<<< HEAD
             switch SQLite3.sqlite3_value_type(value) {
             case SQLITE_BLOB:
                 return Blob(bytes: SQLite3.sqlite3_value_blob(value), length: Int(sqlite3_value_bytes(value)))
@@ -774,11 +925,27 @@ extension Argv {
                 return nil
             case SQLITE_TEXT:
                 return String(cString: UnsafePointer(SQLite3.sqlite3_value_text(value)))
+=======
+            switch sqlite3_value_type(value) {
+            case SQLITE_BLOB:
+                return Blob(bytes: sqlite3_value_blob(value), length: Int(sqlite3_value_bytes(value)))
+            case SQLITE_FLOAT:
+                return sqlite3_value_double(value)
+            case SQLITE_INTEGER:
+                return sqlite3_value_int64(value)
+            case SQLITE_NULL:
+                return nil
+            case SQLITE_TEXT:
+                return String(cString: UnsafePointer(sqlite3_value_text(value)))
+>>>>>>> d0c842f (Add SkipSQLDB module)
             case let type:
                 fatalError("unsupported value type: \(type)")
             }
         }
     }
 }
+<<<<<<< HEAD
 #endif
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)

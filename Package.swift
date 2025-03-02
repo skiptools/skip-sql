@@ -36,11 +36,19 @@ let package = Package(
         ], plugins: [.plugin(name: "skipstone", package: "skip")]),
         .target(name: "SkipSQLDB", dependencies: [
             "SkipSQL",
+<<<<<<< HEAD
         ], plugins: [.plugin(name: "skipstone", package: "skip")]),
         .testTarget(name: "SkipSQLDBTests", dependencies: [
             "SkipSQLDB",
             .product(name: "SkipTest", package: "skip")
         ], resources: [.process("Resources")], plugins: [.plugin(name: "skipstone", package: "skip")]),
+=======
+        ], plugins: [/*.plugin(name: "skipstone", package: "skip")*/]),
+        .testTarget(name: "SkipSQLDBTests", dependencies: [
+            "SkipSQLDB",
+            .product(name: "SkipTest", package: "skip")
+        ], resources: [.process("Resources")], plugins: [/*.plugin(name: "skipstone", package: "skip")*/]),
+>>>>>>> d0c842f (Add SkipSQLDB module)
         .target(name: "SQLExt", dependencies: [
             .product(name: "SkipLTC", package: "skip-ltc"),
             .product(name: "SkipUnit", package: "skip-unit")

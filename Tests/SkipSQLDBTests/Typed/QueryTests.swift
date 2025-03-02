@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -27,6 +28,18 @@
 //
 import XCTest
 import SkipSQL
+=======
+import XCTest
+#if SQLITE_SWIFT_STANDALONE
+import sqlite3
+#elseif SQLITE_SWIFT_SQLCIPHER
+import SQLCipher
+#elseif os(Linux) || os(Windows) || os(Android)
+import CSQLite
+#else
+import SQLite3
+#endif
+>>>>>>> d0c842f (Add SkipSQLDB module)
 @testable import SkipSQLDB
 
 class QueryTests: XCTestCase {
@@ -96,12 +109,20 @@ class QueryTests: XCTestCase {
     func test_join_withExplicitType_compilesJoinClauseWithType() {
         assertSQL(
             "SELECT * FROM \"users\" LEFT OUTER JOIN \"posts\" ON (\"posts\".\"user_id\" = \"users\".\"id\")",
+<<<<<<< HEAD
             users.join(JoinType.leftOuter, posts, on: posts[userId] == users[id])
+=======
+            users.join(.leftOuter, posts, on: posts[userId] == users[id])
+>>>>>>> d0c842f (Add SkipSQLDB module)
         )
 
         assertSQL(
             "SELECT * FROM \"users\" CROSS JOIN \"posts\" ON (\"posts\".\"user_id\" = \"users\".\"id\")",
+<<<<<<< HEAD
             users.join(JoinType.cross, posts, on: posts[userId] == users[id])
+=======
+            users.join(.cross, posts, on: posts[userId] == users[id])
+>>>>>>> d0c842f (Add SkipSQLDB module)
         )
     }
 
@@ -403,6 +424,7 @@ class QueryTests: XCTestCase {
     }
     #endif
 
+<<<<<<< HEAD
     struct InsertAndSearchForUUIDTest: Codable {
         var uuid: UUID
         var string: String
@@ -411,6 +433,15 @@ class QueryTests: XCTestCase {
     func test_insert_and_search_for_UUID() throws {
         let testUUID = UUID()
         let testValue = InsertAndSearchForUUIDTest(uuid: testUUID, string: "value")
+=======
+    func test_insert_and_search_for_UUID() throws {
+        struct Test: Codable {
+            var uuid: UUID
+            var string: String
+        }
+        let testUUID = UUID()
+        let testValue = Test(uuid: testUUID, string: "value")
+>>>>>>> d0c842f (Add SkipSQLDB module)
         let db = try Connection(.temporary)
         try db.run(table.create { t in
             t.column(uuid)
@@ -423,7 +454,11 @@ class QueryTests: XCTestCase {
 
         let fQuery = table.filter(uuid == testUUID)
         if let result = try db.pluck(fQuery) {
+<<<<<<< HEAD
             let testValueReturned = InsertAndSearchForUUIDTest(uuid: result[uuid], string: result[string])
+=======
+            let testValueReturned = Test(uuid: result[uuid], string: result[string])
+>>>>>>> d0c842f (Add SkipSQLDB module)
             XCTAssertEqual(testUUID, testValueReturned.uuid)
         } else {
             XCTFail("Search for uuid failed")
@@ -532,7 +567,11 @@ class QueryTests: XCTestCase {
             sql.index(sql.startIndex, offsetBy: expectedPrefix.count) ..<
             sql.index(sql.endIndex, offsetBy: -expectedSuffix.count)
         ])
+<<<<<<< HEAD
         let decodedJSON = try JSONDecoder().decode(TestCodable.self, from: extractedJSON.data(using: String.Encoding.utf8)!)
+=======
+        let decodedJSON = try JSONDecoder().decode(TestCodable.self, from: extractedJSON.data(using: .utf8)!)
+>>>>>>> d0c842f (Add SkipSQLDB module)
         XCTAssertEqual(decodedJSON, value1)
     }
 

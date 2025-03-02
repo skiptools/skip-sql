@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -29,6 +30,21 @@ import XCTest
 import Foundation
 @testable import SkipSQLDB
 import SkipSQL
+=======
+import XCTest
+import Foundation
+@testable import SkipSQLDB
+
+#if SQLITE_SWIFT_STANDALONE
+import sqlite3
+#elseif SQLITE_SWIFT_SQLCIPHER
+import SQLCipher
+#elseif os(Linux) || os(Windows) || os(Android)
+import CSQLite
+#else
+import SQLite3
+#endif
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
 class ResultTests: XCTestCase {
     var connection: Connection!
@@ -49,7 +65,10 @@ class ResultTests: XCTestCase {
         XCTAssertNil(Result(errorCode: SQLITE_DONE, connection: connection, statement: nil) as Result?)
     }
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     func test_init_with_other_code_returns_error() {
         if case .some(.error(let message, let code, let statement)) =
             Result(errorCode: SQLITE_MISUSE, connection: connection, statement: nil) {
@@ -61,7 +80,10 @@ class ResultTests: XCTestCase {
             XCTFail("no error")
         }
     }
+<<<<<<< HEAD
     #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
     func test_description_contains_error_code() {
         XCTAssertEqual("not an error (code: 21)",
@@ -74,7 +96,10 @@ class ResultTests: XCTestCase {
             Result(errorCode: SQLITE_MISUSE, connection: connection, statement: statement)?.description)
     }
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     func test_init_extended_with_other_code_returns_error() {
         connection.usesExtendedErrorCodes = true
         if case .some(.extendedError(let message, let extendedCode, let statement)) =
@@ -87,5 +112,8 @@ class ResultTests: XCTestCase {
             XCTFail("no error")
         }
     }
+<<<<<<< HEAD
     #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 }

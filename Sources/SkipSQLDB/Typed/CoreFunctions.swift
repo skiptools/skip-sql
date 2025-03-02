@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
 // This code is adapted from the SQLite.swift project, with the following license:
 
+=======
+//
+>>>>>>> d0c842f (Add SkipSQLDB module)
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -132,8 +136,11 @@ extension ExpressionType where UnderlyingType == Double? {
 
 }
 
+<<<<<<< HEAD
 #if !SKIP // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 extension ExpressionType where UnderlyingType: Value, UnderlyingType.Datatype == Int64 {
 
     /// Builds an expression representing the `random` function.
@@ -186,7 +193,10 @@ extension ExpressionType where UnderlyingType == Data {
     }
 
 }
+<<<<<<< HEAD
 #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
 extension ExpressionType where UnderlyingType == Data? {
 
@@ -742,8 +752,11 @@ extension String {
 
 }
 
+<<<<<<< HEAD
 #if !SKIP // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 /// Builds a copy of the given expressions wrapped with the `ifnull` function.
 ///
 ///     let name = SQLExpression<String?>("name")
@@ -802,6 +815,9 @@ public func ??<V: Value>(optional: SQLExpression<V?>, defaultValue: SQLExpressio
 public func ??<V: Value>(optional: SQLExpression<V?>, defaultValue: SQLExpression<V?>) -> SQLExpression<V> {
     Function.ifnull.wrap([optional, defaultValue])
 }
+<<<<<<< HEAD
 
 #endif
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -25,11 +26,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 import XCTest
 import Foundation
 import Dispatch
 @testable import SkipSQLDB
+<<<<<<< HEAD
 import SkipSQL
+=======
+
+#if SQLITE_SWIFT_STANDALONE
+import sqlite3
+#elseif SQLITE_SWIFT_SQLCIPHER
+import SQLCipher
+#elseif os(Linux) || os(Windows) || os(Android)
+import CSQLite
+#else
+import SQLite3
+#endif
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
 class ConnectionTests: SQLiteTestCase {
 
@@ -82,8 +98,11 @@ class ConnectionTests: SQLiteTestCase {
         XCTAssertEqual(location.description, "file:foo?mode=ro&cache=private")
     }
 
+<<<<<<< HEAD
     #if false // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     func test_readonly_returnsFalseOnReadWriteConnections() {
         XCTAssertFalse(db.readonly)
     }
@@ -93,8 +112,11 @@ class ConnectionTests: SQLiteTestCase {
         XCTAssertTrue(db.readonly)
     }
 
+<<<<<<< HEAD
     #endif
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     func test_changes_returnsZeroOnNewConnections() {
         XCTAssertEqual(0, db.changes)
     }
@@ -104,8 +126,11 @@ class ConnectionTests: SQLiteTestCase {
         XCTAssertEqual(1, db.lastInsertRowid)
     }
 
+<<<<<<< HEAD
     #if false // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     func test_lastInsertRowid_doesNotResetAfterError() throws {
         XCTAssert(db.lastInsertRowid == 0)
         try insertUser("alice")
@@ -113,7 +138,11 @@ class ConnectionTests: SQLiteTestCase {
         XCTAssertThrowsError(
             try db.run("INSERT INTO \"users\" (email, age, admin) values ('invalid@example.com', 12, 'invalid')")
         ) { error in
+<<<<<<< HEAD
             if case SQLiteDB.Result.error(_, let code, _) = error {
+=======
+            if case SkipSQLDB.Result.error(_, let code, _) = error {
+>>>>>>> d0c842f (Add SkipSQLDB module)
                 XCTAssertEqual(SQLITE_CONSTRAINT, code)
             } else {
                 XCTFail("expected error")
@@ -121,7 +150,10 @@ class ConnectionTests: SQLiteTestCase {
         }
         XCTAssertEqual(1, db.lastInsertRowid)
     }
+<<<<<<< HEAD
     #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
     func test_changes_returnsNumberOfChanges() throws {
         try insertUser("alice")
@@ -193,8 +225,11 @@ class ConnectionTests: SQLiteTestCase {
         assertSQL("BEGIN EXCLUSIVE TRANSACTION")
     }
 
+<<<<<<< HEAD
     #if false // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     func test_backup_copiesDatabase() throws {
         let target = try Connection()
 
@@ -206,7 +241,10 @@ class ConnectionTests: SQLiteTestCase {
         let users = try target.prepare("SELECT email FROM users ORDER BY email")
         XCTAssertEqual(users.map { $0[0] as? String }, ["alice@example.com", "betsy@example.com"])
     }
+<<<<<<< HEAD
     #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
     func test_transaction_beginsAndCommitsTransactions() throws {
         let stmt = try db.prepare("INSERT INTO users (email) VALUES (?)", "alice@example.com")
@@ -320,8 +358,11 @@ class ConnectionTests: SQLiteTestCase {
         assertSQL("RELEASE SAVEPOINT '1'", 0)
     }
 
+<<<<<<< HEAD
     #if false // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     func test_updateHook_setsUpdateHook_withInsert() throws {
         try async { done in
             db.updateHook { operation, db, table, rowid in
@@ -405,10 +446,13 @@ class ConnectionTests: SQLiteTestCase {
         }
     }
 
+<<<<<<< HEAD
     #endif
 
     #if false // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     // https://github.com/stephencelis/SQLite.swift/issues/1071
     #if !os(Linux) && !os(Android) && !os(Windows)
     func test_createFunction_withArrayArguments() throws {
@@ -459,9 +503,13 @@ class ConnectionTests: SQLiteTestCase {
         }
     }
     #endif
+<<<<<<< HEAD
     #endif
 
     #if !SKIP // SkipSQLDB TODO
+=======
+
+>>>>>>> d0c842f (Add SkipSQLDB module)
     func test_concurrent_access_single_connection() throws {
         // test can fail on iOS/tvOS 9.x: SQLite compile-time differences?
         guard #available(iOS 10.0, OSX 10.10, tvOS 10.0, watchOS 2.2, *) else { return }
@@ -482,5 +530,8 @@ class ConnectionTests: SQLiteTestCase {
         }
         semaphores.forEach { $0.wait() }
     }
+<<<<<<< HEAD
     #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 }

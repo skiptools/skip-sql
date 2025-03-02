@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
 // This code is adapted from the SQLite.swift project, with the following license:
 
+=======
+//
+>>>>>>> d0c842f (Add SkipSQLDB module)
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -26,8 +30,11 @@
 // THE SOFTWARE.
 //
 
+<<<<<<< HEAD
 #if !SKIP // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 precedencegroup ColumnAssignment {
     associativity: left
     assignment: true
@@ -286,6 +293,9 @@ public postfix func --<V: Value>(column: SQLExpression<V>) -> Setter where V.Dat
 public postfix func --<V: Value>(column: SQLExpression<V?>) -> Setter where V.Datatype == Int64 {
     SQLExpression<Int>(column) -= 1
 }
+<<<<<<< HEAD
 
 #endif
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)

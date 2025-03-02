@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
 // This code is adapted from the SQLite.swift project, with the following license:
 
+=======
+//
+>>>>>>> d0c842f (Add SkipSQLDB module)
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -49,12 +53,17 @@ public protocol Value: Expressible { // extensions cannot have inheritance claus
 
 }
 
+<<<<<<< HEAD
 #if !SKIP // SkipSQLDB TODO
 extension Double: Number, Value {
 }
 #endif
 
 extension Double {
+=======
+extension Double: Number, Value {
+
+>>>>>>> d0c842f (Add SkipSQLDB module)
     public static let declaredDatatype = "REAL"
 
     public static func fromDatatypeValue(_ datatypeValue: Double) -> Double {
@@ -67,12 +76,17 @@ extension Double {
 
 }
 
+<<<<<<< HEAD
 #if !SKIP // SkipSQLDB TODO
 extension Int64: Number, Value {
 }
 #endif
 
 extension Int64 {
+=======
+extension Int64: Number, Value {
+
+>>>>>>> d0c842f (Add SkipSQLDB module)
     public static let declaredDatatype = "INTEGER"
 
     public static func fromDatatypeValue(_ datatypeValue: Int64) -> Int64 {
@@ -85,12 +99,17 @@ extension Int64 {
 
 }
 
+<<<<<<< HEAD
 #if !SKIP // SkipSQLDB TODO
 extension String: Binding, Value {
 }
 #endif
 
 extension String {
+=======
+extension String: Binding, Value {
+
+>>>>>>> d0c842f (Add SkipSQLDB module)
     public static let declaredDatatype = "TEXT"
 
     public static func fromDatatypeValue(_ datatypeValue: String) -> String {
@@ -103,12 +122,17 @@ extension String {
 
 }
 
+<<<<<<< HEAD
 #if !SKIP // SkipSQLDB TODO
 extension Blob: Binding, Value {
 }
 #endif
 
 extension Blob {
+=======
+extension Blob: Binding, Value {
+
+>>>>>>> d0c842f (Add SkipSQLDB module)
     public static let declaredDatatype = "BLOB"
 
     public static func fromDatatypeValue(_ datatypeValue: Blob) -> Blob {
@@ -123,12 +147,17 @@ extension Blob {
 
 // MARK: -
 
+<<<<<<< HEAD
 #if !SKIP // SkipSQLDB TODO
 extension Bool: Binding, Value {
 }
 #endif
 
 extension Bool {
+=======
+extension Bool: Binding, Value {
+
+>>>>>>> d0c842f (Add SkipSQLDB module)
     public static var declaredDatatype = Int64.declaredDatatype
 
     public static func fromDatatypeValue(_ datatypeValue: Int64) -> Bool {
@@ -141,12 +170,17 @@ extension Bool {
 
 }
 
+<<<<<<< HEAD
 #if !SKIP // SkipSQLDB TODO
 extension Int: Number, Value {
 }
 #endif
 
 extension Int {
+=======
+extension Int: Number, Value {
+
+>>>>>>> d0c842f (Add SkipSQLDB module)
     public static var declaredDatatype = Int64.declaredDatatype
 
     public static func fromDatatypeValue(_ datatypeValue: Int64) -> Int {

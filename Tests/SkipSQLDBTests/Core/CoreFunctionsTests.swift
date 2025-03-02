@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -25,6 +26,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 import XCTest
 @testable import SkipSQLDB
 
@@ -91,6 +94,7 @@ class CoreFunctionsTests: XCTestCase {
     }
 
     func test_collate_buildsExpressionWithCollateOperator() {
+<<<<<<< HEAD
         assertSQL("(\"string\" COLLATE BINARY)", string.collate(Collation.binary))
         assertSQL("(\"string\" COLLATE NOCASE)", string.collate(Collation.nocase))
         assertSQL("(\"string\" COLLATE RTRIM)", string.collate(Collation.rtrim))
@@ -100,6 +104,17 @@ class CoreFunctionsTests: XCTestCase {
         assertSQL("(\"stringOptional\" COLLATE NOCASE)", stringOptional.collate(Collation.nocase))
         assertSQL("(\"stringOptional\" COLLATE RTRIM)", stringOptional.collate(Collation.rtrim))
         assertSQL("(\"stringOptional\" COLLATE \"CUSTOM\")", stringOptional.collate(Collation.custom("CUSTOM")))
+=======
+        assertSQL("(\"string\" COLLATE BINARY)", string.collate(.binary))
+        assertSQL("(\"string\" COLLATE NOCASE)", string.collate(.nocase))
+        assertSQL("(\"string\" COLLATE RTRIM)", string.collate(.rtrim))
+        assertSQL("(\"string\" COLLATE \"CUSTOM\")", string.collate(.custom("CUSTOM")))
+
+        assertSQL("(\"stringOptional\" COLLATE BINARY)", stringOptional.collate(.binary))
+        assertSQL("(\"stringOptional\" COLLATE NOCASE)", stringOptional.collate(.nocase))
+        assertSQL("(\"stringOptional\" COLLATE RTRIM)", stringOptional.collate(.rtrim))
+        assertSQL("(\"stringOptional\" COLLATE \"CUSTOM\")", stringOptional.collate(.custom("CUSTOM")))
+>>>>>>> d0c842f (Add SkipSQLDB module)
     }
 
     func test_ltrim_wrapsStringWithLtrimFunction() {

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -25,6 +26,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 import XCTest
 import SkipSQLDB
 
@@ -320,6 +323,7 @@ class SchemaTests: XCTestCase {
     func test_column_withIntegerExpression_compilesPrimaryKeyAutoincrementColumnDefinitionExpression() {
         XCTAssertEqual(
             "CREATE TABLE \"table\" (\"int64\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL)",
+<<<<<<< HEAD
             table.create { t in t.column(int64, primaryKey: PrimaryKey.autoincrement) }
         )
         XCTAssertEqual(
@@ -329,6 +333,17 @@ class SchemaTests: XCTestCase {
         XCTAssertEqual(
             "CREATE TABLE \"table\" (\"int64\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL CHECK (\"int64Optional\" > 0))",
             table.create { t in t.column(int64, primaryKey: PrimaryKey.autoincrement, check: int64Optional > 0) }
+=======
+            table.create { t in t.column(int64, primaryKey: .autoincrement) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"int64\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL CHECK (\"int64\" > 0))",
+            table.create { t in t.column(int64, primaryKey: .autoincrement, check: int64 > 0) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"int64\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL CHECK (\"int64Optional\" > 0))",
+            table.create { t in t.column(int64, primaryKey: .autoincrement, check: int64Optional > 0) }
+>>>>>>> d0c842f (Add SkipSQLDB module)
         )
     }
 
@@ -422,6 +437,7 @@ class SchemaTests: XCTestCase {
     func test_column_withStringExpression_compilesCollatedColumnDefinitionExpression() {
         XCTAssertEqual(
             "CREATE TABLE \"table\" (\"string\" TEXT NOT NULL COLLATE RTRIM)",
+<<<<<<< HEAD
             table.create { t in t.column(string, collate: Collation.rtrim) }
         )
         XCTAssertEqual(
@@ -491,10 +507,82 @@ class SchemaTests: XCTestCase {
         XCTAssertEqual(
             "CREATE TABLE \"table\" (\"string\" TEXT NOT NULL CHECK (\"stringOptional\" != '') DEFAULT ('string') COLLATE RTRIM)",
             table.create { t in t.column(string, check: stringOptional != "", defaultValue: "string", collate: Collation.rtrim) }
+=======
+            table.create { t in t.column(string, collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"string\" TEXT NOT NULL UNIQUE COLLATE RTRIM)",
+            table.create { t in t.column(string, unique: true, collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"string\" TEXT NOT NULL CHECK (\"string\" != '') COLLATE RTRIM)",
+            table.create { t in t.column(string, check: string != "", collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"string\" TEXT NOT NULL CHECK (\"stringOptional\" != '') COLLATE RTRIM)",
+            table.create { t in t.column(string, check: stringOptional != "", collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"string\" TEXT NOT NULL DEFAULT (\"string\") COLLATE RTRIM)",
+            table.create { t in t.column(string, defaultValue: string, collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"string\" TEXT NOT NULL DEFAULT ('string') COLLATE RTRIM)",
+            table.create { t in t.column(string, defaultValue: "string", collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"string\" TEXT NOT NULL UNIQUE CHECK (\"string\" != '') COLLATE RTRIM)",
+            table.create { t in t.column(string, unique: true, check: string != "", collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"string\" TEXT NOT NULL UNIQUE CHECK (\"stringOptional\" != '') COLLATE RTRIM)",
+            table.create { t in t.column(string, unique: true, check: stringOptional != "", collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"string\" TEXT NOT NULL UNIQUE DEFAULT (\"string\") COLLATE RTRIM)",
+            table.create { t in t.column(string, unique: true, defaultValue: string, collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"string\" TEXT NOT NULL UNIQUE DEFAULT ('string') COLLATE RTRIM)",
+            table.create { t in t.column(string, unique: true, defaultValue: "string", collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"string\" TEXT NOT NULL UNIQUE CHECK (\"string\" != '') DEFAULT (\"string\") COLLATE RTRIM)",
+            table.create { t in t.column(string, unique: true, check: string != "", defaultValue: string, collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"string\" TEXT NOT NULL UNIQUE CHECK (\"stringOptional\" != '') DEFAULT (\"string\") COLLATE RTRIM)",
+            table.create { t in t.column(string, unique: true, check: stringOptional != "", defaultValue: string, collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"string\" TEXT NOT NULL UNIQUE CHECK (\"string\" != '') DEFAULT ('string') COLLATE RTRIM)",
+            table.create { t in t.column(string, unique: true, check: string != "", defaultValue: "string", collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"string\" TEXT NOT NULL UNIQUE CHECK (\"stringOptional\" != '') DEFAULT ('string') COLLATE RTRIM)",
+            table.create { t in t.column(string, unique: true, check: stringOptional != "", defaultValue: "string", collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"string\" TEXT NOT NULL CHECK (\"string\" != '') DEFAULT (\"string\") COLLATE RTRIM)",
+            table.create { t in t.column(string, check: string != "", defaultValue: string, collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"string\" TEXT NOT NULL CHECK (\"stringOptional\" != '') DEFAULT (\"string\") COLLATE RTRIM)",
+            table.create { t in t.column(string, check: stringOptional != "", defaultValue: string, collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"string\" TEXT NOT NULL CHECK (\"string\" != '') DEFAULT ('string') COLLATE RTRIM)",
+            table.create { t in t.column(string, check: string != "", defaultValue: "string", collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"string\" TEXT NOT NULL CHECK (\"stringOptional\" != '') DEFAULT ('string') COLLATE RTRIM)",
+            table.create { t in t.column(string, check: stringOptional != "", defaultValue: "string", collate: .rtrim) }
+>>>>>>> d0c842f (Add SkipSQLDB module)
         )
 
         XCTAssertEqual(
             "CREATE TABLE \"table\" (\"stringOptional\" TEXT COLLATE RTRIM)",
+<<<<<<< HEAD
             table.create { t in t.column(stringOptional, collate: Collation.rtrim) }
         )
         XCTAssertEqual(
@@ -544,6 +632,57 @@ class SchemaTests: XCTestCase {
         XCTAssertEqual(
             "CREATE TABLE \"table\" (\"stringOptional\" TEXT UNIQUE CHECK (\"string\" != '') DEFAULT (\"string\") COLLATE RTRIM)",
             table.create { t in t.column(stringOptional, unique: true, check: string != "", defaultValue: string, collate: Collation.rtrim) }
+=======
+            table.create { t in t.column(stringOptional, collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"stringOptional\" TEXT UNIQUE COLLATE RTRIM)",
+            table.create { t in t.column(stringOptional, unique: true, collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"stringOptional\" TEXT CHECK (\"string\" != '') COLLATE RTRIM)",
+            table.create { t in t.column(stringOptional, check: string != "", collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"stringOptional\" TEXT CHECK (\"stringOptional\" != '') COLLATE RTRIM)",
+            table.create { t in t.column(stringOptional, check: stringOptional != "", collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"stringOptional\" TEXT DEFAULT (\"string\") COLLATE RTRIM)",
+            table.create { t in t.column(stringOptional, defaultValue: string, collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"stringOptional\" TEXT DEFAULT (\"stringOptional\") COLLATE RTRIM)",
+            table.create { t in t.column(stringOptional, defaultValue: stringOptional, collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"stringOptional\" TEXT DEFAULT ('string') COLLATE RTRIM)",
+            table.create { t in t.column(stringOptional, defaultValue: "string", collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"stringOptional\" TEXT UNIQUE CHECK (\"string\" != '') COLLATE RTRIM)",
+            table.create { t in t.column(stringOptional, unique: true, check: string != "", collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"stringOptional\" TEXT UNIQUE CHECK (\"stringOptional\" != '') COLLATE RTRIM)",
+            table.create { t in t.column(stringOptional, unique: true, check: stringOptional != "", collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"stringOptional\" TEXT UNIQUE DEFAULT (\"string\") COLLATE RTRIM)",
+            table.create { t in t.column(stringOptional, unique: true, defaultValue: string, collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"stringOptional\" TEXT UNIQUE DEFAULT (\"stringOptional\") COLLATE RTRIM)",
+            table.create { t in t.column(stringOptional, unique: true, defaultValue: stringOptional, collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"stringOptional\" TEXT UNIQUE DEFAULT ('string') COLLATE RTRIM)",
+            table.create { t in t.column(stringOptional, unique: true, defaultValue: "string", collate: .rtrim) }
+        )
+        XCTAssertEqual(
+            "CREATE TABLE \"table\" (\"stringOptional\" TEXT UNIQUE CHECK (\"string\" != '') DEFAULT (\"string\") COLLATE RTRIM)",
+            table.create { t in t.column(stringOptional, unique: true, check: string != "", defaultValue: string, collate: .rtrim) }
+>>>>>>> d0c842f (Add SkipSQLDB module)
         )
         XCTAssertEqual(
             """
@@ -554,7 +693,11 @@ class SchemaTests: XCTestCase {
                                          unique: true,
                                          check: string != "",
                                          defaultValue: stringOptional,
+<<<<<<< HEAD
                                          collate: Collation.rtrim) }
+=======
+                                         collate: .rtrim) }
+>>>>>>> d0c842f (Add SkipSQLDB module)
         )
         XCTAssertEqual(
             """
@@ -562,7 +705,11 @@ class SchemaTests: XCTestCase {
              DEFAULT (\"string\") COLLATE RTRIM)
             """.replacingOccurrences(of: "\n", with: ""),
             table.create { t in t.column(stringOptional, unique: true, check: stringOptional != "",
+<<<<<<< HEAD
                                          defaultValue: string, collate: Collation.rtrim) }
+=======
+                                         defaultValue: string, collate: .rtrim) }
+>>>>>>> d0c842f (Add SkipSQLDB module)
         )
         XCTAssertEqual(
             """
@@ -570,7 +717,11 @@ class SchemaTests: XCTestCase {
              DEFAULT (\"stringOptional\") COLLATE RTRIM)
             """.replacingOccurrences(of: "\n", with: ""),
             table.create { t in t.column(stringOptional, unique: true, check: stringOptional != "",
+<<<<<<< HEAD
                                          defaultValue: stringOptional, collate: Collation.rtrim) }
+=======
+                                         defaultValue: stringOptional, collate: .rtrim) }
+>>>>>>> d0c842f (Add SkipSQLDB module)
         )
         XCTAssertEqual(
             """
@@ -578,7 +729,11 @@ class SchemaTests: XCTestCase {
              DEFAULT ('string') COLLATE RTRIM)
             """.replacingOccurrences(of: "\n", with: ""),
             table.create { t in t.column(stringOptional, unique: true, check: string != "",
+<<<<<<< HEAD
                                          defaultValue: "string", collate: Collation.rtrim) }
+=======
+                                         defaultValue: "string", collate: .rtrim) }
+>>>>>>> d0c842f (Add SkipSQLDB module)
         )
         XCTAssertEqual(
             """
@@ -586,7 +741,11 @@ class SchemaTests: XCTestCase {
              DEFAULT ('string') COLLATE RTRIM)
             """.replacingOccurrences(of: "\n", with: ""),
             table.create { t in t.column(stringOptional, unique: true, check: stringOptional != "",
+<<<<<<< HEAD
                                          defaultValue: "string", collate: Collation.rtrim) }
+=======
+                                         defaultValue: "string", collate: .rtrim) }
+>>>>>>> d0c842f (Add SkipSQLDB module)
         )
         XCTAssertEqual(
             """
@@ -594,7 +753,11 @@ class SchemaTests: XCTestCase {
              DEFAULT (\"string\") COLLATE RTRIM)
             """.replacingOccurrences(of: "\n", with: ""),
             table.create { t in t.column(stringOptional, check: string != "",
+<<<<<<< HEAD
                                          defaultValue: string, collate: Collation.rtrim) }
+=======
+                                         defaultValue: string, collate: .rtrim) }
+>>>>>>> d0c842f (Add SkipSQLDB module)
         )
         XCTAssertEqual(
             """
@@ -602,7 +765,11 @@ class SchemaTests: XCTestCase {
              DEFAULT (\"string\") COLLATE RTRIM)
             """.replacingOccurrences(of: "\n", with: ""),
             table.create { t in t.column(stringOptional, check: stringOptional != "",
+<<<<<<< HEAD
                                          defaultValue: string, collate: Collation.rtrim) }
+=======
+                                         defaultValue: string, collate: .rtrim) }
+>>>>>>> d0c842f (Add SkipSQLDB module)
         )
         XCTAssertEqual(
             """
@@ -610,7 +777,11 @@ class SchemaTests: XCTestCase {
              DEFAULT (\"stringOptional\") COLLATE RTRIM)
             """.replacingOccurrences(of: "\n", with: ""),
             table.create { t in t.column(stringOptional, check: string != "",
+<<<<<<< HEAD
                                          defaultValue: stringOptional, collate: Collation.rtrim) }
+=======
+                                         defaultValue: stringOptional, collate: .rtrim) }
+>>>>>>> d0c842f (Add SkipSQLDB module)
         )
         XCTAssertEqual(
             """
@@ -618,7 +789,11 @@ class SchemaTests: XCTestCase {
              DEFAULT (\"stringOptional\") COLLATE RTRIM)
             """.replacingOccurrences(of: "\n", with: ""),
             table.create { t in t.column(stringOptional, check: stringOptional != "",
+<<<<<<< HEAD
                                          defaultValue: stringOptional, collate: Collation.rtrim) }
+=======
+                                         defaultValue: stringOptional, collate: .rtrim) }
+>>>>>>> d0c842f (Add SkipSQLDB module)
         )
         XCTAssertEqual(
             """
@@ -626,7 +801,11 @@ class SchemaTests: XCTestCase {
              DEFAULT ('string') COLLATE RTRIM)
             """.replacingOccurrences(of: "\n", with: ""),
             table.create { t in t.column(stringOptional, check: string != "",
+<<<<<<< HEAD
                                          defaultValue: "string", collate: Collation.rtrim) }
+=======
+                                         defaultValue: "string", collate: .rtrim) }
+>>>>>>> d0c842f (Add SkipSQLDB module)
         )
         XCTAssertEqual(
             """
@@ -634,7 +813,11 @@ class SchemaTests: XCTestCase {
              DEFAULT ('string') COLLATE RTRIM)
             """.replacingOccurrences(of: "\n", with: ""),
             table.create { t in t.column(stringOptional, check: stringOptional != "",
+<<<<<<< HEAD
                                          defaultValue: "string", collate: Collation.rtrim) }
+=======
+                                         defaultValue: "string", collate: .rtrim) }
+>>>>>>> d0c842f (Add SkipSQLDB module)
         )
     }
 
@@ -795,6 +978,7 @@ class SchemaTests: XCTestCase {
     func test_addColumn_withStringExpression_compilesCollatedAlterTableExpression() {
         XCTAssertEqual(
             "ALTER TABLE \"table\" ADD COLUMN \"string\" TEXT NOT NULL DEFAULT ('string') COLLATE RTRIM",
+<<<<<<< HEAD
             table.addColumn(string, defaultValue: "string", collate: Collation.rtrim)
         )
         XCTAssertEqual(
@@ -804,10 +988,22 @@ class SchemaTests: XCTestCase {
         XCTAssertEqual(
             "ALTER TABLE \"table\" ADD COLUMN \"string\" TEXT NOT NULL CHECK (\"stringOptional\" != '') DEFAULT ('string') COLLATE RTRIM",
             table.addColumn(string, check: stringOptional != "", defaultValue: "string", collate: Collation.rtrim)
+=======
+            table.addColumn(string, defaultValue: "string", collate: .rtrim)
+        )
+        XCTAssertEqual(
+            "ALTER TABLE \"table\" ADD COLUMN \"string\" TEXT NOT NULL CHECK (\"string\" != '') DEFAULT ('string') COLLATE RTRIM",
+            table.addColumn(string, check: string != "", defaultValue: "string", collate: .rtrim)
+        )
+        XCTAssertEqual(
+            "ALTER TABLE \"table\" ADD COLUMN \"string\" TEXT NOT NULL CHECK (\"stringOptional\" != '') DEFAULT ('string') COLLATE RTRIM",
+            table.addColumn(string, check: stringOptional != "", defaultValue: "string", collate: .rtrim)
+>>>>>>> d0c842f (Add SkipSQLDB module)
         )
 
         XCTAssertEqual(
             "ALTER TABLE \"table\" ADD COLUMN \"stringOptional\" TEXT COLLATE RTRIM",
+<<<<<<< HEAD
             table.addColumn(stringOptional, collate: Collation.rtrim)
         )
         XCTAssertEqual(
@@ -825,6 +1021,25 @@ class SchemaTests: XCTestCase {
         XCTAssertEqual(
             "ALTER TABLE \"table\" ADD COLUMN \"stringOptional\" TEXT CHECK (\"stringOptional\" != '') DEFAULT ('string') COLLATE RTRIM",
             table.addColumn(stringOptional, check: stringOptional != "", defaultValue: "string", collate: Collation.rtrim)
+=======
+            table.addColumn(stringOptional, collate: .rtrim)
+        )
+        XCTAssertEqual(
+            "ALTER TABLE \"table\" ADD COLUMN \"stringOptional\" TEXT CHECK (\"string\" != '') COLLATE RTRIM",
+            table.addColumn(stringOptional, check: string != "", collate: .rtrim)
+        )
+        XCTAssertEqual(
+            "ALTER TABLE \"table\" ADD COLUMN \"stringOptional\" TEXT CHECK (\"stringOptional\" != '') COLLATE RTRIM",
+            table.addColumn(stringOptional, check: stringOptional != "", collate: .rtrim)
+        )
+        XCTAssertEqual(
+            "ALTER TABLE \"table\" ADD COLUMN \"stringOptional\" TEXT CHECK (\"string\" != '') DEFAULT ('string') COLLATE RTRIM",
+            table.addColumn(stringOptional, check: string != "", defaultValue: "string", collate: .rtrim)
+        )
+        XCTAssertEqual(
+            "ALTER TABLE \"table\" ADD COLUMN \"stringOptional\" TEXT CHECK (\"stringOptional\" != '') DEFAULT ('string') COLLATE RTRIM",
+            table.addColumn(stringOptional, check: stringOptional != "", defaultValue: "string", collate: .rtrim)
+>>>>>>> d0c842f (Add SkipSQLDB module)
         )
     }
 

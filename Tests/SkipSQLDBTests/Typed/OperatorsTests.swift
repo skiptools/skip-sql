@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -25,6 +26,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 import XCTest
 import SkipSQLDB
 
@@ -300,7 +303,10 @@ class OperatorsTests: XCTestCase {
         assertSQL("(1 <= \"boolOptional\")", true <= boolOptional)
     }
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     func test_patternMatchingOperator_withComparableCountableClosedRange_buildsBetweenBooleanExpression() {
         assertSQL("\"int\" BETWEEN 0 AND 5", 0...5 ~= int)
         assertSQL("\"intOptional\" BETWEEN 0 AND 5", 0...5 ~= intOptional)
@@ -335,7 +341,10 @@ class OperatorsTests: XCTestCase {
         assertSQL("\"string\" BETWEEN 'a' AND 'b'", "a"..."b" ~= string)
         assertSQL("\"stringOptional\" BETWEEN 'a' AND 'b'", "a"..."b" ~= stringOptional)
     }
+<<<<<<< HEAD
     #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
     func test_doubleAndOperator_withBooleanExpressions_buildsCompoundExpression() {
         assertSQL("(\"bool\" AND \"bool\")", bool && bool)
@@ -398,7 +407,10 @@ class OperatorsTests: XCTestCase {
         assertSQL("(\"date\" <= '1970-01-01T00:00:00.000')", date <= begin)
     }
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     func test_dateExpressionRange() {
         let begin = Date(timeIntervalSince1970: 0)
         let end = Date(timeIntervalSince1970: 5000)
@@ -416,6 +428,9 @@ class OperatorsTests: XCTestCase {
             (begin...end) ~= date
         )
     }
+<<<<<<< HEAD
     #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
 }

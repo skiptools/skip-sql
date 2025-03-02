@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
 // This code is adapted from the SQLite.swift project, with the following license:
 
+=======
+//
+>>>>>>> d0c842f (Add SkipSQLDB module)
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -467,7 +471,11 @@ private class SQLiteDecoder: Decoder {
                     throw DecodingError.typeMismatch(type, DecodingError.Context(codingPath: codingPath,
                                                                                  debugDescription: "an unsupported type was found"))
                 }
+<<<<<<< HEAD
                 guard let data = JSONString.data(using: String.Encoding.utf8) else {
+=======
+                guard let data = JSONString.data(using: .utf8) else {
+>>>>>>> d0c842f (Add SkipSQLDB module)
                     throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: codingPath,
                                                                             debugDescription: "invalid utf8 data found"))
                 }
@@ -511,7 +519,11 @@ private class SQLiteDecoder: Decoder {
                 guard let JSONString = try row.get(SQLExpression<String?>(key.stringValue)) else {
                     return nil
                 }
+<<<<<<< HEAD
                 guard let data = JSONString.data(using: String.Encoding.utf8) else {
+=======
+                guard let data = JSONString.data(using: .utf8) else {
+>>>>>>> d0c842f (Add SkipSQLDB module)
                     throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: codingPath,
                                                                             debugDescription: "invalid utf8 data found"))
                 }

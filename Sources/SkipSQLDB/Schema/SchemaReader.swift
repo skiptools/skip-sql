@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -25,6 +26,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 import Foundation
 
 public class SchemaReader {
@@ -34,8 +37,11 @@ public class SchemaReader {
         self.connection = connection
     }
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     // https://sqlite.org/pragma.html#pragma_table_info
     //
     // This pragma returns one row for each column in the named table. Columns in the result set include the
@@ -63,8 +69,12 @@ public class SchemaReader {
                 )
             }
     }
+<<<<<<< HEAD
     #endif
     
+=======
+
+>>>>>>> d0c842f (Add SkipSQLDB module)
     public func objectDefinitions(name: String? = nil,
                                   type: ObjectDefinition.ObjectType? = nil,
                                   temp: Bool = false) throws -> [ObjectDefinition] {

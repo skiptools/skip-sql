@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -25,6 +26,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 import Foundation
 
 struct TableDefinition: Equatable {
@@ -117,17 +120,25 @@ public struct ColumnDefinition: Equatable {
         let autoIncrement: Bool
         let onConflict: OnConflict?
 
+<<<<<<< HEAD
         #if !SKIP // SkipSQLDB TODO
         // swiftlint:disable:next force_try
         static let pattern = try! NSRegularExpression(pattern: "PRIMARY KEY\\s*(?:ASC|DESC)?\\s*(?:ON CONFLICT (\\w+)?)?\\s*(AUTOINCREMENT)?")
         #endif
+=======
+        // swiftlint:disable:next force_try
+        static let pattern = try! NSRegularExpression(pattern: "PRIMARY KEY\\s*(?:ASC|DESC)?\\s*(?:ON CONFLICT (\\w+)?)?\\s*(AUTOINCREMENT)?")
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
         init(autoIncrement: Bool = true, onConflict: OnConflict? = nil) {
             self.autoIncrement = autoIncrement
             self.onConflict = onConflict
         }
 
+<<<<<<< HEAD
         #if !SKIP // SkipSQLDB TODO
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
         init?(sql: String) {
             guard let match = PrimaryKey.pattern.firstMatch(
                 in: sql,
@@ -144,7 +155,10 @@ public struct ColumnDefinition: Equatable {
             let autoIncrement = match.range(at: 2).location != NSNotFound
             self.init(autoIncrement: autoIncrement, onConflict: onConflict)
         }
+<<<<<<< HEAD
         #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     }
 
     public struct ForeignKey: Equatable {
@@ -284,8 +298,11 @@ public struct IndexDefinition: Equatable {
         self.orders = orders
     }
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     init (table: String, name: String, unique: Bool, columns: [String], indexSQL: String?) {
         func wherePart(sql: String) -> String? {
             IndexDefinition.whereRe.firstMatch(in: sql, options: [], range: NSRange(location: 0, length: sql.count)).map {
@@ -299,7 +316,11 @@ public struct IndexDefinition: Equatable {
                 .reduce([String: IndexDefinition.Order]()) { (memo, result) in
                         var memo2 = memo
                         let column = (sql as NSString).substring(with: result.range(at: 1))
+<<<<<<< HEAD
                         memo2[column] = Order.DESC
+=======
+                        memo2[column] = .DESC
+>>>>>>> d0c842f (Add SkipSQLDB module)
                         return memo2
             }
         }
@@ -310,8 +331,12 @@ public struct IndexDefinition: Equatable {
                   where: indexSQL.flatMap(wherePart),
                   orders: indexSQL.flatMap(orders))
     }
+<<<<<<< HEAD
     #endif
     
+=======
+
+>>>>>>> d0c842f (Add SkipSQLDB module)
     public let table: String
     public let name: String
     public let unique: Bool

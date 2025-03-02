@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -25,6 +26,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 import Foundation
 
 public typealias UserVersion = Int32
@@ -45,7 +48,11 @@ public extension Connection {
     /// See SQLite [sqlite_version()](https://sqlite.org/lang_corefunc.html#sqlite_version)
     var sqliteVersion: SQLiteVersion {
         guard let version = (try? scalar("SELECT sqlite_version()")) as? String,
+<<<<<<< HEAD
               let splits = Optional(version.split(separator: ".", maxSplits: 3)), splits.count == 3,
+=======
+              let splits = .some(version.split(separator: ".", maxSplits: 3)), splits.count == 3,
+>>>>>>> d0c842f (Add SkipSQLDB module)
               let major = Int(splits[0]), let minor = Int(splits[1]), let point = Int(splits[2]) else {
             return .zero
         }

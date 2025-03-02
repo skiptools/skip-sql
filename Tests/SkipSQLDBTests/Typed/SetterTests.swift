@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -25,6 +26,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 import XCTest
 import SkipSQLDB
 
@@ -111,7 +114,10 @@ class SetterTests: XCTestCase {
         assertSQL("\"intOptional\" = (\"intOptional\" % 1)", intOptional %= 1)
     }
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     func test_leftShiftEquals_withIntegerExpression_buildsSetter() {
         assertSQL("\"int\" = (\"int\" << \"int\")", int <<= int)
         assertSQL("\"int\" = (\"int\" << 1)", int <<= 1)
@@ -161,5 +167,9 @@ class SetterTests: XCTestCase {
         assertSQL("\"int\" = (\"int\" - 1)", int--)
         assertSQL("\"intOptional\" = (\"intOptional\" - 1)", intOptional--)
     }
+<<<<<<< HEAD
     #endif
+=======
+
+>>>>>>> d0c842f (Add SkipSQLDB module)
 }

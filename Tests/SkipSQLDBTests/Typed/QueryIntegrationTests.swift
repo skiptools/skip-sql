@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -27,6 +28,18 @@
 //
 import XCTest
 import SkipSQL
+=======
+import XCTest
+#if SQLITE_SWIFT_STANDALONE
+import sqlite3
+#elseif SQLITE_SWIFT_SQLCIPHER
+import SQLCipher
+#elseif os(Linux) || os(Windows) || os(Android)
+import CSQLite
+#else
+import SQLite3
+#endif
+>>>>>>> d0c842f (Add SkipSQLDB module)
 @testable import SkipSQLDB
 
 class QueryIntegrationTests: SQLiteTestCase {
@@ -171,6 +184,7 @@ class QueryIntegrationTests: SQLiteTestCase {
          XCTAssertEqual(values.count, 2)
     }
 
+<<<<<<< HEAD
     struct TestTypeWithOptionalArray: Codable {
         var myInt: Int
         var myString: String
@@ -178,6 +192,14 @@ class QueryIntegrationTests: SQLiteTestCase {
     }
 
     func test_insert_custom_encodable_type() throws {
+=======
+    func test_insert_custom_encodable_type() throws {
+        struct TestTypeWithOptionalArray: Codable {
+            var myInt: Int
+            var myString: String
+            var myOptionalArray: [Int]?
+        }
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
         let table = Table("custom_codable")
         try db.run(table.create { builder in
@@ -264,7 +286,10 @@ class QueryIntegrationTests: SQLiteTestCase {
         }
     }
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     func test_catchConstraintError() throws {
         try db.run(users.insert(email <- "alice@example.com"))
         do {
@@ -289,7 +314,10 @@ class QueryIntegrationTests: SQLiteTestCase {
             XCTFail("unexpected error: \(error)")
         }
     }
+<<<<<<< HEAD
     #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
     // https://github.com/stephencelis/SQLite.swift/issues/285
     func test_order_by_random() throws {

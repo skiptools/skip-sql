@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
 // This code is adapted from the SQLite.swift project, with the following license:
 
+=======
+//
+>>>>>>> d0c842f (Add SkipSQLDB module)
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -513,7 +517,11 @@ extension QueryType {
         " ".join([
             SQLExpression<Void>(literal:
                             clauses.select.distinct ? "SELECT DISTINCT" : "SELECT"),
+<<<<<<< HEAD
            ", ".join(clauses.select.selectColumns),
+=======
+           ", ".join(clauses.select.columns),
+>>>>>>> d0c842f (Add SkipSQLDB module)
            SQLExpression<Void>(literal: "FROM"),
            tableName(alias: true)
        ])
@@ -851,6 +859,7 @@ extension QueryType {
     }
 
     func database(namespace name: String) -> Expressible {
+<<<<<<< HEAD
         let nameExpression = SQLExpression<Void>(name)
 
         guard let database = clauses.from.database else {
@@ -858,6 +867,15 @@ extension QueryType {
         }
 
         return ".".join([SQLExpression<Void>(database), nameExpression])
+=======
+        let name = SQLExpression<Void>(name)
+
+        guard let database = clauses.from.database else {
+            return name
+        }
+
+        return ".".join([SQLExpression<Void>(database), name])
+>>>>>>> d0c842f (Add SkipSQLDB module)
     }
 
     public var expression: SQLExpression<Void> {
@@ -931,8 +949,11 @@ public struct ScalarQuery<V>: QueryType {
 
 // TODO: decide: simplify the below with a boxed type instead
 
+<<<<<<< HEAD
 #if !SKIP // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 public struct Select<T>: ExpressionType {
 
     public var template: String
@@ -945,8 +966,11 @@ public struct Select<T>: ExpressionType {
 
 }
 
+<<<<<<< HEAD
 #endif
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 public struct Insert: ExpressionType {
 
     public var template: String
@@ -1039,7 +1063,11 @@ extension Connection {
 
     private func columnNamesForQuery(_ query: QueryType) throws -> [String: Int] {
         var (columnNames, idx) = ([String: Int](), 0)
+<<<<<<< HEAD
         column: for each in query.clauses.select.selectColumns {
+=======
+        column: for each in query.clauses.select.columns {
+>>>>>>> d0c842f (Add SkipSQLDB module)
             var names = each.expression.template.split { $0 == "." }.map(String.init)
             let column = names.removeLast()
             let namespace = names.joined(separator: ".")
@@ -1282,7 +1310,11 @@ public enum OnConflict: String {
 
 public struct QueryClauses {
 
+<<<<<<< HEAD
     var select = (distinct: false, selectColumns: [SQLExpression<Void>(literal: "*") as Expressible])
+=======
+    var select = (distinct: false, columns: [SQLExpression<Void>(literal: "*") as Expressible])
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
     var from: (name: String, alias: String?, database: String?)
 

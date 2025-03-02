@@ -48,6 +48,7 @@ public protocol SQLiteLibrary : NativeLibrary {
     func sqlite3_prepare_v2(_ db: OpaquePointer, _ sql: String, _ nBytes: Int32, _ ppStmt: sqlite3_openarg, _ tail: sqlite_tail_ptr?) -> Int32
 
     // Statement API
+<<<<<<< HEAD
     func sqlite3_step(_ stmt: OpaquePointer?) -> Int32
     @discardableResult func sqlite3_finalize(_ stmt: OpaquePointer?) -> Int32
     func sqlite3_reset(_ stmt: OpaquePointer?) -> Int32
@@ -56,6 +57,16 @@ public protocol SQLiteLibrary : NativeLibrary {
     func sqlite3_bind_parameter_name(_ stmt: OpaquePointer?, _ columnIndex: Int32) -> sqlite3_cstring_ptr?
     func sqlite3_bind_parameter_index(_ stmt: OpaquePointer?, _ name: String) -> Int32
     func sqlite3_clear_bindings(_ stmt: OpaquePointer?) -> Int32
+=======
+    func sqlite3_step(_ stmt: OpaquePointer) -> Int32
+    @discardableResult func sqlite3_finalize(_ stmt: OpaquePointer) -> Int32
+    func sqlite3_reset(_ stmt: OpaquePointer) -> Int32
+    func sqlite3_column_count(_ stmt: OpaquePointer) -> Int32
+    func sqlite3_bind_parameter_count(_ stmnt: OpaquePointer) -> Int32
+    func sqlite3_bind_parameter_name(_ stmnt: OpaquePointer, _ columnIndex: Int32) -> sqlite3_cstring_ptr?
+    func sqlite3_bind_parameter_index(_ stmnt: OpaquePointer, _ name: String) -> Int32
+    func sqlite3_clear_bindings(_ stmnt: OpaquePointer) -> Int32
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
     func sqlite3_column_name(_ stmt: OpaquePointer?, _ columnIndex: Int32) -> sqlite3_cstring_ptr?
 
@@ -69,6 +80,7 @@ public protocol SQLiteLibrary : NativeLibrary {
     func sqlite3_db_handle(_ stmt: OpaquePointer?) -> OpaquePointer
 
     // Parameter Binding
+<<<<<<< HEAD
     @discardableResult func sqlite3_bind_null(_ stmt: OpaquePointer?, _ paramIndex: Int32) -> Int32
     @discardableResult func sqlite3_bind_int(_ stmt: OpaquePointer?, _ paramIndex: Int32, _ value: Int32) -> Int32
     @discardableResult func sqlite3_bind_int64(_ stmt: OpaquePointer?, _ paramIndex: Int32, _ value: Int64) -> Int32
@@ -76,6 +88,15 @@ public protocol SQLiteLibrary : NativeLibrary {
     @discardableResult func sqlite3_bind_text(_ stmt: OpaquePointer?, _ paramIndex: Int32, _ value: String, _ length: Int32, _ destructor: sqlite3_destructor_type) -> Int32
     @discardableResult func sqlite3_bind_blob(_ stmt: OpaquePointer?, _ paramIndex: Int32, _ value: UnsafeRawPointer?, _ length: Int32, _ destructor: sqlite3_destructor_type) -> Int32
     @discardableResult func sqlite3_bind_zeroblob(_ stmt: OpaquePointer?, _ paramIndex: Int32, _ length: Int32) -> Int32
+=======
+    @discardableResult func sqlite3_bind_null(_ stmt: OpaquePointer, _ paramIndex: Int32) -> Int32
+    @discardableResult func sqlite3_bind_int(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: Int32) -> Int32
+    @discardableResult func sqlite3_bind_int64(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: Int64) -> Int32
+    @discardableResult func sqlite3_bind_double(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: Double) -> Int32
+    @discardableResult func sqlite3_bind_text(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: String, _ length: Int32, _ destructor: sqlite3_destructor_type) -> Int32
+    @discardableResult func sqlite3_bind_blob(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: UnsafeRawPointer?, _ length: Int32, _ destructor: sqlite3_destructor_type) -> Int32
+    @discardableResult func sqlite3_bind_zeroblob(_ stmt: OpaquePointer, _ paramIndex: Int32, _ length: Int32) -> Int32
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
 
     // Column Value API

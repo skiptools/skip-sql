@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -25,6 +26,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 import XCTest
 @testable import SkipSQLDB
 
@@ -163,8 +166,11 @@ class AffinityTests: XCTestCase {
     }
 }
 
+<<<<<<< HEAD
 #if !SKIP // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 class IndexDefinitionTests: XCTestCase {
     var definition: IndexDefinition!
     var expected: String!
@@ -270,8 +276,11 @@ class IndexDefinitionTests: XCTestCase {
     }
 }
 
+<<<<<<< HEAD
 #endif
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 class ForeignKeyDefinitionTests: XCTestCase {
     func test_toSQL() {
         XCTAssertEqual(
@@ -350,14 +359,20 @@ class PrimaryKeyTests: XCTestCase {
         )
     }
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     func test_toSQL_on_conflict() {
         XCTAssertEqual(
             ColumnDefinition.PrimaryKey(autoIncrement: false, onConflict: .ROLLBACK).toSQL(),
             "PRIMARY KEY ON CONFLICT ROLLBACK"
         )
     }
+<<<<<<< HEAD
     #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
     func test_fromSQL() {
         XCTAssertEqual(
@@ -377,14 +392,20 @@ class PrimaryKeyTests: XCTestCase {
         )
     }
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     func test_fromSQL_on_conflict() {
         XCTAssertEqual(
             ColumnDefinition.PrimaryKey(sql: "PRIMARY KEY ON CONFLICT ROLLBACK"),
             ColumnDefinition.PrimaryKey(autoIncrement: false, onConflict: .ROLLBACK)
         )
     }
+<<<<<<< HEAD
     #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 }
 
 class LiteralValueTests: XCTestCase {

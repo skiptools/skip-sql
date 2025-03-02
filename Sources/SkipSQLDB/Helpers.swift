@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
 // This code is adapted from the SQLite.swift project, with the following license:
 
+=======
+//
+>>>>>>> d0c842f (Add SkipSQLDB module)
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -26,6 +30,7 @@
 // THE SOFTWARE.
 //
 
+<<<<<<< HEAD
 import SkipSQL
 
 // TODO: make this customizable in the Connnection constructor
@@ -38,6 +43,23 @@ public func *(_: SQLExpression<Binding>?, _: SQLExpression<Binding>?) -> SQLExpr
     SQLExpression(literal: "*")
 }
 #endif
+=======
+#if SQLITE_SWIFT_STANDALONE
+import sqlite3
+#elseif SQLITE_SWIFT_SQLCIPHER
+import SQLCipher
+#elseif os(Linux) || os(Windows) || os(Android)
+import CSQLite
+#else
+import SQLite3
+#endif
+
+public typealias Star = (SQLExpression<Binding>?, SQLExpression<Binding>?) -> SQLExpression<Void>
+
+public func *(_: SQLExpression<Binding>?, _: SQLExpression<Binding>?) -> SQLExpression<Void> {
+    SQLExpression(literal: "*")
+}
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
 // swiftlint:disable:next type_name
 public protocol _OptionalType {
@@ -46,13 +68,19 @@ public protocol _OptionalType {
 
 }
 
+<<<<<<< HEAD
 #if !SKIP // SkipSQLDB TODO
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 extension Optional: _OptionalType {
 
     public typealias WrappedType = Wrapped
 
 }
+<<<<<<< HEAD
 #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
 // let SQLITE_STATIC = unsafeBitCast(0, sqlite3_destructor_type.self)
 let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
@@ -132,6 +160,7 @@ func value<A: Value>(_ binding: Binding) -> A {
 func value<A: Value>(_ binding: Binding?) -> A {
     value(binding!)
 }
+<<<<<<< HEAD
 
 
 // MARK: SQLite Result Codes
@@ -286,3 +315,5 @@ let SQLITE_BLOB = SQLType.blob.rawValue
 let SQLITE_NULL = SQLType.null.rawValue
 
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)

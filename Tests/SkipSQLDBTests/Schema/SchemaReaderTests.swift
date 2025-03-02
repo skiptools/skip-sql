@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -30,6 +31,11 @@ import XCTest
 
 #if false // SkipSQLDB TODO
 
+=======
+import XCTest
+@testable import SkipSQLDB
+
+>>>>>>> d0c842f (Add SkipSQLDB module)
 class SchemaReaderTests: SQLiteTestCase {
     private var schemaReader: SchemaReader!
 
@@ -187,8 +193,13 @@ class SchemaReaderTests: SQLiteTestCase {
     func test_foreignKeys() throws {
         let linkTable = Table("test_links")
 
+<<<<<<< HEAD
         let idColumn = SQLiteDB.SQLExpression<Int64>("id")
         let testIdColumn = SQLiteDB.SQLExpression<Int64>("test_id")
+=======
+        let idColumn = SkipSQLDB.SQLExpression<Int64>("id")
+        let testIdColumn = SkipSQLDB.SQLExpression<Int64>("test_id")
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
         try db.run(linkTable.create(block: { definition in
             definition.column(idColumn, primaryKey: .autoincrement)
@@ -316,6 +327,9 @@ class SchemaReaderTests: SQLiteTestCase {
         XCTAssertTrue((try schemaReader.objectDefinitions(name: "xxx")).isEmpty)
     }
 }
+<<<<<<< HEAD
 
 #endif
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)

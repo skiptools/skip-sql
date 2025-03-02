@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
 // This code is adapted from the SQLite.swift project, with the following license:
 
+=======
+//
+>>>>>>> d0c842f (Add SkipSQLDB module)
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -33,17 +37,24 @@ public protocol ExpressionType: Expressible, CustomStringConvertible { // extens
     var template: String { get }
     var bindings: [Binding?] { get }
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO: Kotlin cannot satisfy a protocol init requirement with a generic constructor
     init(_ template: String, _ bindings: [Binding?])
     #else
     init(_ template: String, _ bindings: [Binding?], _ type: UnderlyingType.self)
     #endif
+=======
+    init(_ template: String, _ bindings: [Binding?])
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
 }
 
 extension ExpressionType {
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     public init(literal: String) {
         self.init(literal, [])
     }
@@ -55,16 +66,22 @@ extension ExpressionType {
     public init<U: ExpressionType>(_ expression: U) {
         self.init(expression.template, expression.bindings)
     }
+<<<<<<< HEAD
     #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
     public var description: String {
         asSQL()
     }
 }
 
+<<<<<<< HEAD
 
 #if !SKIP // SkipSQLDB TODO: Kotlin cannot satisfy a protocol init requirement with a generic constructor
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 @available(*, deprecated, renamed: "SQLExpression")
 public typealias Expression<T> = SQLExpression<T>
 
@@ -76,11 +93,15 @@ public struct SQLExpression<Datatype>: ExpressionType {
     public var template: String
     public var bindings: [Binding?]
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO: Kotlin cannot satisfy a protocol init requirement with a generic constructor
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     public init(_ template: String, _ bindings: [Binding?]) {
         self.template = template
         self.bindings = bindings
     }
+<<<<<<< HEAD
     #else
     public init(_ template: String, _ bindings: [Binding?], _ type: T.self) {
         self.template = template
@@ -90,6 +111,10 @@ public struct SQLExpression<Datatype>: ExpressionType {
 }
 #endif
 
+=======
+
+}
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
 public protocol Expressible {
 
@@ -131,8 +156,11 @@ extension ExpressionType {
 
 }
 
+<<<<<<< HEAD
 #if !SKIP // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 extension ExpressionType where UnderlyingType: Value {
 
     public init(value: UnderlyingType) {
@@ -153,8 +181,11 @@ extension ExpressionType where UnderlyingType: _OptionalType, UnderlyingType.Wra
 
 }
 
+<<<<<<< HEAD
 #endif
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 extension Value {
 
     public var expression: SQLExpression<Void> {

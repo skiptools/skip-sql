@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -25,6 +26,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 import Foundation
 
 /*
@@ -79,6 +82,7 @@ public class SchemaChanger: CustomStringConvertible {
             switch self {
             case .addColumn(let definition):
                 return "ALTER TABLE \(table.quote()) ADD COLUMN \(definition.toSQL())"
+<<<<<<< HEAD
             case .renameColumn(let from, let to):
                 if SQLiteFeature.renameColumn.isSupported(by: version) {
                     return "ALTER TABLE \(table.quote()) RENAME COLUMN \(from.quote()) TO \(to.quote())"
@@ -91,6 +95,12 @@ public class SchemaChanger: CustomStringConvertible {
                 } else {
                     return nil
                 }
+=======
+            case .renameColumn(let from, let to) where SQLiteFeature.renameColumn.isSupported(by: version):
+                return "ALTER TABLE \(table.quote()) RENAME COLUMN \(from.quote()) TO \(to.quote())"
+            case .dropColumn(let column) where SQLiteFeature.dropColumn.isSupported(by: version):
+                return "ALTER TABLE \(table.quote()) DROP COLUMN \(column.quote())"
+>>>>>>> d0c842f (Add SkipSQLDB module)
             default: return nil
             }
         }
@@ -296,9 +306,14 @@ extension IndexDefinition {
 
 extension TableDefinition {
     func apply(_ operation: SchemaChanger.Operation?) -> TableDefinition {
+<<<<<<< HEAD
         guard let operation else { return self }
 
         switch operation {
+=======
+        switch operation {
+        case .none: return self
+>>>>>>> d0c842f (Add SkipSQLDB module)
         case .addColumn: fatalError("Use 'ALTER TABLE ADD COLUMN (...)'")
         case .dropColumn(let column):
             return TableDefinition(name: name,

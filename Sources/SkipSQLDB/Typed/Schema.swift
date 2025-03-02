@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
 // This code is adapted from the SQLite.swift project, with the following license:
 
+=======
+//
+>>>>>>> d0c842f (Add SkipSQLDB module)
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -83,8 +87,11 @@ extension Table {
         addColumn(definition(name, V.declaredDatatype, nil, true, false, check, defaultValue, nil, nil))
     }
 
+<<<<<<< HEAD
 #if !SKIP // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     public func addColumn<V: Value>(_ name: SQLExpression<V>, unique: Bool = false, check: SQLExpression<Bool>? = nil,
                                     references table: QueryType, _ other: SQLExpression<V>) -> String where V.Datatype == Int64 {
         addColumn(definition(name, V.declaredDatatype, nil, false, unique, check, nil, (table, other), nil))
@@ -174,9 +181,14 @@ extension Table {
 
         return database(namespace: index)
     }
+<<<<<<< HEAD
     #endif
 }
 
+=======
+
+}
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
 extension View {
 
@@ -276,8 +288,11 @@ public final class TableBuilder {
         column(name, V.declaredDatatype, nil, true, unique, check, defaultValue, nil, nil)
     }
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     public func column<V: Value>(_ name: SQLExpression<V>, primaryKey: Bool, check: SQLExpression<Bool>? = nil,
                                  defaultValue: SQLExpression<V>? = nil) {
         column(name, V.declaredDatatype, primaryKey ? .default : nil, false, false, check, defaultValue, nil, nil)
@@ -394,7 +409,10 @@ public final class TableBuilder {
                             _ references: (QueryType, Expressible)?, _ collate: Collation?) {
         definitions.append(definition(name, datatype, primaryKey, null, unique, check, defaultValue, references, collate))
     }
+<<<<<<< HEAD
     #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
     // MARK: -
 

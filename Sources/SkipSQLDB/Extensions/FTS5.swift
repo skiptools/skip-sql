@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
 // This code is adapted from the SQLite.swift project, with the following license:
 
+=======
+//
+>>>>>>> d0c842f (Add SkipSQLDB module)
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -26,8 +30,11 @@
 // THE SOFTWARE.
 //
 
+<<<<<<< HEAD
 #if false // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 extension Module {
     public static func FTS5(_ config: FTS5Config) -> Module {
         Module(name: "fts5", arguments: config.arguments())
@@ -97,5 +104,8 @@ open class FTS5Config: FTSConfig {
         }
     }
 }
+<<<<<<< HEAD
 #endif
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)

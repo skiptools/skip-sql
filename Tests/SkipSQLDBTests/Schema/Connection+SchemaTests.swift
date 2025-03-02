@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -25,6 +26,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 import XCTest
 @testable import SkipSQLDB
 
@@ -60,7 +63,10 @@ class ConnectionSchemaTests: SQLiteTestCase {
         XCTAssert(results.isEmpty)
     }
 
+<<<<<<< HEAD
     #if !SKIP // SkipSQLDB TODO
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
     func test_partial_integrityCheck_table() throws {
         guard db.supports(.partialIntegrityCheck) else { return }
         let results = try db.integrityCheck(table: "users")
@@ -77,5 +83,8 @@ class ConnectionSchemaTests: SQLiteTestCase {
             XCTAssertEqual(message, "no such table: xxx")
         }
     }
+<<<<<<< HEAD
     #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 }

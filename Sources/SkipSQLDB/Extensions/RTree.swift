@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
 // This code is adapted from the SQLite.swift project, with the following license:
 
+=======
+//
+>>>>>>> d0c842f (Add SkipSQLDB module)
 // SQLite.swift
 // https://github.com/stephencelis/SQLite.swift
 // Copyright © 2014-2015 Stephen Celis.
@@ -26,8 +30,11 @@
 // THE SOFTWARE.
 //
 
+<<<<<<< HEAD
 #if !SKIP // SkipSQLDB TODO
 
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
 extension Module {
     public static func RTree<T: Value, U: Value>(_ primaryKey: SQLExpression<T>,
                                                  _ pairs: (SQLExpression<U>, SQLExpression<U>)...)
@@ -41,5 +48,8 @@ extension Module {
         return Module(name: "rtree", arguments: arguments)
     }
 }
+<<<<<<< HEAD
 
 #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)

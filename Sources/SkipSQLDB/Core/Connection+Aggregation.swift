@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 
@@ -29,6 +30,18 @@ import Foundation
 import SkipSQL
 
 #if false // SkipSQLDB TODO
+=======
+import Foundation
+#if SQLITE_SWIFT_STANDALONE
+import sqlite3
+#elseif SQLITE_SWIFT_SQLCIPHER
+import SQLCipher
+#elseif os(Linux) || os(Windows) || os(Android)
+import CSQLite
+#else
+import SQLite3
+#endif
+>>>>>>> d0c842f (Add SkipSQLDB module)
 
 extension Connection {
     private typealias Aggregate = @convention(block) (Int, Context, Int32, Argv) -> Void
@@ -72,7 +85,11 @@ extension Connection {
         let argc = argumentCount.map { Int($0) } ?? -1
         let box: Aggregate = { (stepFlag: Int, context: Context, argc: Int32, argv: Argv) in
             let nBytes = Int32(MemoryLayout<UnsafeMutablePointer<Int64>>.size)
+<<<<<<< HEAD
             guard let aggregateContext = SQLite3.sqlite3_aggregate_context(context, nBytes) else {
+=======
+            guard let aggregateContext = sqlite3_aggregate_context(context, nBytes) else {
+>>>>>>> d0c842f (Add SkipSQLDB module)
                 fatalError("Could not get aggregate context")
             }
             let mutablePointer = aggregateContext.assumingMemoryBound(to: UnsafeMutableRawPointer.self)
@@ -89,6 +106,7 @@ extension Connection {
         }
 
         func xStep(context: Context, argc: Int32, value: Argv) {
+<<<<<<< HEAD
             unsafeBitCast(SQLite3.sqlite3_user_data(context), to: Aggregate.self)(1, context, argc, value)
         }
 
@@ -98,6 +116,17 @@ extension Connection {
 
         let flags = SQLITE_UTF8 | (deterministic ? SQLITE_DETERMINISTIC : 0)
         let resultCode = SQLite3.sqlite3_create_function_v2(
+=======
+            unsafeBitCast(sqlite3_user_data(context), to: Aggregate.self)(1, context, argc, value)
+        }
+
+        func xFinal(context: Context) {
+            unsafeBitCast(sqlite3_user_data(context), to: Aggregate.self)(0, context, 0, nil)
+        }
+
+        let flags = SQLITE_UTF8 | (deterministic ? SQLITE_DETERMINISTIC : 0)
+        let resultCode = sqlite3_create_function_v2(
+>>>>>>> d0c842f (Add SkipSQLDB module)
             handle,
             functionName,
             Int32(argc),
@@ -174,5 +203,8 @@ extension Connection {
     }
 
 }
+<<<<<<< HEAD
 
 #endif
+=======
+>>>>>>> d0c842f (Add SkipSQLDB module)
