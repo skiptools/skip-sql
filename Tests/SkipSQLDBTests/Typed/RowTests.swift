@@ -29,6 +29,7 @@ import XCTest
 @testable import SkipSQLDB
 
 class RowTests: XCTestCase {
+    #if !SKIP // SkipSQLDB TODO
 
     public func test_get_value() throws {
         let row = Row(["\"foo\"": 0], ["value"])
@@ -142,4 +143,6 @@ class RowTests: XCTestCase {
             return Blob(bytes: [])
         }
     }
+
+    #endif
 }

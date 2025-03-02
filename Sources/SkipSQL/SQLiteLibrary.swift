@@ -43,6 +43,7 @@ public protocol SQLiteLibrary : NativeLibrary {
     func sqlite3_changes(_ db: OpaquePointer) -> Int32
     func sqlite3_interrupt(_ db: OpaquePointer)
     func sqlite3_db_filename(_ db: OpaquePointer, _ zDbName: sqlite3_cstring_ptr?) -> sqlite3_cstring_ptr?
+    func sqlite3_db_readonly(_ db: OpaquePointer, _ zDbName: sqlite3_cstring_ptr?) -> Int32
 
     func sqlite3_exec(_ db: OpaquePointer, _ sql: String, _ callback: sqlite3_callback?, _ pArg: UnsafeMutableRawPointer?, _ errmsg: sqlite_error_ptr?) -> Int32
     func sqlite3_prepare_v2(_ db: OpaquePointer, _ sql: String, _ nBytes: Int32, _ ppStmt: sqlite3_openarg, _ tail: sqlite_tail_ptr?) -> Int32

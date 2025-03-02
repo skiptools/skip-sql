@@ -30,6 +30,7 @@ import Foundation
 @testable import SkipSQLDB
 import SkipSQL
 
+#if !SKIP // SkipSQLDB TODO
 class ConnectionAttachTests: SQLiteTestCase {
     func test_attach_detach_memory_database() throws {
         let schemaName = "test"
@@ -71,7 +72,7 @@ class ConnectionAttachTests: SQLiteTestCase {
 
     func test_detach_invalid_schema_name_errors_with_no_such_database() throws {
         XCTAssertThrowsError(try db.detach("no-exist")) { error in
-            if case let Result.error(message, code, _) = error {
+            if case let SQLResult.error(message, code, _) = error {
                 XCTAssertEqual(code, SQLITE_ERROR)
                 XCTAssertEqual("no such database: no-exist", message)
             } else {
@@ -80,3 +81,5 @@ class ConnectionAttachTests: SQLiteTestCase {
         }
     }
 }
+#endif
+

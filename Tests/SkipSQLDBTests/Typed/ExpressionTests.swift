@@ -29,6 +29,7 @@ import XCTest
 @testable import SkipSQLDB
 
 class ExpressionTests: XCTestCase {
+    #if !SKIP // SkipSQLDB TODO
 
     func test_asSQL_expression_bindings() {
         let expression = SQLExpression<String>("foo ? bar", ["baz"])
@@ -59,4 +60,5 @@ class ExpressionTests: XCTestCase {
         let expression = SQLExpression<String>("identifier")
         XCTAssertEqual(expression.template, "\"identifier\"")
     }
+    #endif
 }

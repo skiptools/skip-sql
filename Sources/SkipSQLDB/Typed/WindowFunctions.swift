@@ -43,6 +43,8 @@ private enum WindowFunction: String {
     case nth_value
     // swiftlint:enable identifier_name
 
+    #if !SKIP // SkipSQLDB TODO
+
     func wrap<T>(_ value: Int? = nil) -> SQLExpression<T> {
         if let value {
             return self.rawValue.wrap(SQLExpression(value: value))
@@ -63,7 +65,10 @@ private enum WindowFunction: String {
             SQLExpression<T>("OVER (ORDER BY \(orderBy.expression.template))", orderBy.expression.bindings)
         ]).expression)
     }
+    #endif
 }
+
+#if !SKIP // SkipSQLDB TODO
 
 extension ExpressionType where UnderlyingType: Value {
     /// Builds a copy of the expression with `lag(self, offset, default) OVER (ORDER BY {orderBy})` window function
@@ -170,3 +175,5 @@ public func percentRank(_ orderBy: Expressible) -> SQLExpression<Double> {
 public func cumeDist(_ orderBy: Expressible) -> SQLExpression<Double> {
     WindowFunction.cume_dist.over(orderBy)
 }
+#endif
+

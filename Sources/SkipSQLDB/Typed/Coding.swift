@@ -28,6 +28,8 @@
 
 import Foundation
 
+#if !SKIP // SkipSQLDB TODO
+
 extension QueryType {
     /// Creates an `INSERT` statement by encoding the given object
     /// This method converts any custom nested types to JSON data and does not handle any sort
@@ -564,3 +566,5 @@ private class SQLiteDecoder: Decoder {
                                                                 debugDescription: "decoding a single value container is not supported"))
     }
 }
+#endif
+

@@ -35,6 +35,7 @@ class ConnectionSchemaTests: SQLiteTestCase {
         try createUsersTable()
     }
 
+    #if !SKIP // SkipSQLDB TODO
     func test_foreignKeyCheck() throws {
         let errors = try db.foreignKeyCheck()
         XCTAssert(errors.isEmpty)
@@ -47,7 +48,7 @@ class ConnectionSchemaTests: SQLiteTestCase {
 
     func test_foreignKeyCheck_table_not_found() throws {
         XCTAssertThrowsError(try db.foreignKeyCheck(table: "xxx")) { error in
-            guard case Result.error(let message, _, _) = error else {
+            guard case SQLResult.error(let message, _, _) = error else {
                 assertionFailure("invalid error type")
                 return
             }
@@ -60,7 +61,6 @@ class ConnectionSchemaTests: SQLiteTestCase {
         XCTAssert(results.isEmpty)
     }
 
-    #if !SKIP // SkipSQLDB TODO
     func test_partial_integrityCheck_table() throws {
         guard db.supports(.partialIntegrityCheck) else { return }
         let results = try db.integrityCheck(table: "users")
@@ -70,7 +70,7 @@ class ConnectionSchemaTests: SQLiteTestCase {
     func test_integrityCheck_table_not_found() throws {
         guard db.supports(.partialIntegrityCheck) else { return }
         XCTAssertThrowsError(try db.integrityCheck(table: "xxx")) { error in
-            guard case Result.error(let message, _, _) = error else {
+            guard case SQLResult.error(let message, _, _) = error else {
                 assertionFailure("invalid error type")
                 return
             }

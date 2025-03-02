@@ -43,12 +43,15 @@ extension Data {
         Data(dataValue.bytes)
     }
 
+    #if !SKIP // SkipSQLDB TODO
+
     public var datatypeValue: Blob {
         withUnsafeBytes { (pointer: UnsafeRawBufferPointer) -> Blob in
             Blob(bytes: pointer.baseAddress!, length: count)
         }
     }
-
+    #endif
+    
 }
 
 #if !SKIP // SkipSQLDB TODO

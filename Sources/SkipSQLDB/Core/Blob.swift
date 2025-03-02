@@ -50,11 +50,13 @@ public struct Blob {
     #endif
 }
 
+#if !SKIP // SkipSQLDB TODO
 extension Blob: CustomStringConvertible {
     public var description: String {
         "x'\(toHex())'"
     }
 }
+#endif
 
 extension Blob: Equatable {
 }

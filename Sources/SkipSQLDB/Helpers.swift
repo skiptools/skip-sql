@@ -27,9 +27,12 @@
 //
 
 import SkipSQL
+import SkipSQLPlus
 
 // TODO: make this customizable in the Connnection constructor
-let SQLite3: SQLiteLibrary = SQLiteConfiguration.platform.library
+//let SQLite3: SQLiteLibrary = SQLiteConfiguration.platform.library
+let SQLite3: SQLiteLibrary = SQLiteConfiguration.plus.library
+
 
 public typealias Star = (SQLExpression<Binding>?, SQLExpression<Binding>?) -> SQLExpression<Void>
 
@@ -54,12 +57,15 @@ extension Optional: _OptionalType {
 }
 #endif
 
+#if !SKIP // SkipSQLDB TODO
 // let SQLITE_STATIC = unsafeBitCast(0, sqlite3_destructor_type.self)
 let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+#endif
 
 extension String {
     func quote(_ mark: Character = "\"") -> String {
         var quoted = ""
+        #if !SKIP // SkipSQLDB TODO
         quoted.append(mark)
         for character in self {
             quoted.append(character)
@@ -68,9 +74,13 @@ extension String {
             }
         }
         quoted.append(mark)
+        #else
+        fatalError("SkipSQLDB TODO: implement String#quote")
+        #endif
         return quoted
     }
 
+    #if !SKIP // SkipSQLDB TODO
     func join(_ expressions: [Expressible]) -> Expressible {
         var (template, bindings) = ([String](), [Binding?]())
         for expressible in expressions {
@@ -108,8 +118,11 @@ extension String {
     func wrap<T>(_ expressions: [Expressible]) -> SQLExpression<T> {
         wrap(", ".join(expressions))
     }
+    #endif
 
 }
+
+#if !SKIP // SkipSQLDB TODO
 
 func transcode(_ literal: Binding?) -> String {
     guard let literal else { return "NULL" }
@@ -132,6 +145,7 @@ func value<A: Value>(_ binding: Binding) -> A {
 func value<A: Value>(_ binding: Binding?) -> A {
     value(binding!)
 }
+#endif
 
 
 // MARK: SQLite Result Codes

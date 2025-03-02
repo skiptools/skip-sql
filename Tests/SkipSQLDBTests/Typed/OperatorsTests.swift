@@ -29,6 +29,7 @@ import XCTest
 import SkipSQLDB
 
 class OperatorsTests: XCTestCase {
+    #if !SKIP // SkipSQLDB TODO
 
     func test_stringExpressionPlusStringExpression_buildsConcatenatingStringExpression() {
         assertSQL("(\"string\" || \"string\")", string + string)
@@ -398,7 +399,6 @@ class OperatorsTests: XCTestCase {
         assertSQL("(\"date\" <= '1970-01-01T00:00:00.000')", date <= begin)
     }
 
-    #if !SKIP // SkipSQLDB TODO
     func test_dateExpressionRange() {
         let begin = Date(timeIntervalSince1970: 0)
         let end = Date(timeIntervalSince1970: 5000)
@@ -417,5 +417,4 @@ class OperatorsTests: XCTestCase {
         )
     }
     #endif
-
 }

@@ -132,11 +132,11 @@ extension Bool {
     public static var declaredDatatype = Int64.declaredDatatype
 
     public static func fromDatatypeValue(_ datatypeValue: Int64) -> Bool {
-        datatypeValue != 0
+        datatypeValue != 0 as Int64
     }
 
     public var datatypeValue: Int64 {
-        self ? 1 : 0
+        (self ? 1 : 0) as Int64
     }
 
 }

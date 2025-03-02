@@ -28,7 +28,7 @@
 
 import Foundation
 import Dispatch
-import SkipSQL
+import SkipSQLPlus
 #if SKIP
 import SkipFFI
 #endif
@@ -102,7 +102,7 @@ public final class Connection {
     ///     Default: `false`.
     ///
     /// - Returns: A new database connection.
-    public init(_ location: Location = .inMemory, readonly: Bool = false) throws {
+    public init(_ location: Connection.Location = .inMemory, readonly: Bool = false) throws {
         let flags = readonly ? SQLITE_OPEN_READONLY : (SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE)
         try check(withUnsafeMutablePointer(to: &_handle) { ptr in
             SQLite3.sqlite3_open_v2(location.description,
@@ -129,20 +129,32 @@ public final class Connection {
     /// - Throws: `Result.Error` iff a connection cannot be established.
     ///
     /// - Returns: A new database connection.
-    public convenience init(_ filename: String, readonly: Bool = false) throws {
-        try self.init(Location.uri(filename), readonly: readonly)
+    public /*convenience*/ init(_ filename: String, readonly: Bool = false) throws {
+        let location = Connection.Location.uri(filename, parameters: [])
+        // try self.init(location, readonly: readonly) // FIXME: Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+
+        let flags = readonly ? SQLITE_OPEN_READONLY : (SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE)
+        try check(withUnsafeMutablePointer(to: &_handle) { ptr in
+            SQLite3.sqlite3_open_v2(location.description,
+                                    ptr,
+                                    flags | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_URI,
+                                    nil)
+        })
+        #if !SKIP // SkipSQLDB TODO
+        queue.setSpecific(key: Connection.queueKey, value: queueContext)
+        #endif
+
     }
 
     deinit {
-        SQLite3.sqlite3_close(handle)
+        let x = SQLite3.sqlite3_close(handle)
+        let _ = x
     }
 
     // MARK: -
 
-    #if false // SkipSQLDB TODO
     /// Whether or not the database was opened in a read-only state.
     public var readonly: Bool { SQLite3.sqlite3_db_readonly(handle, nil) == 1 }
-    #endif
 
     /// The last rowid inserted into the database via this connection.
     public var lastInsertRowid: Int64 {
@@ -361,6 +373,8 @@ public final class Connection {
         try transaction("BEGIN \(mode.rawValue) TRANSACTION", block, "COMMIT TRANSACTION", or: "ROLLBACK TRANSACTION")
     }
 
+    #if !SKIP // SkipSQLDB TODO
+
     // TODO: Consider not requiring a throw to roll back?
     // TODO: Consider removing ability to set a name?
     /// Runs a transaction with the given savepoint name (if omitted, it will
@@ -383,6 +397,7 @@ public final class Connection {
 
         try transaction(savepoint, block, "RELEASE \(savepoint)", or: "ROLLBACK TO \(savepoint)")
     }
+    #endif
 
     fileprivate func transaction(_ begin: String, _ block: () throws -> Void, _ commit: String, or rollback: String) throws {
         return try sync {
@@ -682,7 +697,7 @@ public final class Connection {
     }
 
     @discardableResult func check(_ resultCode: Int32, statement: Statement? = nil) throws -> Int32 {
-        guard let error = Result(errorCode: resultCode, connection: self, statement: statement) else {
+        guard let error = SQLResult(errorCode: resultCode, connection: self, statement: statement) else {
             return resultCode
         }
 
@@ -707,6 +722,7 @@ extension Connection: CustomStringConvertible {
 
 }
 
+// SKIP NOWARN
 extension Connection.Location: CustomStringConvertible {
 
     public var description: String {
@@ -720,8 +736,7 @@ extension Connection.Location: CustomStringConvertible {
                   var components = URLComponents(string: URI) else {
                 return URI
             }
-            components.queryItems =
-                (components.queryItems ?? []) + parameters.map(\.queryItem)
+            components.queryItems = (components.queryItems ?? []) + parameters.map({ $0.queryItem })
             if components.scheme == nil {
                 components.scheme = "file"
             }

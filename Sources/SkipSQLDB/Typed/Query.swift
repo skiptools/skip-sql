@@ -27,6 +27,8 @@
 //
 import Foundation
 
+#if !SKIP // SkipSQLDB TODO
+
 public protocol QueryType: Expressible {
 
     var clauses: QueryClauses { get set }
@@ -1037,6 +1039,7 @@ extension Connection {
         try prepare(statement, bindings).prepareRowIterator()
     }
 
+    #if !SKIP // SkipSQLDB TODO
     private func columnNamesForQuery(_ query: QueryType) throws -> [String: Int] {
         var (columnNames, idx) = ([String: Int](), 0)
         column: for each in query.clauses.select.selectColumns {
@@ -1096,6 +1099,7 @@ extension Connection {
         }
         return columnNames
     }
+    #endif
 
     public func scalar<V: Value>(_ query: ScalarQuery<V>) throws -> V {
         let expression = query.expression
@@ -1305,3 +1309,5 @@ public struct QueryClauses {
     }
 
 }
+#endif
+

@@ -50,6 +50,7 @@ private enum Operator: String {
     case lte = "<="
     case concatenate = "||"
 
+    #if !SKIP // SkipSQLDB TODO
     func infix<T>(_ lhs: Expressible, _ rhs: Expressible, wrap: Bool = true) -> SQLExpression<T> {
         self.rawValue.infix(lhs, rhs, wrap: wrap)
     }
@@ -57,6 +58,7 @@ private enum Operator: String {
     func wrap<T>(_ expression: Expressible) -> SQLExpression<T> {
         self.rawValue.wrap(expression)
     }
+    #endif
 }
 
 #if !SKIP // SkipSQLDB TODO

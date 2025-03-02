@@ -29,6 +29,7 @@ import XCTest
 import SkipSQLDB
 
 class WindowFunctionsTests: XCTestCase {
+    #if !SKIP // SkipSQLDB TODO
 
     func test_ntile_wrapsExpressionWithOverClause() {
         assertSQL("ntile(1) OVER (ORDER BY \"int\" DESC)", ntile(1, int.desc))
@@ -82,4 +83,5 @@ class WindowFunctionsTests: XCTestCase {
     func test_nth_value_wrapsExpressionWithOverClause() {
         assertSQL("nth_value(\"int\", 3) OVER (ORDER BY \"int\" DESC)", int.value(3, int.desc))
     }
+    #endif
 }

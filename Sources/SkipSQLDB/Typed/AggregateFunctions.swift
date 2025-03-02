@@ -26,6 +26,8 @@
 // THE SOFTWARE.
 //
 
+#if !SKIP // SkipSQLDB TODO
+
 private enum Function: String {
     case count
     case max
@@ -267,3 +269,5 @@ extension ExpressionType where UnderlyingType == Int {
 public func count(_ star: Star) -> SQLExpression<Int> {
     SQLExpression.count(star)
 }
+#endif
+

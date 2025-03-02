@@ -27,6 +27,8 @@
 //
 import Foundation
 
+#if !SKIP // SkipSQLDB TODO
+
 extension QueryType {
 
     /// Sets a `WITH` clause on the query.
@@ -119,3 +121,5 @@ struct WithClauses {
     /// Each `WITH` clause may have multiple subclauses
     var clauses: [Clause] = []
 }
+#endif
+

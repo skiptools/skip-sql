@@ -31,10 +31,15 @@ import XCTest
 class SQLiteTestCase: XCTestCase {
     private var trace: [String: Int]!
     var db: Connection!
-    let users = Table("users")
 
+    // SKIP DECLARE: override fun setUp()
     override func setUpWithError() throws {
+        #if !SKIP
         try super.setUpWithError()
+        #else
+        super.setUp() // no setUpWithError() in Skip's XCTestCase
+        #endif
+
         db = try Connection()
         trace = [String: Int]()
 
@@ -46,7 +51,19 @@ class SQLiteTestCase: XCTestCase {
         #endif
     }
 
+    #if SKIP
+    /// Skip's XCTestCase does not have a setUpWithError
+    open func setUpWithError() throws {
+        self.setUp()
+    }
+    #endif
+
+    #if !SKIP // SkipSQLDB TODO
+    let users = Table("users")
+    #endif
+
     func createUsersTable() throws {
+        #if !SKIP // SkipSQLDB TODO
         try db.execute("""
             CREATE TABLE users (
                 id INTEGER PRIMARY KEY,
@@ -60,8 +77,12 @@ class SQLiteTestCase: XCTestCase {
             )
             """
         )
+        #else
+        fatalError("SkipSQLDB TODO: createUsersTable()")
+        #endif
     }
 
+    #if !SKIP // SkipSQLDB TODO
     func insertUsers(_ names: String...) throws {
         try insertUsers(names)
     }
@@ -74,6 +95,7 @@ class SQLiteTestCase: XCTestCase {
         try db.run("INSERT INTO \"users\" (email, age, admin) values (?, ?, ?)",
                    "\(name)@example.com", age?.datatypeValue, admin.datatypeValue)
     }
+    #endif
 
     #if !SKIP // SkipSQLDB TODO
     func assertSQL(_ SQL: String, _ executions: Int = 1, _ message: String? = nil, file: StaticString = #file, line: UInt = #line) {
@@ -108,13 +130,17 @@ class SQLiteTestCase: XCTestCase {
 //        if let count = trace[SQL] { trace[SQL] = count - 1 }
 //    }
 
+    #if !SKIP // SkipSQLDB TODO
+
     func async(expect description: String = "async", timeout: Double = 5, block: (@escaping () -> Void) throws -> Void) throws {
         let expectation = self.expectation(description: description)
         try block({ expectation.fulfill() })
         waitForExpectations(timeout: timeout, handler: nil)
     }
-
+    #endif
 }
+
+#if !SKIP // SkipSQLDB TODO
 
 let bool = SQLExpression<Bool>("bool")
 let boolOptional = SQLExpression<Bool?>("boolOptional")
@@ -142,6 +168,7 @@ let uuidOptional = SQLExpression<UUID?>("uuidOptional")
 
 let testUUIDValue = UUID(uuidString: "E621E1F8-C36C-495A-93FC-0C247A3E6E5F")!
 
+#endif
 
 #if !SKIP // SkipSQLDB TODO
 func assertSQL(_ expression1: @autoclosure () -> String, _ expression2: @autoclosure () -> Expressible,
@@ -149,6 +176,8 @@ func assertSQL(_ expression1: @autoclosure () -> String, _ expression2: @autoclo
     XCTAssertEqual(expression1(), expression2().asSQL(), file: file, line: line)
 }
 #endif
+
+#if !SKIP // SkipSQLDB TODO
 
 func extractAndReplace(_ value: String, regex: String, with replacement: String) -> (String, String) {
     // We cannot use `Regex` because it is not available before iOS 16 :(
@@ -159,6 +188,9 @@ func extractAndReplace(_ value: String, regex: String, with replacement: String)
     let extractedValue = String(value[range])
     return (value.replacingCharacters(in: range, with: replacement), extractedValue)
 }
+#endif
+
+#if !SKIP // SkipSQLDB TODO
 
 let table = Table("table")
 let qualifiedTable = Table("table", database: "main")
@@ -220,3 +252,5 @@ struct TestOptionalCodable: Codable, Equatable {
         self.uuid = uuid
     }
 }
+#endif
+

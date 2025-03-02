@@ -26,9 +26,14 @@
 // THE SOFTWARE.
 //
 
+
 public protocol ExpressionType: Expressible, CustomStringConvertible { // extensions cannot have inheritance clauses
 
+    #if !SKIP // SkipSQLDB TODO
     associatedtype UnderlyingType = Void
+    #else
+    //associatedtype UnderlyingType
+    #endif
 
     var template: String { get }
     var bindings: [Binding?] { get }
@@ -36,7 +41,7 @@ public protocol ExpressionType: Expressible, CustomStringConvertible { // extens
     #if !SKIP // SkipSQLDB TODO: Kotlin cannot satisfy a protocol init requirement with a generic constructor
     init(_ template: String, _ bindings: [Binding?])
     #else
-    init(_ template: String, _ bindings: [Binding?], _ type: UnderlyingType.self)
+    //init(_ template: String, _ bindings: [Binding?], _ type: UnderlyingType.self)
     #endif
 
 }
@@ -63,8 +68,6 @@ extension ExpressionType {
 }
 
 
-#if !SKIP // SkipSQLDB TODO: Kotlin cannot satisfy a protocol init requirement with a generic constructor
-
 @available(*, deprecated, renamed: "SQLExpression")
 public typealias Expression<T> = SQLExpression<T>
 
@@ -76,31 +79,33 @@ public struct SQLExpression<Datatype>: ExpressionType {
     public var template: String
     public var bindings: [Binding?]
 
-    #if !SKIP // SkipSQLDB TODO: Kotlin cannot satisfy a protocol init requirement with a generic constructor
+//    #if !SKIP // SkipSQLDB TODO: Kotlin cannot satisfy a protocol init requirement with a generic constructor
     public init(_ template: String, _ bindings: [Binding?]) {
         self.template = template
         self.bindings = bindings
     }
-    #else
-    public init(_ template: String, _ bindings: [Binding?], _ type: T.self) {
-        self.template = template
-        self.bindings = bindings
-    }
-    #endif
+//    #else
+//    public init(_ template: String, _ bindings: [Binding?], _ type: Datatype.Type) {
+//        self.template = template
+//        self.bindings = bindings
+//    }
+//    #endif
 }
-#endif
-
 
 public protocol Expressible {
 
+    #if !SKIP // SkipSQLDB TODO
     var expression: SQLExpression<Void> { get }
+    #endif
 
 }
 
 extension Expressible {
 
     // naïve compiler for statements that can’t be bound, e.g., CREATE TABLE
+    // SKIP NOWARN
     func asSQL() -> String {
+        #if !SKIP // SkipSQLDB TODO
         let expressed = expression
         return expressed.template.reduce(("", 0)) { memo, character in
             let (template, index) = memo
@@ -112,8 +117,13 @@ extension Expressible {
                 return (template + String(character), index)
             }
         }.0
+        #else
+        fatalError("SkipSQLDB TODO")
+        #endif
     }
 }
+
+#if !SKIP // SkipSQLDB TODO
 
 extension ExpressionType {
 
@@ -131,7 +141,6 @@ extension ExpressionType {
 
 }
 
-#if !SKIP // SkipSQLDB TODO
 
 extension ExpressionType where UnderlyingType: Value {
 
@@ -153,8 +162,6 @@ extension ExpressionType where UnderlyingType: _OptionalType, UnderlyingType.Wra
 
 }
 
-#endif
-
 extension Value {
 
     public var expression: SQLExpression<Void> {
@@ -172,4 +179,6 @@ public func cast<T: Value, U: Value>(_ expression: SQLExpression<T>) -> SQLExpre
 public func cast<T: Value, U: Value>(_ expression: SQLExpression<T?>) -> SQLExpression<U?> {
     SQLExpression("CAST (\(expression.template) AS \(U.declaredDatatype))", expression.bindings)
 }
+
+#endif
 

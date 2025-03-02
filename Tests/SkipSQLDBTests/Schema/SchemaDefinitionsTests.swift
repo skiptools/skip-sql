@@ -28,6 +28,8 @@
 import XCTest
 @testable import SkipSQLDB
 
+#if !SKIP // SkipSQLDB TODO
+
 class ColumnDefinitionTests: XCTestCase {
     var definition: ColumnDefinition!
     var expected: String!
@@ -479,3 +481,5 @@ class LiteralValueTests: XCTestCase {
         XCTAssertEqual(LiteralValue.blobLiteral("deadbeef").description, "X'deadbeef'")
     }
 }
+#endif
+

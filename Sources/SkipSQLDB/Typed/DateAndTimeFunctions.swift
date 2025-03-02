@@ -28,6 +28,8 @@
 
 import Foundation
 
+#if !SKIP // SkipSQLDB TODO
+
 /// All five date and time functions take a time string as an argument.
 /// The time string is followed by zero or more modifiers.
 /// The strftime() function also takes a format string as its first argument.
@@ -108,3 +110,5 @@ extension SQLExpression where UnderlyingType == Date {
         SQLExpression<Date>("julianday(\(template))", bindings)
     }
 }
+#endif
+

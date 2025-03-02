@@ -27,6 +27,8 @@
 //
 import Foundation
 
+#if !SKIP // SkipSQLDB TODO
+
 /*
     https://www.sqlite.org/lang_altertable.html
 
@@ -316,3 +318,5 @@ extension TableDefinition {
         }
     }
 }
+#endif
+

@@ -28,6 +28,8 @@
 import Foundation
 import SkipSQL
 
+#if !SKIP // SkipSQLDB TODO
+
 extension Connection {
     #if SQLITE_SWIFT_SQLCIPHER
     /// See https://www.zetetic.net/sqlcipher/sqlcipher-api/#attach
@@ -50,3 +52,5 @@ extension Connection {
         try run("DETACH DATABASE ?", schemaName)
     }
 }
+#endif
+

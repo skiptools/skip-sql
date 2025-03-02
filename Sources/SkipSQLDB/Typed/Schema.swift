@@ -26,6 +26,8 @@
 // THE SOFTWARE.
 //
 
+#if !SKIP // SkipSQLDB TODO
+
 extension SchemaType {
 
     // MARK: - DROP TABLE / VIEW / VIRTUAL TABLE
@@ -601,3 +603,5 @@ private enum Modifier: String {
     case temporary = "TEMPORARY"
 
 }
+#endif
+

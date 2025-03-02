@@ -37,6 +37,7 @@ internal final class SQLiteJNALibrary : SQLiteLibrary {
     // /* SKIP INSERT: external */ func sqlite3_changes64(_ db: OpaquePointer) -> Int64 // unavailable on Android
     /* SKIP INSERT: external */ func sqlite3_interrupt(_ db: OpaquePointer)
     /* SKIP INSERT: external override */ public func sqlite3_db_filename(_ db: OpaquePointer, _ zDbName: sqlite3_cstring_ptr?) -> sqlite3_cstring_ptr?
+    /* SKIP INSERT: external override */ public func sqlite3_db_readonly(_ db: OpaquePointer, _ zDbName: sqlite3_cstring_ptr?) -> Int32
     /* SKIP INSERT: external override */ public func sqlite3_exec(_ db: OpaquePointer, _ sql: String, _ callback: sqlite3_callback?, _ pArg: UnsafeMutableRawPointer?, _ errmsg: sqlite_error_ptr?) -> Int32
     /* SKIP INSERT: external override */ public func sqlite3_prepare_v2(_ db: OpaquePointer, _ sql: String, _ nBytes: Int32, _ ppStmt: sqlite3_openarg, _ tail: sqlite_tail_ptr?) -> Int32
     /* SKIP INSERT: external */ func sqlite3_step(_ stmt: OpaquePointer?) -> Int32

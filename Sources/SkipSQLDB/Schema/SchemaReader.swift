@@ -27,6 +27,8 @@
 //
 import Foundation
 
+#if !SKIP // SkipSQLDB TODO
+
 public class SchemaReader {
     private let connection: Connection
 
@@ -222,3 +224,5 @@ private enum ForeignKeyListTable {
     static let onDeleteColumn = SQLExpression<String>("on_delete")
     static let matchColumn = SQLExpression<String>("match")
 }
+#endif
+

@@ -29,7 +29,7 @@ import XCTest
 @testable import SkipSQLDB
 
 class CoreFunctionsTests: XCTestCase {
-
+    #if !SKIP // SkipSQLDB TODO
     func test_round_wrapsDoubleExpressionsWithRoundFunction() {
         assertSQL("round(\"double\")", double.round())
         assertSQL("round(\"doubleOptional\")", doubleOptional.round())
@@ -168,5 +168,5 @@ class CoreFunctionsTests: XCTestCase {
         assertSQL("(\"string\" IN ('hello', 'world'))", ["hello", "world"].contains(string))
         assertSQL("(\"stringOptional\" IN ('hello', 'world'))", ["hello", "world"].contains(stringOptional))
     }
-
+    #endif
 }

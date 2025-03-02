@@ -26,9 +26,11 @@
 // THE SOFTWARE.
 //
 import XCTest
+import Foundation
 @testable import SkipSQLDB
 
 class DateAndTimeFunctionsTests: XCTestCase {
+    #if !SKIP // SkipSQLDB TODO
 
     func test_date() {
         assertSQL("date('now')", DateFunctions.date("now"))
@@ -54,9 +56,11 @@ class DateAndTimeFunctionsTests: XCTestCase {
         assertSQL("strftime('%Y-%m-%d', 'now')", DateFunctions.strftime("%Y-%m-%d", "now"))
         assertSQL("strftime('%Y-%m-%d', 'now', 'localtime')", DateFunctions.strftime("%Y-%m-%d", "now", "localtime"))
     }
+    #endif
 }
 
 class DateExtensionTests: XCTestCase {
+    #if !SKIP // SkipSQLDB TODO
     func test_time() {
         assertSQL("time('1970-01-01T00:00:00.000')", Date(timeIntervalSince1970: 0).time)
     }
@@ -72,9 +76,11 @@ class DateExtensionTests: XCTestCase {
     func test_julianday() {
         assertSQL("julianday('1970-01-01T00:00:00.000')", Date(timeIntervalSince1970: 0).julianday)
     }
+    #endif
 }
 
 class DateExpressionTests: XCTestCase {
+    #if !SKIP // SkipSQLDB TODO
     func test_date() {
         assertSQL("date(\"date\")", date.date)
     }
@@ -90,4 +96,5 @@ class DateExpressionTests: XCTestCase {
     func test_julianday() {
         assertSQL("julianday(\"date\")", date.julianday)
     }
+    #endif
 }

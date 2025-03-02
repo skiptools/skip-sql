@@ -30,6 +30,7 @@ import Foundation
 @testable import SkipSQLDB
 import SkipSQL
 
+#if !SKIP // SkipSQLDB TODO
 class ConnectionPragmaTests: SQLiteTestCase {
     func test_userVersion() {
         db.userVersion = 2
@@ -60,3 +61,4 @@ class ConnectionPragmaTests: SQLiteTestCase {
         XCTAssertTrue(db.deferForeignKeys)
     }
 }
+#endif

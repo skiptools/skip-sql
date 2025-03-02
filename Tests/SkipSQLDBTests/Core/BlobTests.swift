@@ -28,6 +28,7 @@
 import XCTest
 import SkipSQLDB
 
+#if !SKIP // SkipSQLDB TODO
 class BlobTests: XCTestCase {
 
     func test_toHex() {
@@ -74,3 +75,4 @@ class BlobTests: XCTestCase {
         XCTAssertNotEqual(blob1, blob3)
     }
 }
+#endif

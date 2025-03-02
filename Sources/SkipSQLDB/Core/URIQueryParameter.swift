@@ -69,11 +69,11 @@ public enum URIQueryParameter: CustomStringConvertible {
     var queryItem: URLQueryItem {
         switch self {
         case .cache(let mode): return .init(name: "cache", value: mode.rawValue)
-        case .immutable(let bool): return .init(name: "immutable", value: NSNumber(value: bool).description)
+        case .immutable(let bool): return .init(name: "immutable", value: bool ? "true" : "false")
         case .modeOf(let filename): return .init(name: "modeOf", value: filename)
         case .mode(let fileMode): return .init(name: "mode", value: fileMode.rawValue)
-        case .nolock(let bool): return .init(name: "nolock", value: NSNumber(value: bool).description)
-        case .powersafeOverwrite(let bool): return .init(name: "psow", value: NSNumber(value: bool).description)
+        case .nolock(let bool): return .init(name: "nolock", value: bool ? "true" : "false")
+        case .powersafeOverwrite(let bool): return .init(name: "psow", value: bool ? "true" : "false")
         case .vfs(let name): return .init(name: "vfs", value: name)
         }
     }

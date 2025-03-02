@@ -26,9 +26,12 @@
 // THE SOFTWARE.
 //
 import XCTest
+import Foundation
 import SkipSQLDB
 
 class FoundationTests: XCTestCase {
+    #if !SKIP // SkipSQLDB TODO
+
     func testDataFromBlob() {
         let data = Data([1, 2, 3])
         let blob = data.datatypeValue
@@ -64,4 +67,5 @@ class FoundationTests: XCTestCase {
         let string = url.datatypeValue
         XCTAssertEqual("http://foo.com", string)
     }
+    #endif
 }

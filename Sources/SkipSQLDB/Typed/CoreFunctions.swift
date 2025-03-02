@@ -27,6 +27,8 @@
 //
 import Foundation
 
+#if !SKIP // SkipSQLDB TODO
+
 private enum Function: String {
     case abs
     case round
@@ -802,6 +804,8 @@ public func ??<V: Value>(optional: SQLExpression<V?>, defaultValue: SQLExpressio
 public func ??<V: Value>(optional: SQLExpression<V?>, defaultValue: SQLExpression<V?>) -> SQLExpression<V> {
     Function.ifnull.wrap([optional, defaultValue])
 }
+
+#endif
 
 #endif
 

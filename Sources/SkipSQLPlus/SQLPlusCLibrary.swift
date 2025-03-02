@@ -61,6 +61,10 @@ internal final class SQLPlusCLibrary : SQLiteLibrary {
         SQLExt.sqlite3_db_filename(db, zDbName)
     }
 
+    func sqlite3_db_readonly(_ db: OpaquePointer, _ zDbName: sqlite3_cstring_ptr?) -> Int32 {
+        SQLExt.sqlite3_db_readonly(db, zDbName)
+    }
+
     func sqlite3_exec(_ db: OpaquePointer, _ sql: String, _ callback: sqlite3_callback?, _ pArg: UnsafeMutableRawPointer?, _ errmsg: sqlite_error_ptr?) -> Int32 {
         SQLExt.sqlite3_exec(db, sql, callback, pArg, errmsg)
     }

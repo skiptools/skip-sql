@@ -30,6 +30,7 @@ import SkipSQL
 @testable import SkipSQLDB
 
 class QueryIntegrationTests: SQLiteTestCase {
+    #if !SKIP // SkipSQLDB TODO
 
     let id = SQLExpression<Int64>("id")
     let email = SQLExpression<String>("email")
@@ -270,7 +271,7 @@ class QueryIntegrationTests: SQLiteTestCase {
         do {
             try db.run(users.insert(email <- "alice@example.com"))
             XCTFail("expected error")
-        } catch let Result.error(_, code, _) where code == SQLITE_CONSTRAINT {
+        } catch let SQLResult.error(_, code, _) where code == SQLITE_CONSTRAINT {
             // expected
         } catch let error {
             XCTFail("unexpected error: \(error)")
@@ -283,7 +284,7 @@ class QueryIntegrationTests: SQLiteTestCase {
         do {
             try db.run(users.insert(email <- "alice@example.com"))
             XCTFail("expected error")
-        } catch let Result.extendedError(_, extendedCode, _) where extendedCode == 2_067 {
+        } catch let SQLResult.extendedError(_, extendedCode, _) where extendedCode == 2_067 {
             // SQLITE_CONSTRAINT_UNIQUE expected
         } catch let error {
             XCTFail("unexpected error: \(error)")
@@ -466,7 +467,10 @@ class QueryIntegrationTests: SQLiteTestCase {
         row = try db.pluck(users.select(id, nthValue))!
         XCTAssertEqual(row[nthValue], "Billy@example.com")
     }
+    #endif
 }
+
+#if !SKIP // SkipSQLDB TODO
 
 extension Connection {
     func satisfiesMinimumVersion(minor: Int, patch: Int = 0) -> Bool {
@@ -477,3 +481,4 @@ extension Connection {
         return components[1] >= minor && components[2] >= patch
     }
 }
+#endif

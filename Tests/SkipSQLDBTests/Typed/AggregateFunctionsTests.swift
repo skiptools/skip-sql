@@ -29,6 +29,7 @@ import XCTest
 import SkipSQLDB
 
 class AggregateFunctionsTests: XCTestCase {
+    #if !SKIP // SkipSQLDB TODO
 
     func test_distinct_prependsExpressionsWithDistinctKeyword() {
         assertSQL("DISTINCT \"int\"", int.distinct)
@@ -91,5 +92,5 @@ class AggregateFunctionsTests: XCTestCase {
     func test_count_withStar_wrapsStarWithCountFunction() {
         assertSQL("count(*)", count(*))
     }
-
+    #endif
 }

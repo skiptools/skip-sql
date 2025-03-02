@@ -29,6 +29,7 @@ import XCTest
 @testable import SkipSQLDB
 
 class SelectTests: SQLiteTestCase {
+    #if !SKIP // SkipSQLDB TODO
 
     override func setUpWithError() throws {
         try super.setUpWithError()
@@ -68,4 +69,5 @@ class SelectTests: SQLiteTestCase {
             XCTAssertEqual($0[email], "Joey@example.com")
         }
     }
+    #endif
 }

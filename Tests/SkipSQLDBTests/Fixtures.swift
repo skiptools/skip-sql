@@ -41,6 +41,8 @@ func fixture(_ name: String, withExtension: String?) -> String {
             return url.path
         }
     }
+
+    return "/Users/marc/Desktop/test.sqlite" // TEMP FIX FOR "mergeDebugUnitTestAssets" "java.nio.file.DirectoryNotEmptyException"
     fatalError("Cannot find \(name).\(withExtension ?? "")")
 }
 

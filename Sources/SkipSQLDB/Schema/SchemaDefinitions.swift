@@ -27,6 +27,8 @@
 //
 import Foundation
 
+#if !SKIP // SkipSQLDB TODO
+
 struct TableDefinition: Equatable {
     let name: String
     let columns: [ColumnDefinition]
@@ -428,3 +430,5 @@ extension ColumnDefinition.PrimaryKey {
         ].compactMap { $0 }.joined(separator: " ")
     }
 }
+#endif
+

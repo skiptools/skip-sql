@@ -27,6 +27,7 @@
 //
 
 import SkipSQL
+import SkipFFI
 
 /// A single SQL statement.
 public final class Statement {
@@ -37,7 +38,12 @@ public final class Statement {
 
     init(_ connection: Connection, _ SQL: String) throws {
         self.connection = connection
-        try connection.check(SQLite3.sqlite3_prepare_v2(connection.handle, SQL, -1, &handle, nil))
+
+        //try connection.check(SQLite3.sqlite3_prepare_v2(connection.handle, SQL, -1, &handle, nil))
+
+        try connection.check(withUnsafeMutablePointer(to: &handle) { ptr in
+            SQLite3.sqlite3_prepare_v2(connection.handle, SQL, Int32(-1), ptr, nil)
+        })
     }
 
     deinit {
@@ -102,6 +108,7 @@ public final class Statement {
             SQLite3.sqlite3_bind_null(handle, Int32(idx))
             return
         }
+        #if !SKIP // SkipSQLDB TODO
         switch value {
         case let value as Blob:
             if value.bytes.count == 0 {
@@ -122,6 +129,9 @@ public final class Statement {
         default:
             fatalError("tried to bind unexpected value \(value)")
         }
+        #else
+        fatalError("SkipSQLDB TODO")
+        #endif
     }
 
     /// - Parameter bindings: A list of parameters to bind to the statement.
@@ -168,7 +178,11 @@ public final class Statement {
 
         reset(clearBindings: false)
         _ = try step()
+        #if !SKIP // SkipSQLDB TODO
         return row[0]
+        #else
+        fatalError("SkipSQLDB TODO")
+        #endif
     }
 
     /// - Parameter bindings: A list of parameters to bind to the statement.
@@ -195,20 +209,21 @@ public final class Statement {
     }
 
     fileprivate func reset(clearBindings shouldClear: Bool) {
-        SQLite3.sqlite3_reset(handle)
-        if shouldClear { SQLite3.sqlite3_clear_bindings(handle) }
+        _ = SQLite3.sqlite3_reset(handle)
+        if shouldClear { _ = SQLite3.sqlite3_clear_bindings(handle) }
     }
 
 }
 
+#if !SKIP // SkipSQLDB TODO
 extension Statement: Sequence {
 
     public func makeIterator() -> Statement {
         reset(clearBindings: false)
         return self
     }
-
 }
+#endif
 
 public protocol FailableIterator: IteratorProtocol {
     func failableNext() throws -> Self.Element?
@@ -232,6 +247,7 @@ extension Array {
     #endif
 }
 
+#if !SKIP // SkipSQLDB TODO
 extension Statement: FailableIterator {
     public typealias Element = [Binding?]
     public func failableNext() throws -> [Binding?]? {
@@ -253,6 +269,7 @@ extension Statement {
         return result
     }
 }
+#endif
 
 extension Statement: CustomStringConvertible {
 
@@ -273,6 +290,7 @@ public struct Cursor {
         columnCount = statement.columnCount
     }
 
+    #if !SKIP // SkipSQLDB TODO
     public subscript(idx: Int) -> Double {
         SQLite3.sqlite3_column_double(handle, Int32(idx))
     }
@@ -281,13 +299,9 @@ public struct Cursor {
         SQLite3.sqlite3_column_int64(handle, Int32(idx))
     }
 
-    #if !SKIP // SkipSQLDB TODO
     public subscript(idx: Int) -> String {
         String(cString: UnsafePointer(SQLite3.sqlite3_column_text(handle, Int32(idx))!))
     }
-    #endif
-
-    #if !SKIP // SkipSQLDB TODO
 
     public subscript(idx: Int) -> Blob {
         if let pointer = SQLite3.sqlite3_column_blob(handle, Int32(idx)) {
@@ -318,6 +332,7 @@ public struct Cursor {
 /// Cursors provide direct access to a statement’s current row.
 extension Cursor: Sequence {
 
+    #if !SKIP // SkipSQLDB TODO
     public subscript(idx: Int) -> Binding? {
         switch SQLite3.sqlite3_column_type(handle, Int32(idx)) {
         case SQLITE_BLOB:
@@ -346,6 +361,7 @@ extension Cursor: Sequence {
             }
         }
     }
+    #endif
 
 }
 #endif

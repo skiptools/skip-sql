@@ -28,6 +28,8 @@
 import XCTest
 import SkipSQLDB
 
+#if !SKIP // SkipSQLDB TODO
+
 class SchemaTests: XCTestCase {
 
     func test_drop_compilesDropTableExpression() {
@@ -892,3 +894,5 @@ class SchemaTests: XCTestCase {
     }
 
 }
+#endif
+

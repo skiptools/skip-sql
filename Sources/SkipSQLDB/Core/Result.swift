@@ -26,10 +26,14 @@
 // THE SOFTWARE.
 //
 import SkipSQL
+import SkipFFI
 
-public enum Result: Error {
+@available(*, deprecated, renamed: "SQLResult")
+public typealias Result = SQLResult
 
-    fileprivate static let successCodes: Set = [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]
+public enum SQLResult: Error {
+
+    fileprivate static let successCodes: Set<Int32> = [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]
 
     /// Represents a SQLite specific [error code](https://sqlite.org/rescode.html)
     ///
@@ -38,7 +42,7 @@ public enum Result: Error {
     /// - code: SQLite [error code](https://sqlite.org/rescode.html#primary_result_code_list)
     ///
     /// - statement: the statement which produced the error
-    case error(message: String, code: Int32, statement: Statement?)
+    case error(msg: String, code: Int32, statement: Statement?)
 
     /// Represents a SQLite specific [extended error code] (https://sqlite.org/rescode.html#primary_result_codes_versus_extended_result_codes)
     ///
@@ -47,25 +51,28 @@ public enum Result: Error {
     /// - extendedCode: SQLite [extended error code](https://sqlite.org/rescode.html#extended_result_code_list)
     ///
     /// - statement: the statement which produced the error
-    case extendedError(message: String, extendedCode: Int32, statement: Statement?)
+    case extendedError(msg: String, extendedCode: Int32, statement: Statement?)
 
     init?(errorCode: Int32, connection: Connection, statement: Statement? = nil) {
-        guard !Result.successCodes.contains(errorCode) else { return nil }
+        guard !SQLResult.successCodes.contains(errorCode) else { return nil }
 
-        let message = String(cString: SQLite3.sqlite3_errmsg(connection.handle)!)
-
-        guard connection.usesExtendedErrorCodes else {
-            self = .error(message: message, code: errorCode, statement: statement)
-            return
+        guard let msgPtr = SQLite3.sqlite3_errmsg(connection.handle) else {
+            return nil
         }
 
-        let extendedErrorCode = SQLite3.sqlite3_extended_errcode(connection.handle)
-        self = .extendedError(message: message, extendedCode: extendedErrorCode, statement: statement)
+        let message = String(cString: msgPtr)
+
+        if !connection.usesExtendedErrorCodes {
+            self = .error(msg: message, code: errorCode, statement: statement)
+        } else {
+            let extendedErrorCode = SQLite3.sqlite3_extended_errcode(connection.handle)
+            self = .extendedError(msg: message, extendedCode: extendedErrorCode, statement: statement)
+        }
     }
 
 }
 
-extension Result: CustomStringConvertible {
+extension SQLResult: CustomStringConvertible {
 
     public var description: String {
         switch self {

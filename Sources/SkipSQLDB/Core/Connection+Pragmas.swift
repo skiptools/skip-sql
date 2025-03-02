@@ -29,6 +29,8 @@ import Foundation
 
 public typealias UserVersion = Int32
 
+#if !SKIP // SkipSQLDB TODO
+
 public extension Connection {
     /// The user version of the database.
     /// See SQLite [PRAGMA user_version](https://sqlite.org/pragma.html#pragma_user_version)
@@ -69,10 +71,12 @@ public extension Connection {
     private func getBoolPragma(_ key: String) -> Bool {
         guard let binding = try? scalar("PRAGMA \(key)"),
               let intBinding = binding as? Int64 else { return false }
-        return intBinding == 1
+        return intBinding == 1 as Int64
     }
 
     private func setBoolPragma(_ key: String, _ newValue: Bool) {
         _ = try? run("PRAGMA \(key) = \(newValue ? "1" : "0")")
     }
 }
+#endif
+

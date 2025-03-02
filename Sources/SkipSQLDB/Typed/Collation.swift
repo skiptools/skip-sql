@@ -50,7 +50,11 @@ public enum Collation {
 extension Collation: Expressible {
 
     public var expression: SQLExpression<Void> {
+        #if !SKIP // SkipSQLDB TODO
         SQLExpression(literal: description)
+        #else
+        fatalError("SkipSQLDB TODO: Collation.expression")
+        #endif
     }
 
 }

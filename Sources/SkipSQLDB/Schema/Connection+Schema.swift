@@ -27,6 +27,8 @@
 //
 import Foundation
 
+#if !SKIP // SkipSQLDB TODO
+
 public extension Connection {
     var schema: SchemaReader { SchemaReader(connection: self) }
 
@@ -60,3 +62,5 @@ public extension Connection {
             .filter { $0 != "ok" }
     }
 }
+#endif
+

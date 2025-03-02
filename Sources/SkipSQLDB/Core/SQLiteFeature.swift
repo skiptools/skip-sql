@@ -45,8 +45,11 @@ enum SQLiteFeature {
     }
 }
 
+#if !SKIP // SkipSQLDB TODO
 extension Connection {
     func supports(_ feature: SQLiteFeature) -> Bool {
         feature.isSupported(by: sqliteVersion)
     }
 }
+#endif
+

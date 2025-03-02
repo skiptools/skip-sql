@@ -30,12 +30,12 @@ import XCTest
 import SkipSQL
 
 class StatementTests: SQLiteTestCase {
+    #if !SKIP // SkipSQLDB TODO
     override func setUpWithError() throws {
         try super.setUpWithError()
         try createUsersTable()
     }
 
-    #if !SKIP // SkipSQLDB TODO
     func test_cursor_to_blob() throws {
         try insertUsers("alice")
         let statement = try db.prepare("SELECT email FROM users")
@@ -52,7 +52,6 @@ class StatementTests: SQLiteTestCase {
         let blobValue = try db.scalar(blobs.select(blobColumn).limit(1, offset: 0))
         XCTAssertEqual([], blobValue.bytes)
     }
-    #endif
 
     func test_prepareRowIterator() throws {
         let names = ["a", "b", "c"]
@@ -78,7 +77,7 @@ class StatementTests: SQLiteTestCase {
 
         // verify implicit transaction is not closed, and the users table is still locked
         XCTAssertThrowsError(try db.run("DROP TABLE users")) { error in
-            if case let Result.error(_, code, _) = error {
+            if case let SQLResult.error(_, code, _) = error {
                 XCTAssertEqual(code, SQLITE_LOCKED)
             } else {
                 XCTFail("unexpected error")
@@ -91,4 +90,5 @@ class StatementTests: SQLiteTestCase {
         // truncate succeeds
         try db.run("DROP TABLE users")
     }
+    #endif
 }

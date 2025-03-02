@@ -29,6 +29,8 @@ import XCTest
 import SkipSQL
 @testable import SkipSQLDB
 
+#if !SKIP // SkipSQLDB TODO
+
 class QueryTests: XCTestCase {
 
     let users = Table("users")
@@ -602,3 +604,5 @@ class QueryTests: XCTestCase {
     }
 
 }
+#endif
+

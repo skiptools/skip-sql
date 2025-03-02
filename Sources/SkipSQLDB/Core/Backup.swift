@@ -28,7 +28,7 @@
 
 import Foundation
 import Dispatch
-import SkipSQL
+import SkipSQLPlus
 
 #if false // SkipSQLDB TODO
 

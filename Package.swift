@@ -35,7 +35,7 @@ let package = Package(
             .product(name: "SkipTest", package: "skip")
         ], plugins: [.plugin(name: "skipstone", package: "skip")]),
         .target(name: "SkipSQLDB", dependencies: [
-            "SkipSQL",
+            "SkipSQLPlus",
         ], plugins: [.plugin(name: "skipstone", package: "skip")]),
         .testTarget(name: "SkipSQLDBTests", dependencies: [
             "SkipSQLDB",
