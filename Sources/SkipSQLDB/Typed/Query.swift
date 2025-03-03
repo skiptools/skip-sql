@@ -27,11 +27,12 @@
 //
 import Foundation
 
-#if !SKIP // SkipSQLDB TODO
 
 public protocol QueryType: Expressible {
 
+    #if !SKIP // SkipSQLDB TODO
     var clauses: QueryClauses { get set }
+    #endif
 
     init(_ name: String, database: String?)
 
@@ -42,6 +43,8 @@ public protocol SchemaType: QueryType {
     static var identifier: String { get }
 
 }
+
+#if !SKIP // SkipSQLDB TODO
 
 extension SchemaType {
 
@@ -251,7 +254,7 @@ extension QueryType {
     ///
     /// - Returns: A query with the given `JOIN` clause applied.
     public func join(_ table: QueryType, on condition: SQLExpression<Bool?>) -> Self {
-        join(.inner, table, on: condition)
+        join(.innerJoin, table, on: condition)
     }
 
     /// Adds a `JOIN` clause to the query.
@@ -879,11 +882,15 @@ extension QueryType {
 
 }
 
-// TODO: decide: simplify the below with a boxed type instead
+#endif
+
+
+@available(*, deprecated, renamed: "SQLTable")
+public typealias Table = SQLTable
 
 /// Queries a collection of chainable helper functions and expressions to build
 /// executable SQL statements.
-public struct Table: SchemaType {
+public struct SQLTable: SchemaType {
 
     public static let identifier = "TABLE"
 
@@ -895,7 +902,11 @@ public struct Table: SchemaType {
 
 }
 
-public struct View: SchemaType {
+
+@available(*, deprecated, renamed: "SQLView")
+public typealias View = SQLView
+
+public struct SQLView: SchemaType {
 
     public static let identifier = "VIEW"
 
@@ -907,7 +918,10 @@ public struct View: SchemaType {
 
 }
 
-public struct VirtualTable: SchemaType {
+@available(*, deprecated, renamed: "SQLVirtualTable")
+public typealias VirtualTable = SQLVirtualTable
+
+public struct SQLVirtualTable: SchemaType {
 
     public static let identifier = "VIRTUAL TABLE"
 
@@ -918,6 +932,8 @@ public struct VirtualTable: SchemaType {
     }
 
 }
+
+#if !SKIP // SkipSQLDB TODO
 
 // TODO: make `ScalarQuery` work in `QueryType.select()`, `.filter()`, etc.
 
@@ -931,9 +947,8 @@ public struct ScalarQuery<V>: QueryType {
 
 }
 
-// TODO: decide: simplify the below with a boxed type instead
 
-#if !SKIP // SkipSQLDB TODO
+// TODO: decide: simplify the below with a boxed type instead
 
 public struct Select<T>: ExpressionType {
 
@@ -946,8 +961,6 @@ public struct Select<T>: ExpressionType {
     }
 
 }
-
-#endif
 
 public struct Insert: ExpressionType {
 
@@ -986,12 +999,12 @@ public struct Delete: ExpressionType {
 }
 
 public struct RowIterator: FailableIterator {
-    public typealias Element = Row
+    public typealias Element = SQLRow
     let statement: Statement
     let columnNames: [String: Int]
 
-    public func failableNext() throws -> Row? {
-        try statement.failableNext().flatMap { Row(columnNames, $0) }
+    public func failableNext() throws -> SQLRow? {
+        try statement.failableNext().flatMap { SQLRow(columnNames, $0) }
     }
 
     public func map<T>(_ transform: (Element) throws -> T) throws -> [T] {
@@ -1012,16 +1025,16 @@ public struct RowIterator: FailableIterator {
     }
 }
 
-extension Connection {
+extension SQLConnection {
 
-    public func prepare(_ query: QueryType) throws -> AnySequence<Row> {
+    public func prepare(_ query: QueryType) throws -> AnySequence<SQLRow> {
         let expression = query.expression
         let statement = try prepare(expression.template, expression.bindings)
 
         let columnNames = try columnNamesForQuery(query)
 
         return AnySequence {
-            AnyIterator { statement.next().map { Row(columnNames, $0) } }
+            AnyIterator { statement.next().map { SQLRow(columnNames, $0) } }
         }
     }
 
@@ -1123,7 +1136,7 @@ extension Connection {
         return try V.fromDatatypeValue(value)
     }
 
-    public func pluck(_ query: QueryType) throws -> Row? {
+    public func pluck(_ query: QueryType) throws -> SQLRow? {
         try prepareRowIterator(query.limit(1, query.clauses.limit?.offset)).failableNext()
     }
 
@@ -1180,7 +1193,10 @@ extension Connection {
 
 }
 
-public struct Row {
+@available(*, deprecated, renamed: "SQLRow")
+public typealias Row = SQLRow
+
+public struct SQLRow {
 
     let columnNames: [String: Int]
 
@@ -1252,18 +1268,19 @@ public struct Row {
         try! get(column)
     }
 }
+#endif
 
 /// Determines the join operator for a query’s `JOIN` clause.
 public enum JoinType: String {
 
     /// A `CROSS` join.
-    case cross = "CROSS"
+    case crossJoin = "CROSS"
 
     /// An `INNER` join.
-    case inner = "INNER"
+    case innerJoin = "INNER"
 
     /// A `LEFT OUTER` join.
-    case leftOuter = "LEFT OUTER"
+    case leftOuterJoin = "LEFT OUTER"
 
 }
 
@@ -1286,7 +1303,9 @@ public enum OnConflict: String {
 
 public struct QueryClauses {
 
+    #if !SKIP // SkipSQLDB TODO
     var select = (distinct: false, selectColumns: [SQLExpression<Void>(literal: "*") as Expressible])
+    #endif
 
     var from: (name: String, alias: String?, database: String?)
 
@@ -1309,5 +1328,4 @@ public struct QueryClauses {
     }
 
 }
-#endif
 

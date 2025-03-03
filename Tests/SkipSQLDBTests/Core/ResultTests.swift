@@ -31,11 +31,11 @@ import Foundation
 import SkipSQL
 
 class ResultTests: XCTestCase {
-    var connection: Connection!
+    var connection: SQLConnection!
 
     // SKIP DECLARE: override fun setUp()
     override func setUpWithError() throws {
-        connection = try Connection(.inMemory)
+        connection = try SQLConnection(.inMemory)
     }
 
     func test_init_with_ok_code_returns_nil() {

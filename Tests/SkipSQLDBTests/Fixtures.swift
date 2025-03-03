@@ -28,11 +28,7 @@
 import Foundation
 
 func fixture(_ name: String, withExtension: String?) -> String {
-    #if SWIFT_PACKAGE
     let testBundle = Bundle.module
-    #else
-    let testBundle = Bundle(for: SQLiteTestCase.self)
-    #endif
 
     for resource in [name, "Resources/\(name)"] {
         if let url = testBundle.url(
@@ -42,7 +38,6 @@ func fixture(_ name: String, withExtension: String?) -> String {
         }
     }
 
-    return "/Users/marc/Desktop/test.sqlite" // TEMP FIX FOR "mergeDebugUnitTestAssets" "java.nio.file.DirectoryNotEmptyException"
     fatalError("Cannot find \(name).\(withExtension ?? "")")
 }
 

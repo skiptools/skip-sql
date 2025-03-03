@@ -155,7 +155,7 @@ extension QueryType {
     }
 }
 
-extension Row {
+extension SQLRow {
     /// Decode an object from this row
     /// This method expects any custom nested types to be in the form of JSON data and does not handle
     /// any sort of object relationships. If you want to support relationships between objects you will
@@ -368,9 +368,9 @@ private class SQLiteDecoder: Decoder {
         typealias Key = MyKey
 
         let codingPath: [CodingKey] = []
-        let row: Row
+        let row: SQLRow
 
-        init(row: Row) {
+        init(row: SQLRow) {
             self.row = row
         }
 
@@ -543,11 +543,11 @@ private class SQLiteDecoder: Decoder {
         }
     }
 
-    let row: Row
+    let row: SQLRow
     let codingPath: [CodingKey] = []
     let userInfo: [CodingUserInfoKey: Any]
 
-    init(row: Row, userInfo: [CodingUserInfoKey: Any]) {
+    init(row: SQLRow, userInfo: [CodingUserInfoKey: Any]) {
         self.row = row
         self.userInfo = userInfo
     }

@@ -33,8 +33,11 @@ import SkipSQLPlus
 import SkipFFI
 #endif
 
+@available(*, deprecated, renamed: "SQLConnection")
+public typealias Connection = SQLConnection
+
 /// A connection to SQLite.
-public final class Connection {
+public final class SQLConnection {
 
     /// The location of a SQLite database.
     public enum Location {
@@ -102,7 +105,7 @@ public final class Connection {
     ///     Default: `false`.
     ///
     /// - Returns: A new database connection.
-    public init(_ location: Connection.Location = .inMemory, readonly: Bool = false) throws {
+    public init(_ location: SQLConnection.Location = .inMemory, readonly: Bool = false) throws {
         let flags = readonly ? SQLITE_OPEN_READONLY : (SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE)
         try check(withUnsafeMutablePointer(to: &_handle) { ptr in
             SQLite3.sqlite3_open_v2(location.description,
@@ -111,7 +114,7 @@ public final class Connection {
                                     nil)
         })
         #if !SKIP // SkipSQLDB TODO
-        queue.setSpecific(key: Connection.queueKey, value: queueContext)
+        queue.setSpecific(key: SQLConnection.queueKey, value: queueContext)
         #endif
     }
 
@@ -130,7 +133,7 @@ public final class Connection {
     ///
     /// - Returns: A new database connection.
     public /*convenience*/ init(_ filename: String, readonly: Bool = false) throws {
-        let location = Connection.Location.uri(filename, parameters: [])
+        let location = SQLConnection.Location.uri(filename, parameters: [])
         // try self.init(location, readonly: readonly) // FIXME: Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
 
         let flags = readonly ? SQLITE_OPEN_READONLY : (SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE)
@@ -141,7 +144,7 @@ public final class Connection {
                                     nil)
         })
         #if !SKIP // SkipSQLDB TODO
-        queue.setSpecific(key: Connection.queueKey, value: queueContext)
+        queue.setSpecific(key: SQLConnection.queueKey, value: queueContext)
         #endif
 
     }
@@ -686,7 +689,7 @@ public final class Connection {
 
     func sync<T>(_ block: () throws -> T) rethrows -> T {
         #if !SKIP // SkipSQLDB TODO
-        if DispatchQueue.getSpecific(key: Connection.queueKey) == queueContext {
+        if DispatchQueue.getSpecific(key: SQLConnection.queueKey) == queueContext {
             return try block()
         } else {
             return try queue.sync(execute: block)
@@ -714,7 +717,7 @@ public final class Connection {
 
 }
 
-extension Connection: CustomStringConvertible {
+extension SQLConnection: CustomStringConvertible {
 
     public var description: String {
         String(cString: SQLite3.sqlite3_db_filename(handle, nil)!)
@@ -723,7 +726,7 @@ extension Connection: CustomStringConvertible {
 }
 
 // SKIP NOWARN
-extension Connection.Location: CustomStringConvertible {
+extension SQLConnection.Location: CustomStringConvertible {
 
     public var description: String {
         switch self {

@@ -87,7 +87,7 @@ class QueryIntegrationTests: SQLiteTestCase {
     }
 
     func test_select_codable() throws {
-        let table = Table("codable")
+        let table = SQLTable("codable")
         try db.run(table.create { builder in
             builder.column(SQLExpression<Int>("int"))
             builder.column(SQLExpression<String>("string"))
@@ -151,7 +151,7 @@ class QueryIntegrationTests: SQLiteTestCase {
     }
 
     func test_insert_many_encodables() throws {
-        let table = Table("codable")
+        let table = SQLTable("codable")
         try db.run(table.create { builder in
             builder.column(SQLExpression<Int?>("int"))
             builder.column(SQLExpression<String?>("string"))
@@ -180,7 +180,7 @@ class QueryIntegrationTests: SQLiteTestCase {
 
     func test_insert_custom_encodable_type() throws {
 
-        let table = Table("custom_codable")
+        let table = SQLTable("custom_codable")
         try db.run(table.create { builder in
             builder.column(SQLExpression<Int?>("myInt"))
             builder.column(SQLExpression<String?>("myString"))
@@ -300,7 +300,7 @@ class QueryIntegrationTests: SQLiteTestCase {
     }
 
     func test_with_recursive() throws {
-        let nodes = Table("nodes")
+        let nodes = SQLTable("nodes")
         let id = SQLExpression<Int64>("id")
         let parent = SQLExpression<Int64?>("parent")
         let value = SQLExpression<Int64>("value")
@@ -321,7 +321,7 @@ class QueryIntegrationTests: SQLiteTestCase {
         ]))
 
         // Compute the sum of the values of node 5 and its ancestors
-        let ancestors = Table("ancestors")
+        let ancestors = SQLTable("ancestors")
         let sum = try db.scalar(
             ancestors
                 .select(value.sum)
@@ -342,7 +342,7 @@ class QueryIntegrationTests: SQLiteTestCase {
 
     /// Verify that `*` is properly expanded in a SELECT statement following a WITH clause.
     func test_with_glob_expansion() throws {
-        let names = Table("names")
+        let names = SQLTable("names")
         let name = SQLExpression<String>("name")
         try db.run(names.create { builder in
             builder.column(email)
@@ -353,7 +353,7 @@ class QueryIntegrationTests: SQLiteTestCase {
         try db.run(names.insert(email <- "alice@example.com", name <- "Alice"))
 
         // WITH intermediate AS ( SELECT ... ) SELECT * FROM intermediate
-        let intermediate = Table("intermediate")
+        let intermediate = SQLTable("intermediate")
         let rows = try db.prepare(
             intermediate
                 .with(intermediate,
@@ -374,7 +374,7 @@ class QueryIntegrationTests: SQLiteTestCase {
     }
 
     func test_select_ntile_function() throws {
-        let users = Table("users")
+        let users = SQLTable("users")
 
         try insertUser("Joey")
         try insertUser("Timmy")
@@ -388,7 +388,7 @@ class QueryIntegrationTests: SQLiteTestCase {
     }
 
     func test_select_cume_dist_function() throws {
-        let users = Table("users")
+        let users = SQLTable("users")
 
         try insertUser("Joey")
         try insertUser("Timmy")
@@ -403,7 +403,7 @@ class QueryIntegrationTests: SQLiteTestCase {
     }
 
     func test_select_window_row_number() throws {
-        let users = Table("users")
+        let users = SQLTable("users")
 
         try insertUser("Billy")
         try insertUser("Jimmy")
@@ -420,7 +420,7 @@ class QueryIntegrationTests: SQLiteTestCase {
     }
 
     func test_select_window_ranking() throws {
-        let users = Table("users")
+        let users = SQLTable("users")
 
         try insertUser("Billy")
         try insertUser("Jimmy")
@@ -447,7 +447,7 @@ class QueryIntegrationTests: SQLiteTestCase {
     }
 
     func test_select_window_values() throws {
-        let users = Table("users")
+        let users = SQLTable("users")
 
         try insertUser("Billy")
         try insertUser("Jimmy")
@@ -472,7 +472,7 @@ class QueryIntegrationTests: SQLiteTestCase {
 
 #if !SKIP // SkipSQLDB TODO
 
-extension Connection {
+extension SQLConnection {
     func satisfiesMinimumVersion(minor: Int, patch: Int = 0) -> Bool {
         guard let version = try? scalar("SELECT sqlite_version()") as? String else { return false }
         let components = version.split(separator: ".", maxSplits: 3).compactMap { Int($0) }

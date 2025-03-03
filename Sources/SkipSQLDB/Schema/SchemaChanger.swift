@@ -145,7 +145,7 @@ public class SchemaChanger: CustomStringConvertible {
         }
     }
 
-    private let connection: Connection
+    private let connection: SQLConnection
     private let schemaReader: SchemaReader
     private let version: SQLiteVersion
     static let tempPrefix = "tmp_"
@@ -158,12 +158,12 @@ public class SchemaChanger: CustomStringConvertible {
         static let temp = Options(rawValue: 1)
     }
 
-    public convenience init(connection: Connection) {
+    public convenience init(connection: SQLConnection) {
         self.init(connection: connection,
                   version: connection.sqliteVersion)
     }
 
-    init(connection: Connection, version: SQLiteVersion) {
+    init(connection: SQLConnection, version: SQLiteVersion) {
         self.connection = connection
         schemaReader = connection.schema
         self.version = version

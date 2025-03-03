@@ -30,9 +30,9 @@ import Foundation
 #if !SKIP // SkipSQLDB TODO
 
 public class SchemaReader {
-    private let connection: Connection
+    private let connection: SQLConnection
 
-    init(connection: Connection) {
+    init(connection: SQLConnection) {
         self.connection = connection
     }
 
@@ -53,7 +53,7 @@ public class SchemaReader {
             Dictionary(grouping: try foreignKeys(table: table), by: { $0.column })
 
         return try connection.prepareRowIterator("PRAGMA table_info(\(table.quote()))")
-            .map { (row: Row) -> ColumnDefinition in
+            .map { (row: SQLRow) -> ColumnDefinition in
                 ColumnDefinition(
                     name: row[TableInfoTable.nameColumn],
                     primaryKey: (row[TableInfoTable.primaryKeyColumn] ?? 0) > 0 ?
@@ -158,13 +158,13 @@ public class SchemaReader {
 }
 
 private enum SchemaTable {
-    private static let name = Table("sqlite_schema", database: "main")
-    private static let tempName = Table("sqlite_schema", database: "temp")
+    private static let name = SQLTable("sqlite_schema", database: "main")
+    private static let tempName = SQLTable("sqlite_schema", database: "temp")
     // legacy names (< 3.33.0)
-    private static let masterName = Table("sqlite_master")
-    private static let tempMasterName = Table("sqlite_temp_master")
+    private static let masterName = SQLTable("sqlite_master")
+    private static let tempMasterName = SQLTable("sqlite_temp_master")
 
-    static func get(for connection: Connection, temp: Bool = false) -> Table {
+    static func get(for connection: SQLConnection, temp: Bool = false) -> SQLTable {
         if connection.supports(.sqliteSchemaTable) {
             return temp ? SchemaTable.tempName : SchemaTable.name
         } else {

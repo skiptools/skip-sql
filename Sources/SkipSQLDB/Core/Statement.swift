@@ -34,9 +34,9 @@ public final class Statement {
 
     fileprivate var handle: OpaquePointer?
 
-    fileprivate let connection: Connection
+    fileprivate let connection: SQLConnection
 
-    init(_ connection: Connection, _ SQL: String) throws {
+    init(_ connection: SQLConnection, _ SQL: String) throws {
         self.connection = connection
 
         //try connection.check(SQLite3.sqlite3_prepare_v2(connection.handle, SQL, -1, &handle, nil))

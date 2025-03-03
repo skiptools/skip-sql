@@ -33,19 +33,19 @@ import SkipSQL
 
 class QueryTests: XCTestCase {
 
-    let users = Table("users")
+    let users = SQLTable("users")
     let id = SQLExpression<Int64>("id")
     let email = SQLExpression<String>("email")
     let age = SQLExpression<Int?>("age")
     let admin = SQLExpression<Bool>("admin")
     let optionalAdmin = SQLExpression<Bool?>("admin")
 
-    let posts = Table("posts")
+    let posts = SQLTable("posts")
     let userId = SQLExpression<Int64>("user_id")
     let categoryId = SQLExpression<Int64>("category_id")
     let published = SQLExpression<Bool>("published")
 
-    let categories = Table("categories")
+    let categories = SQLTable("categories")
     let tag = SQLExpression<String>("tag")
 
     func test_select_withExpression_compilesSelectClause() {
@@ -98,12 +98,12 @@ class QueryTests: XCTestCase {
     func test_join_withExplicitType_compilesJoinClauseWithType() {
         assertSQL(
             "SELECT * FROM \"users\" LEFT OUTER JOIN \"posts\" ON (\"posts\".\"user_id\" = \"users\".\"id\")",
-            users.join(JoinType.leftOuter, posts, on: posts[userId] == users[id])
+            users.join(JoinType.leftOuterJoin, posts, on: posts[userId] == users[id])
         )
 
         assertSQL(
             "SELECT * FROM \"users\" CROSS JOIN \"posts\" ON (\"posts\".\"user_id\" = \"users\".\"id\")",
-            users.join(JoinType.cross, posts, on: posts[userId] == users[id])
+            users.join(JoinType.crossJoin, posts, on: posts[userId] == users[id])
         )
     }
 
@@ -250,44 +250,44 @@ class QueryTests: XCTestCase {
     }
 
     func test_with_compilesWithClause() {
-        let temp = Table("temp")
+        let temp = SQLTable("temp")
 
         assertSQL("WITH \"temp\" AS (SELECT * FROM \"users\") SELECT * FROM \"temp\"",
                   temp.with(temp, as: users))
     }
 
     func test_with_compilesWithRecursiveClause() {
-        let temp = Table("temp")
+        let temp = SQLTable("temp")
 
         assertSQL("WITH RECURSIVE \"temp\" AS (SELECT * FROM \"users\") SELECT * FROM \"temp\"",
                   temp.with(temp, recursive: true, as: users))
     }
 
     func test_with_compilesWithMaterializedClause() {
-        let temp = Table("temp")
+        let temp = SQLTable("temp")
 
         assertSQL("WITH \"temp\" AS MATERIALIZED (SELECT * FROM \"users\") SELECT * FROM \"temp\"",
                   temp.with(temp, hint: .materialized, as: users))
     }
 
     func test_with_compilesWithNotMaterializedClause() {
-        let temp = Table("temp")
+        let temp = SQLTable("temp")
 
         assertSQL("WITH \"temp\" AS NOT MATERIALIZED (SELECT * FROM \"users\") SELECT * FROM \"temp\"",
                   temp.with(temp, hint: .notMaterialized, as: users))
     }
 
     func test_with_columns_compilesWithClause() {
-        let temp = Table("temp")
+        let temp = SQLTable("temp")
 
         assertSQL("WITH \"temp\" (\"id\", \"email\") AS (SELECT * FROM \"users\") SELECT * FROM \"temp\"",
                   temp.with(temp, columns: [id, email], recursive: false, hint: nil, as: users))
     }
 
     func test_with_multiple_compilesWithClause() {
-        let temp = Table("temp")
-        let second = Table("second")
-        let third = Table("third")
+        let temp = SQLTable("temp")
+        let second = SQLTable("second")
+        let third = SQLTable("third")
 
         let query = temp
             .with(temp, recursive: true, as: users)
@@ -324,7 +324,7 @@ class QueryTests: XCTestCase {
     }
 
     func test_insert_withQuery_compilesInsertExpressionWithSelectStatement() {
-        let emails = Table("emails")
+        let emails = SQLTable("emails")
 
         assertSQL(
             "INSERT INTO \"emails\" SELECT \"email\" FROM \"users\" WHERE \"admin\"",
@@ -362,7 +362,7 @@ class QueryTests: XCTestCase {
     }
 
     func test_insert_encodable() throws {
-        let emails = Table("emails")
+        let emails = SQLTable("emails")
         let value = TestCodable(int: 1, string: "2", bool: true, float: 3, double: 4,
                                 date: Date(timeIntervalSince1970: 0), uuid: testUUIDValue, optional: nil, sub: nil)
         let insert = try emails.insert(value)
@@ -377,7 +377,7 @@ class QueryTests: XCTestCase {
 
     #if !os(Linux) && !os(Android) && !os(Windows) // depends on exact JSON serialization
     func test_insert_encodable_with_nested_encodable() throws {
-        let emails = Table("emails")
+        let emails = SQLTable("emails")
         let value1 = TestCodable(int: 1, string: "2", bool: true, float: 3, double: 4,
                                  date: Date(timeIntervalSince1970: 0), uuid: testUUIDValue, optional: nil, sub: nil)
         let value = TestCodable(int: 1, string: "2", bool: true, float: 3, double: 4,
@@ -413,7 +413,7 @@ class QueryTests: XCTestCase {
     func test_insert_and_search_for_UUID() throws {
         let testUUID = UUID()
         let testValue = InsertAndSearchForUUIDTest(uuid: testUUID, string: "value")
-        let db = try Connection(.temporary)
+        let db = try SQLConnection(.temporary)
         try db.run(table.create { t in
             t.column(uuid)
             t.column(string)
@@ -443,7 +443,7 @@ class QueryTests: XCTestCase {
     }
 
     func test_upsert_encodable() throws {
-        let emails = Table("emails")
+        let emails = SQLTable("emails")
         let string = SQLExpression<String>("string")
         let value = TestCodable(int: 1, string: "2", bool: true, float: 3, double: 4,
                                 date: Date(timeIntervalSince1970: 0), uuid: testUUIDValue, optional: nil, sub: nil)
@@ -461,7 +461,7 @@ class QueryTests: XCTestCase {
     }
 
     func test_insert_many_encodables() throws {
-        let emails = Table("emails")
+        let emails = SQLTable("emails")
         let value1 = TestCodable(int: 1, string: "2", bool: true, float: 3, double: 4,
                                  date: Date(timeIntervalSince1970: 0), uuid: testUUIDValue, optional: nil, sub: nil)
         let value2 = TestCodable(int: 2, string: "3", bool: true, float: 3, double: 5,
@@ -495,7 +495,7 @@ class QueryTests: XCTestCase {
     }
 
     func test_update_encodable() throws {
-        let emails = Table("emails")
+        let emails = SQLTable("emails")
         let value = TestCodable(int: 1, string: "2", bool: true, float: 3, double: 4,
                                 date: Date(timeIntervalSince1970: 0), uuid: testUUIDValue, optional: nil, sub: nil)
         let update = try emails.update(value)
@@ -509,7 +509,7 @@ class QueryTests: XCTestCase {
     }
 
     func test_update_encodable_with_nested_encodable() throws {
-        let emails = Table("emails")
+        let emails = SQLTable("emails")
         let value1 = TestCodable(int: 1, string: "2", bool: true, float: 3, double: 4,
                                  date: Date(timeIntervalSince1970: 0), uuid: testUUIDValue, optional: nil, sub: nil)
         let value = TestCodable(int: 1, string: "2", bool: true, float: 3, double: 4,
@@ -571,7 +571,7 @@ class QueryTests: XCTestCase {
     }
 
     func test_subscript_withExpression_returnsNamespacedExpression() {
-        let query = Table("query")
+        let query = SQLTable("query")
 
         assertSQL("\"query\".\"blob\"", query[data])
         assertSQL("\"query\".\"blobOptional\"", query[dataOptional])
@@ -598,7 +598,7 @@ class QueryTests: XCTestCase {
     }
 
     func test_tableNamespacedByDatabase() {
-        let table = Table("table", database: "attached")
+        let table = SQLTable("table", database: "attached")
 
         assertSQL("SELECT * FROM \"attached\".\"table\"", table)
     }

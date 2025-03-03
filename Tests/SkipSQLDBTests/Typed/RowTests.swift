@@ -32,49 +32,49 @@ class RowTests: XCTestCase {
     #if !SKIP // SkipSQLDB TODO
 
     public func test_get_value() throws {
-        let row = Row(["\"foo\"": 0], ["value"])
+        let row = SQLRow(["\"foo\"": 0], ["value"])
         let result = try row.get(SQLExpression<String>("foo"))
 
         XCTAssertEqual("value", result)
     }
 
     public func test_get_value_subscript() {
-        let row = Row(["\"foo\"": 0], ["value"])
+        let row = SQLRow(["\"foo\"": 0], ["value"])
         let result = row[SQLExpression<String>("foo")]
 
         XCTAssertEqual("value", result)
     }
 
     public func test_get_value_optional() throws {
-        let row = Row(["\"foo\"": 0], ["value"])
+        let row = SQLRow(["\"foo\"": 0], ["value"])
         let result = try row.get(SQLExpression<String?>("foo"))
 
         XCTAssertEqual("value", result)
     }
 
     public func test_get_value_optional_subscript() {
-        let row = Row(["\"foo\"": 0], ["value"])
+        let row = SQLRow(["\"foo\"": 0], ["value"])
         let result = row[SQLExpression<String?>("foo")]
 
         XCTAssertEqual("value", result)
     }
 
     public func test_get_value_optional_nil() throws {
-        let row = Row(["\"foo\"": 0], [nil])
+        let row = SQLRow(["\"foo\"": 0], [nil])
         let result = try row.get(SQLExpression<String?>("foo"))
 
         XCTAssertNil(result)
     }
 
     public func test_get_value_optional_nil_subscript() {
-        let row = Row(["\"foo\"": 0], [nil])
+        let row = SQLRow(["\"foo\"": 0], [nil])
         let result = row[SQLExpression<String?>("foo")]
 
         XCTAssertNil(result)
     }
 
     public func test_get_type_mismatch_throws_unexpected_null_value() {
-        let row = Row(["\"foo\"": 0], ["value"])
+        let row = SQLRow(["\"foo\"": 0], ["value"])
         XCTAssertThrowsError(try row.get(SQLExpression<Int>("foo"))) { error in
             if case QueryError.unexpectedNullValue(let name) = error {
                 XCTAssertEqual("\"foo\"", name)
@@ -85,13 +85,13 @@ class RowTests: XCTestCase {
     }
 
     public func test_get_type_mismatch_optional_returns_nil() throws {
-        let row = Row(["\"foo\"": 0], ["value"])
+        let row = SQLRow(["\"foo\"": 0], ["value"])
         let result = try row.get(SQLExpression<Int?>("foo"))
         XCTAssertNil(result)
     }
 
     public func test_get_non_existent_column_throws_no_such_column() {
-        let row = Row(["\"foo\"": 0], ["value"])
+        let row = SQLRow(["\"foo\"": 0], ["value"])
         XCTAssertThrowsError(try row.get(SQLExpression<Int>("bar"))) { error in
             if case QueryError.noSuchColumn(let name, let columns) = error {
                 XCTAssertEqual("\"bar\"", name)
@@ -103,7 +103,7 @@ class RowTests: XCTestCase {
     }
 
     public func test_get_ambiguous_column_throws() {
-        let row = Row(["table1.\"foo\"": 0, "table2.\"foo\"": 1], ["value"])
+        let row = SQLRow(["table1.\"foo\"": 0, "table2.\"foo\"": 1], ["value"])
         XCTAssertThrowsError(try row.get(SQLExpression<Int>("foo"))) { error in
             if case QueryError.ambiguousColumn(let name, let columns) = error {
                 XCTAssertEqual("\"foo\"", name)
@@ -116,7 +116,7 @@ class RowTests: XCTestCase {
 
     public func test_get_datatype_throws() {
         // swiftlint:disable nesting
-        let row = Row(["\"foo\"": 0], [Blob(bytes: [])])
+        let row = SQLRow(["\"foo\"": 0], [Blob(bytes: [])])
         XCTAssertThrowsError(try row.get(SQLExpression<MyType>("foo"))) { error in
             if case MyType.MyError.failed = error {
                 XCTAssertTrue(true)

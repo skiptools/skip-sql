@@ -29,7 +29,7 @@ import Foundation
 
 #if !SKIP // SkipSQLDB TODO
 
-public extension Connection {
+public extension SQLConnection {
     var schema: SchemaReader { SchemaReader(connection: self) }
 
     // There are four columns in each result row.

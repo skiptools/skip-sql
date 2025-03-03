@@ -180,7 +180,7 @@ class SchemaChangerTests: SQLiteTestCase {
 
     func test_rename_table() throws {
         try schemaChanger.rename(table: "users", to: "users_new")
-        let users_new = Table("users_new")
+        let users_new = SQLTable("users_new")
         XCTAssertEqual((try db.scalar(users_new.count)) as Int, 1)
     }
 }

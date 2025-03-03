@@ -37,7 +37,7 @@ class ConnectionAttachTests: SQLiteTestCase {
 
         try db.attach(.inMemory, as: schemaName)
 
-        let table = Table("attached_users", database: schemaName)
+        let table = SQLTable("attached_users", database: schemaName)
         let name = SQLExpression<String>("string")
 
         // create a table, insert some data
@@ -60,7 +60,7 @@ class ConnectionAttachTests: SQLiteTestCase {
 
         try db.attach(.uri(testDb, parameters: [.mode(.readOnly)]), as: schemaName)
 
-        let table = Table("tests", database: schemaName)
+        let table = SQLTable("tests", database: schemaName)
         let email = SQLExpression<String>("email")
 
         let rows = try db.prepare(table.select(email)).map { $0[email] }
@@ -82,4 +82,3 @@ class ConnectionAttachTests: SQLiteTestCase {
     }
 }
 #endif
-

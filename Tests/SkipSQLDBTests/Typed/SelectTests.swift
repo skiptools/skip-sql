@@ -49,8 +49,8 @@ class SelectTests: SQLiteTestCase {
     }
 
     func test_select_columns_from_multiple_tables() throws {
-        let usersData = Table("users_name")
-        let users = Table("users")
+        let usersData = SQLTable("users_name")
+        let users = SQLTable("users")
 
         let name = SQLExpression<String>("name")
         let id = SQLExpression<Int64>("id")

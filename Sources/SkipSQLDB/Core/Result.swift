@@ -53,7 +53,7 @@ public enum SQLResult: Error {
     /// - statement: the statement which produced the error
     case extendedError(msg: String, extendedCode: Int32, statement: Statement?)
 
-    init?(errorCode: Int32, connection: Connection, statement: Statement? = nil) {
+    init?(errorCode: Int32, connection: SQLConnection, statement: Statement? = nil) {
         guard !SQLResult.successCodes.contains(errorCode) else { return nil }
 
         guard let msgPtr = SQLite3.sqlite3_errmsg(connection.handle) else {

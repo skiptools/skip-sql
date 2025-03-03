@@ -39,22 +39,22 @@ class ConnectionTests: SQLiteTestCase {
     }
 
     func test_init_withInMemory_returnsInMemoryConnection() throws {
-        let db = try Connection(.inMemory)
+        let db = try SQLConnection(.inMemory)
         XCTAssertEqual("", db.description)
     }
 
     func test_init_returnsInMemoryByDefault() throws {
-        let db = try Connection()
+        let db = try SQLConnection()
         XCTAssertEqual("", db.description)
     }
 
     func test_init_withTemporary_returnsTemporaryConnection() throws {
-        let db = try Connection(.temporary)
+        let db = try SQLConnection(.temporary)
         XCTAssertEqual("", db.description)
     }
 
     func test_init_withURI_returnsURIConnection() throws {
-        let db = try Connection(Connection.Location.uri("\(NSTemporaryDirectory())/SQLite.swift Tests.sqlite3"))
+        let db = try SQLConnection(SQLConnection.Location.uri("\(NSTemporaryDirectory())/SQLite.swift Tests.sqlite3"))
         // SkipSQLDB TODO: java.net.URISyntaxException: Illegal character in path at index 76: file:///private/var/folders/zl/wkdjv4s1271fbm6w0plzknkh0000gn/T/SQLite.swift Tests.sqlite3
         #if SKIP
         throw XCTSkip("cannot parse URL with space")
@@ -64,7 +64,7 @@ class ConnectionTests: SQLiteTestCase {
     }
 
     func test_init_withString_returnsURIConnection() throws {
-        let db = try Connection("\(NSTemporaryDirectory())/SQLite.swift Tests.sqlite3")
+        let db = try SQLConnection("\(NSTemporaryDirectory())/SQLite.swift Tests.sqlite3")
         #if SKIP
         throw XCTSkip("cannot parse URL with space")
         #else
@@ -76,17 +76,17 @@ class ConnectionTests: SQLiteTestCase {
     #if !os(Windows) // fails on Windows for some reason, maybe due to URI parameter (because test_attach_detach_file_database fails too)
     func test_init_with_Uri_and_Parameters() throws {
         let testDb = fixture("test", withExtension: "sqlite")
-        _ = try Connection(.uri(testDb, parameters: [.cache(.shared)]))
+        _ = try SQLConnection(.uri(testDb, parameters: [.cache(.shared)]))
     }
     #endif
 
     func test_location_without_Uri_parameters() {
-        let location: Connection.Location = .uri("foo")
+        let location: SQLConnection.Location = .uri("foo")
         XCTAssertEqual(location.description, "foo")
     }
 
     func test_location_with_Uri_parameters() {
-        let location: Connection.Location = .uri("foo", parameters: [.mode(.readOnly), .cache(.private)])
+        let location: SQLConnection.Location = .uri("foo", parameters: [.mode(.readOnly), .cache(.private)])
         // SkipSQLDB TODO
         #if SKIP
         throw XCTSkip("URL parameters are not returned correctly")
@@ -485,7 +485,7 @@ class ConnectionTests: SQLiteTestCase {
         // test can fail on iOS/tvOS 9.x: SQLite compile-time differences?
         guard #available(iOS 10.0, OSX 10.10, tvOS 10.0, watchOS 2.2, *) else { return }
 
-        let conn = try Connection("\(NSTemporaryDirectory())/\(UUID().uuidString)")
+        let conn = try SQLConnection("\(NSTemporaryDirectory())/\(UUID().uuidString)")
         try conn.execute("DROP TABLE IF EXISTS test; CREATE TABLE test(value);")
         try conn.run("INSERT INTO test(value) VALUES(?)", 0)
         let queue = DispatchQueue(label: "Readers", attributes: [.concurrent])

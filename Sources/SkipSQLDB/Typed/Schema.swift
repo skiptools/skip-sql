@@ -38,7 +38,7 @@ extension SchemaType {
 
 }
 
-extension Table {
+extension SQLTable {
 
     // MARK: - CREATE TABLE
 
@@ -49,7 +49,7 @@ extension Table {
         block(builder)
 
         let clauses: [Expressible?] = [
-            create(Table.identifier, tableName(), temporary ? .temporary : nil, ifNotExists),
+            create(SQLTable.identifier, tableName(), temporary ? .temporary : nil, ifNotExists),
             "".wrap(builder.definitions) as SQLExpression<Void>,
             withoutRowid ? SQLExpression<Void>(literal: "WITHOUT ROWID") : nil
         ]
@@ -59,7 +59,7 @@ extension Table {
 
     public func create(_ query: QueryType, temporary: Bool = false, ifNotExists: Bool = false) -> String {
         let clauses: [Expressible?] = [
-            create(Table.identifier, tableName(), temporary ? .temporary : nil, ifNotExists),
+            create(SQLTable.identifier, tableName(), temporary ? .temporary : nil, ifNotExists),
             SQLExpression<Void>(literal: "AS"),
             query
         ]
@@ -138,7 +138,7 @@ extension Table {
 
     // MARK: - ALTER TABLE … RENAME TO
 
-    public func rename(_ to: Table) -> String {
+    public func rename(_ to: SQLTable) -> String {
         rename(to: to)
     }
 
@@ -180,13 +180,13 @@ extension Table {
 }
 
 
-extension View {
+extension SQLView {
 
     // MARK: - CREATE VIEW
 
     public func create(_ query: QueryType, temporary: Bool = false, ifNotExists: Bool = false) -> String {
         let clauses: [Expressible?] = [
-            create(View.identifier, tableName(), temporary ? .temporary : nil, ifNotExists),
+            create(SQLView.identifier, tableName(), temporary ? .temporary : nil, ifNotExists),
             SQLExpression<Void>(literal: "AS"),
             query
         ]
@@ -202,13 +202,13 @@ extension View {
 
 }
 
-extension VirtualTable {
+extension SQLVirtualTable {
 
     // MARK: - CREATE VIRTUAL TABLE
 
     public func create(_ using: Module, ifNotExists: Bool = false) -> String {
         let clauses: [Expressible?] = [
-            create(VirtualTable.identifier, tableName(), nil, ifNotExists),
+            create(SQLVirtualTable.identifier, tableName(), nil, ifNotExists),
             SQLExpression<Void>(literal: "USING"),
             using
         ]
@@ -218,7 +218,7 @@ extension VirtualTable {
 
     // MARK: - ALTER TABLE … RENAME TO
 
-    public func rename(_ to: VirtualTable) -> String {
+    public func rename(_ to: SQLVirtualTable) -> String {
         rename(to: to)
     }
 

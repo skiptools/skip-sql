@@ -30,7 +30,7 @@ import XCTest
 
 class SQLiteTestCase: XCTestCase {
     private var trace: [String: Int]!
-    var db: Connection!
+    var db: SQLConnection!
 
     // SKIP DECLARE: override fun setUp()
     override func setUpWithError() throws {
@@ -40,7 +40,7 @@ class SQLiteTestCase: XCTestCase {
         super.setUp() // no setUpWithError() in Skip's XCTestCase
         #endif
 
-        db = try Connection()
+        db = try SQLConnection()
         trace = [String: Int]()
 
         #if false // SkipSQLDB TODO
@@ -58,12 +58,9 @@ class SQLiteTestCase: XCTestCase {
     }
     #endif
 
-    #if !SKIP // SkipSQLDB TODO
-    let users = Table("users")
-    #endif
+    let users = SQLTable("users")
 
     func createUsersTable() throws {
-        #if !SKIP // SkipSQLDB TODO
         try db.execute("""
             CREATE TABLE users (
                 id INTEGER PRIMARY KEY,
@@ -77,9 +74,6 @@ class SQLiteTestCase: XCTestCase {
             )
             """
         )
-        #else
-        fatalError("SkipSQLDB TODO: createUsersTable()")
-        #endif
     }
 
     #if !SKIP // SkipSQLDB TODO
@@ -190,12 +184,13 @@ func extractAndReplace(_ value: String, regex: String, with replacement: String)
 }
 #endif
 
-#if !SKIP // SkipSQLDB TODO
 
-let table = Table("table")
-let qualifiedTable = Table("table", database: "main")
-let virtualTable = VirtualTable("virtual_table")
-let _view = View("view") // avoid Mac XCTestCase collision
+let table = SQLTable("table")
+let qualifiedTable = SQLTable("table", database: "main")
+let virtualTable = SQLVirtualTable("virtual_table")
+let _view = SQLView("view") // avoid Mac XCTestCase collision
+
+#if !SKIP // SkipSQLDB TODO
 
 class TestCodable: Codable, Equatable {
     let int: Int

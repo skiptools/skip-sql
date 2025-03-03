@@ -52,7 +52,7 @@ extension QueryType {
     ///   -  subquery: A query that generates the rows for the table expression.
     ///
     /// - Returns: A query with the given `ORDER BY` clause applied.
-    public func with(_ alias: Table, columns: [Expressible]? = nil, recursive: Bool = false,
+    public func with(_ alias: SQLTable, columns: [Expressible]? = nil, recursive: Bool = false,
                      hint: MaterializationHint? = nil, as subquery: QueryType) -> Self {
         var query = self
         let clause = WithClauses.Clause(alias: alias, columns: columns, hint: hint, query: subquery)
@@ -100,6 +100,8 @@ extension QueryType {
     }
 }
 
+#endif
+
 /// Materialization hints for `WITH` clause
 public enum MaterializationHint: String {
 
@@ -110,7 +112,7 @@ public enum MaterializationHint: String {
 
 struct WithClauses {
     struct Clause {
-        var alias: Table
+        var alias: SQLTable
         var columns: [Expressible]?
         var hint: MaterializationHint?
         var query: QueryType
@@ -121,5 +123,4 @@ struct WithClauses {
     /// Each `WITH` clause may have multiple subclauses
     var clauses: [Clause] = []
 }
-#endif
 

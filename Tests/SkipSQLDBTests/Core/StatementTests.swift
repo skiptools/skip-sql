@@ -30,12 +30,12 @@ import XCTest
 import SkipSQL
 
 class StatementTests: SQLiteTestCase {
-    #if !SKIP // SkipSQLDB TODO
     override func setUpWithError() throws {
         try super.setUpWithError()
         try createUsersTable()
     }
 
+    #if !SKIP // SkipSQLDB TODO
     func test_cursor_to_blob() throws {
         try insertUsers("alice")
         let statement = try db.prepare("SELECT email FROM users")
@@ -45,7 +45,7 @@ class StatementTests: SQLiteTestCase {
     }
 
     func test_zero_sized_blob_returns_null() throws {
-        let blobs = Table("blobs")
+        let blobs = SQLTable("blobs")
         let blobColumn = SQLExpression<Blob>("blob_column")
         try db.run(blobs.create { $0.column(blobColumn) })
         try db.run(blobs.insert(blobColumn <- Blob(bytes: [])))
