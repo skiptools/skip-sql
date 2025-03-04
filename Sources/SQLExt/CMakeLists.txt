@@ -67,6 +67,8 @@ endif()
 
 string(TOLOWER "${BUILD_MODE}" BUILD_MODE_LOWER)
 
+#message("CHECKING CMAKE LIBRARY: ${CMAKE_PARENT_SOURCE_DIR}/../LibTomCrypt/")
+
 find_library(TOMCRYPT
     NAMES tomcrypt
     REQUIRED
@@ -77,10 +79,12 @@ find_library(TOMCRYPT
     # after updating to the android-gradle-plugin 8.5.0, the output has moved to mergeDebugNativeLibs/mergeReleaseNativeLibs
     #${CMAKE_PARENT_SOURCE_DIR}/../LibTomCrypt/build/intermediates/merged_native_libs/${BUILD_MODE_LOWER}/out/lib/${ANDROID_ABI}/
     ${CMAKE_PARENT_SOURCE_DIR}/../LibTomCrypt/build/intermediates/merged_native_libs/${BUILD_MODE_LOWER}/merge${BUILD_MODE}NativeLibs/out/lib/${ANDROID_ABI}/
+    ${CMAKE_PARENT_SOURCE_DIR}/../LibTomCrypt/.build/*/intermediates/merged_native_libs/${BUILD_MODE_LOWER}/merge${BUILD_MODE}NativeLibs/out/lib/${ANDROID_ABI}/
 
     NO_DEFAULT_PATH
     NO_CMAKE_FIND_ROOT_PATH
 )
+
 
 #message("CMAKE FIND LIBRARY FOR: ${ANDROID_ABI}: ${TOMCRYPT}")
 
