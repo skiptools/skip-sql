@@ -123,6 +123,48 @@ public enum SQLValue : Hashable, CustomStringConvertible {
     }
 }
 
+public extension SQLValue {
+    init(_ text: String?) {
+        if let text = text {
+            self = .text(text)
+        } else {
+            self = .null
+        }
+    }
+
+    init(_ integer: Int?) {
+        if let integer = integer {
+            self = .integer(Int64(integer))
+        } else {
+            self = .null
+        }
+    }
+
+    init(_ integer: Int64?) {
+        if let integer = integer {
+            self = .integer(integer)
+        } else {
+            self = .null
+        }
+    }
+
+    init(_ number: Double?) {
+        if let number = number {
+            self = .float(number)
+        } else {
+            self = .null
+        }
+    }
+
+    init(_ blob: Data?) {
+        if let blob = blob {
+            self = .blob(blob)
+        } else {
+            self = .null
+        }
+    }
+}
+
 public struct SQLContextClosedError : Error {
 }
 

@@ -202,34 +202,131 @@ public final class SQLContext {
             throw SQLContextClosedError()
         }
     }
-    
-    /// Issues a SQL query with the optional parameters and returns all the values.
+
+    /// Issue a query and return all the rows in a single batch
     public func query(sql: String, parameters: [SQLValue] = []) throws -> [[SQLValue]] {
+        try cursor(sql: sql, parameters: parameters).map({ try $0.get() })
+    }
+
+    /// Issues a SQL query with the optional parameters and returns all the values.
+    public func cursor(sql: String, parameters: [SQLValue] = []) throws -> RowCursor {
         let stmnt = try prepare(sql: sql)
         if !parameters.isEmpty {
             try stmnt.bind(parameters: parameters)
         }
+        return RowCursor(statement: stmnt)
+    }
 
-        var err: Error? = nil
+    /// A lazy sequence of rows from the database
+    public class RowCursor : Sequence {
+        public typealias Element = Result<[SQLValue], Error>
+        let statement: SQLStatement
 
-        var rows: [[SQLValue]] = []
-        do {
-            while try stmnt.next() {
-                var cols: [SQLValue] = []
-                for i in 0..<stmnt.columnCount {
-                    cols.append(stmnt.value(at: i))
-                }
-                rows.append(cols)
+        init(statement: SQLStatement) {
+            self.statement = statement
+        }
+
+        public func close() {
+            do {
+                try statement.close()
+            } catch {
             }
-        } catch let e {
-            err = e
         }
 
-        try stmnt.close()
-        if let err = err {
-            throw err
+        #if !SKIP
+        typealias RowIteratorType = IteratorProtocol
+
+        public func makeIterator() -> RowIterator {
+            createIterator()
         }
-        return rows
+        #else
+        typealias RowIteratorType = kotlin.collections.Iterable<Element>
+
+        override var iterable: RowIterator {
+            createIterator()
+        }
+        #endif
+
+        private func createIterator() -> RowIterator {
+            RowIterator(statement: statement)
+        }
+
+        public class RowIterator : RowIteratorType {
+            let stmnt: SQLStatement
+            var errorOccurred = false
+
+            init(statement: SQLStatement) {
+                self.stmnt = statement
+            }
+
+            deinit {
+                do {
+                    try stmnt.close()
+                } catch {
+                    // ignore
+                }
+            }
+
+            #if !SKIP
+            public func next() -> Element? {
+                if errorOccurred {
+                    return nil
+                }
+                do {
+                    if try stmnt.next() == false { return nil }
+                    return Result.success(stmnt.rowValues())
+                } catch {
+                    errorOccurred = true
+                    return Result.failure(error)
+                }
+            }
+            #else
+            override func iterator() -> RowIteratorImpl {
+                RowIteratorImpl(statement: stmnt)
+            }
+
+            public class RowIteratorImpl: kotlin.collections.Iterator<Element> {
+                let stmnt: SQLStatement
+                var nextElement: Element = Element.success([])
+                var errorOccurred = false
+
+                init(statement: SQLStatement) {
+                    self.stmnt = statement
+                }
+
+                func close() {
+                    do {
+                        try stmnt.close()
+                    } catch {
+                        // ignore
+                    }
+                }
+
+                override func hasNext() -> Bool {
+                    if errorOccurred {
+                        return false
+                    }
+                    do {
+                        if try stmnt.next() == false {
+                            close()
+                            return false
+                        }
+                        nextElement = Result.success(stmnt.rowValues())
+                        return true
+                    } catch {
+                        errorOccurred = true
+                        nextElement = Result.failure(error)
+                        close()
+                        return false
+                    }
+                }
+
+                override func next() -> Element {
+                    return nextElement
+                }
+            }
+            #endif
+        }
     }
 
     /// An action that can be registered to receive updates whenever a ROWID table changes.
