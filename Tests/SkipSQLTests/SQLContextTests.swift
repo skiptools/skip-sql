@@ -327,4 +327,142 @@ final class SQLContextTests: XCTestCase {
         logger.log("wrote \(rows) rows to db in \(t): \(dbpath)")
         try sqlite.close()
     }
+
+    func testMiniORM() throws {
+        let sqlite = SQLContext(configuration: .test)
+
+        func count(distinct: Bool = false, columns: String = "*", table: String) throws -> SQLValue? {
+            try sqlite.prepare(sql: "SELECT COUNT(\(distinct ? "DISTINCT" : "") \(columns)) FROM \"\(table)\"").nextValues(close: true)?.first
+        }
+
+        try sqlite.exec(expr: SQLTYPES.create())
+        var ob = SQLTYPES(txt: "ABC", num: 12.3, int: 456, dbl: 7.89, blb: "XYZ".data(using: .utf8))
+        try sqlite.exec(expr: ob.insert())
+        XCTAssertEqual(SQLValue.integer(1), try count(table: "SQLTYPES"))
+        ob.txt = "DEF"
+        try sqlite.exec(expr: ob.insert())
+        XCTAssertEqual(SQLValue.integer(2), try count(table: "SQLTYPES"))
+
+        // if we don't close the cursor before dropping the table, results in the error:
+        // SQLite error code 6: database table is locked
+        let cursor = try sqlite.cursor(sql: "SELECT * FROM SQLTYPES")
+
+        ob.txt = "ABC"
+        XCTAssertEqual(ob.parameters, try? cursor.makeIterator().next()?.get())
+        cursor.close()
+
+        try sqlite.exec(expr: SQLTYPES.drop())
+    }
 }
+
+
+extension String {
+    func quote(_ mark: Character = "\"") -> String {
+        var quoted = ""
+        quoted += mark.description
+        for character in self {
+            quoted += character.description
+            if character == mark {
+                quoted += character.description
+            }
+        }
+        quoted += mark.description
+        return quoted
+    }
+}
+
+struct SQLTYPES : SQLTable {
+    static var tableName = "SQLTYPES"
+
+    var txt: String?
+    static let txtColumn = SQLColumn(name: "TXT", type: "TEXT")
+    var num: Double?
+    static let numColumn = SQLColumn(name: "NUM", type: "NUMERIC")
+    var int: Int?
+    static let intColumn = SQLColumn(name: "INT", type: "INTEGER")
+    var dbl: Double?
+    static let dblColumn = SQLColumn(name: "DBL", type: "REAL")
+    var blb: Data?
+    static let blbColumn = SQLColumn(name: "BLB", type: "BLOB")
+
+    static var columns: [SQLColumn] {
+        [
+            txtColumn,
+            numColumn,
+            intColumn,
+            dblColumn,
+            blbColumn,
+        ]
+    }
+
+    var parameters: [SQLValue] {
+        [
+            SQLValue(txt),
+            SQLValue(num),
+            SQLValue(int),
+            SQLValue(dbl),
+            SQLValue(blb),
+        ]
+    }
+}
+
+public struct SQLColumn {
+    let name: String
+    let type: String
+}
+
+public struct SQLExpression {
+    public var template: String
+    public var bindings: [SQLValue]
+
+    public init(_ template: String, _ bindings: [SQLValue] = []) {
+        self.template = template
+        self.bindings = bindings
+    }
+
+}
+
+public protocol SQLTable {
+    static var tableName: String { get }
+    static var columns: [SQLColumn] { get }
+    var parameters: [SQLValue] { get }
+}
+
+public extension SQLContext {
+    func exec(expr: SQLExpression) throws {
+        try exec(sql: expr.template, parameters: expr.bindings)
+    }
+}
+
+public extension SQLTable {
+    static func drop(ifExists: Bool = false) -> SQLExpression {
+        var sql = "DROP TABLE "
+        if ifExists {
+            sql += "IF EXISTS "
+        }
+        sql += tableName.quote()
+        return SQLExpression(sql)
+    }
+
+    static func create(ifNotExists: Bool = false) -> SQLExpression {
+        var sql = "CREATE TABLE "
+        if ifNotExists {
+            sql += "IF NOT EXISTS "
+        }
+        sql += tableName.quote()
+        sql += " ("
+        sql += columns.map({ $0.name.quote() + " " + $0.type }).joined(separator: ", ")
+        sql += ")"
+        return SQLExpression(sql)
+    }
+
+    func insert() -> SQLExpression {
+        var sql = "INSERT INTO \(type(of: self).tableName) ("
+        sql += type(of: self).columns.map({ $0.name }).joined(separator: ", ")
+        sql += ") VALUES ("
+        sql += type(of: self).columns.map({ _ in "?" }).joined(separator: ", ")
+        sql += ")"
+        return SQLExpression(sql, self.parameters)
+    }
+}
+
