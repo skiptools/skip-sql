@@ -105,6 +105,10 @@ internal final class SQLPlusCLibrary : SQLiteLibrary {
         SQLExt.sqlite3_sql(stmt)
     }
 
+    func sqlite3_expanded_sql(_ stmt: OpaquePointer) -> sqlite3_cstring_mutptr? {
+        SQLExt.sqlite3_expanded_sql(stmt)
+    }
+
     func sqlite3_db_handle(_ stmt: OpaquePointer) -> OpaquePointer {
         SQLExt.sqlite3_db_handle(stmt)
     }
@@ -197,6 +201,10 @@ internal final class SQLPlusCLibrary : SQLiteLibrary {
         SQLExt.sqlite3_extended_result_codes(db, on)
     }
 
+    func sqlite3_free(_ ptr: sqlite3_pointer_type) {
+        SQLExt.sqlite3_free(ptr)
+    }
+
     func sqlite3_db_mutex(_ db: OpaquePointer?) -> OpaquePointer? {
         SQLExt.sqlite3_db_mutex(db)
     }
@@ -215,6 +223,10 @@ internal final class SQLPlusCLibrary : SQLiteLibrary {
 
     func sqlite3_update_hook(_ db: OpaquePointer?, _ callback: sqlite3_update_hook?, _ pArg: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
         SQLExt.sqlite3_update_hook(db, callback, pArg)
+    }
+
+    func sqlite3_trace_v2(_ db: OpaquePointer?, _ mask: sqlite3_unsigned, _ callback: sqlite3_trace_hook?, _ pCtx: UnsafeMutableRawPointer?) -> Int32 {
+        SQLExt.sqlite3_trace_v2(db, mask, callback, pCtx)
     }
 }
 #endif

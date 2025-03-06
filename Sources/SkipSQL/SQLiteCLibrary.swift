@@ -8,6 +8,9 @@ public typealias sqlite3_int64 = SQLite3.sqlite3_int64
 /// `((UnsafeMutableRawPointer?, Int32, UnsafePointer<CChar>?, UnsafePointer<CChar>?, sqlite3_int64) -> Void)`
 public typealias sqlite3_update_hook = @convention(c) (_ updateActionPtr: UnsafeMutableRawPointer?, _ operation: Int32, _ dbname: UnsafePointer<CChar>?, _ tblname: UnsafePointer<CChar>?, _ rowid: sqlite3_int64) -> ()
 
+/// A trace callback is invoked with four arguments: callback(T,C,P,X). The T argument is one of the `SQLITE_TRACE` constants to indicate why the callback was invoked. The C argument is a copy of the context pointer. The P and X arguments are pointers whose meanings depend on T.
+public typealias sqlite3_trace_hook = @convention(c) (_ type: UInt32, _ context: UnsafeMutableRawPointer?, _ p: UnsafeMutableRawPointer?, _ px: UnsafeMutableRawPointer?) -> Int32
+
 public let SQLITE_DONE = 101
 public let SQLITE_ROW = 100
 
@@ -116,6 +119,10 @@ final class SQLiteCLibrary : SQLiteLibrary {
         SQLite3.sqlite3_sql(stmt)
     }
 
+    func sqlite3_expanded_sql(_ stmt: OpaquePointer) -> sqlite3_cstring_mutptr? {
+        SQLite3.sqlite3_expanded_sql(stmt)
+    }
+
     func sqlite3_db_handle(_ stmt: OpaquePointer) -> OpaquePointer {
         SQLite3.sqlite3_db_handle(stmt)
     }
@@ -208,6 +215,10 @@ final class SQLiteCLibrary : SQLiteLibrary {
         SQLite3.sqlite3_extended_result_codes(db, on)
     }
 
+    func sqlite3_free(_ ptr: sqlite3_pointer_type) {
+        SQLite3.sqlite3_free(ptr)
+    }
+
     func sqlite3_db_mutex(_ db: OpaquePointer?) -> OpaquePointer? {
         SQLite3.sqlite3_db_mutex(db)
     }
@@ -226,6 +237,10 @@ final class SQLiteCLibrary : SQLiteLibrary {
 
     func sqlite3_update_hook(_ db: OpaquePointer?, _ callback: sqlite3_update_hook?, _ pArg: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
         SQLite3.sqlite3_update_hook(db, callback, pArg)
+    }
+
+    func sqlite3_trace_v2(_ db: OpaquePointer?, _ mask: sqlite3_unsigned, _ callback: sqlite3_trace_hook?, _ pCtx: UnsafeMutableRawPointer?) -> Int32 {
+        SQLite3.sqlite3_trace_v2(db, mask, callback, pCtx)
     }
 }
 #endif

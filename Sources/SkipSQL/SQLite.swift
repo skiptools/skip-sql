@@ -58,17 +58,27 @@ public enum SQLAction : Int32 {
 /// versions of SQLite may change the behavior of `sqlite3_column_type()`
 /// following a type conversion.
 public enum SQLType : Int32, CaseIterable, Hashable {
-    case integer = 1 // SQLITE_INTEGER
-    case float = 2 // SQLITE_FLOAT
+    case long = 1 // SQLITE_INTEGER
+    case real = 2 // SQLITE_FLOAT
     case text = 3 // SQLITE_TEXT
     case blob = 4 // SQLITE_BLOB
     case null = 5 // SQLITE_NULL
+
+    public var typeName: String {
+        switch self {
+        case .long: return "INTEGER"
+        case .real: return "REAL"
+        case .text: return "TEXT"
+        case .blob: return "BLOB"
+        case .null: return "NULL"
+        }
+    }
 }
 
 /// A database value.
 public enum SQLValue : Hashable, CustomStringConvertible {
-    case integer(Int64)
-    case float(Double)
+    case long(Int64)
+    case real(Double)
     case text(String)
     case blob(Data)
     case null
@@ -76,8 +86,8 @@ public enum SQLValue : Hashable, CustomStringConvertible {
     /// Returns the type of this value
     public var type: SQLType {
         switch self {
-        case .integer: return .integer
-        case .float: return .float
+        case .long: return .long
+        case .real: return .real
         case .text: return .text
         case .blob: return .blob
         case .null: return .null
@@ -86,26 +96,36 @@ public enum SQLValue : Hashable, CustomStringConvertible {
 
     public var description: String {
         switch self {
-        case .integer(let integer): return integer.description
-        case .float(let float): return float.description
+        case .long(let long): return long.description
+        case .real(let real): return real.description
         case .text(let text): return text.description
         case .blob(let blob): return blob.description
         case .null: return "null"
         }
     }
 
-    public var integerValue: Int64? {
+    public var longValue: Int64? {
         switch self {
-        case .integer(let integer): return integer
+        case .long(let long): return long
         default: return nil
         }
     }
 
-    public var floatValue: Double? {
+    @available(*, deprecated, renamed: "longValue")
+    public var integerValue: Int64? {
+        longValue
+    }
+
+    public var realValue: Double? {
         switch self {
-        case .float(let float): return float
+        case .real(let real): return real
         default: return nil
         }
+    }
+
+    @available(*, deprecated, renamed: "realValue")
+    public var floatValue: Double? {
+        realValue
     }
 
     public var textValue: String? {
@@ -132,17 +152,17 @@ public extension SQLValue {
         }
     }
 
-    init(_ integer: Int?) {
-        if let integer = integer {
-            self = .integer(Int64(integer))
+    init(_ long: Int?) {
+        if let long = long {
+            self = .long(Int64(long))
         } else {
             self = .null
         }
     }
 
-    init(_ integer: Int64?) {
-        if let integer = integer {
-            self = .integer(integer)
+    init(_ long: Int64?) {
+        if let long = long {
+            self = .long(long)
         } else {
             self = .null
         }
@@ -150,7 +170,7 @@ public extension SQLValue {
 
     init(_ number: Double?) {
         if let number = number {
-            self = .float(number)
+            self = .real(number)
         } else {
             self = .null
         }
@@ -162,6 +182,31 @@ public extension SQLValue {
         } else {
             self = .null
         }
+    }
+}
+
+
+public extension SQLType {
+    @available(*, deprecated, renamed: "real")
+    static var float: SQLType {
+        .real
+    }
+
+    @available(*, deprecated, renamed: "long")
+    static var integer: SQLType {
+        .long
+    }
+}
+
+public extension SQLValue {
+    @available(*, deprecated, renamed: "real")
+    static func float(_ value: Double) -> SQLValue {
+        .real(value)
+    }
+
+    @available(*, deprecated, renamed: "long")
+    static func integer(_ value: Int64) -> SQLValue {
+        .long(value)
     }
 }
 
@@ -379,4 +424,12 @@ let SQLITE_OPEN_EXRESCODE =      0x02000000  /* Extended result codes */
 let SQLITE_TRANSIENT = Int64(-1)
 
 #endif
+
+
+// https://sqlite.org/c3ref/c_trace.html
+
+let SQLITE_TRACE_STMT = 0x01
+let SQLITE_TRACE_PROFILE = 0x02
+let SQLITE_TRACE_ROW = 0x04
+let SQLITE_TRACE_CLOSE = 0x08
 
