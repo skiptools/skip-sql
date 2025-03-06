@@ -19,7 +19,6 @@ public final class SQLContext {
     /// The pointer to the SQLite database.
     private let db: OpaquePointer
     private var closed = false
-    private var updateHook: UpdateHook? = nil
 
     /// The rowid of the most recent successful `INSERT` into a rowid table.
     public var lastInsertRowID: Int64 {
@@ -97,14 +96,12 @@ public final class SQLContext {
         public static let privateCache = OpenFlags(rawValue: 0x00040000)
     }
 
-
-    /// Execute the given SQL statement.
-    public func exec(sql: String, parameters: [SQLValue] = []) throws {
+    public func exec(_ expr: SQLExpression) throws {
         try checkClosed()
-        let stmnt = try prepare(sql: sql)
+        let stmnt = try prepare(sql: expr.template)
         var err: Error? = nil
         do {
-            try stmnt.update(parameters: parameters)
+            try stmnt.update(parameters: expr.bindings)
         } catch let e {
             err = e
         }
@@ -113,6 +110,11 @@ public final class SQLContext {
         if let err = err {
             throw err
         }
+    }
+
+    /// Execute the given SQL statement.
+    public func exec(sql: String, parameters: [SQLValue] = []) throws {
+        try exec(SQLExpression(sql, parameters))
     }
 
     /// See <https://www.sqlite.org/c3ref/interrupt.html>
@@ -205,137 +207,118 @@ public final class SQLContext {
 
     /// Issue a query and return all the rows in a single batch
     public func query(sql: String, parameters: [SQLValue] = []) throws -> [[SQLValue]] {
-        try cursor(sql: sql, parameters: parameters).map({ try $0.get() })
+        try cursor(SQLExpression(sql, parameters)).map({ try $0.get() })
     }
 
     /// Issues a SQL query with the optional parameters and returns all the values.
-    public func cursor(sql: String, parameters: [SQLValue] = []) throws -> RowCursor {
-        let stmnt = try prepare(sql: sql)
-        if !parameters.isEmpty {
-            try stmnt.bind(parameters: parameters)
+    public func cursor(_ expr: SQLExpression) throws -> RowCursor<[SQLValue]> {
+        let stmnt = try prepare(sql: expr.template)
+        if !expr.bindings.isEmpty {
+            try stmnt.bind(parameters: expr.bindings)
         }
-        return RowCursor(statement: stmnt)
+        return RowCursor(statement: stmnt, creator: { $0.rowValues() })
     }
 
-    /// A lazy sequence of rows from the database
-    public class RowCursor : Sequence {
-        public typealias Element = Result<[SQLValue], Error>
-        let statement: SQLStatement
 
-        init(statement: SQLStatement) {
-            self.statement = statement
+    // MARK: trace
+
+    public typealias TraceAction = (String) -> Void
+    private var traceHook: TraceHook?
+
+    #if !SKIP
+    typealias TraceBox = @convention(block) (UnsafeRawPointer) -> Void
+    private typealias TraceHook = TraceBox
+    #else
+    private final class TraceHook : sqlite3_trace_hook {
+        let action: TraceAction
+        let context: SQLContext
+
+        init(action: TraceAction, context: SQLContext) {
+            self.action = action
+            self.context = context
         }
 
-        public func close() {
-            do {
-                try statement.close()
-            } catch {
+        override func callback(type: sqlite3_unsigned, ctx: OpaquePointer?, pointer: OpaquePointer?, px: OpaquePointer?) -> Int32 {
+            if let pointer,
+               let expandedSQL: sqlite3_cstring_mutptr = context.SQLite3.sqlite3_expanded_sql(pointer) {
+                action(expandedSQL.getString(0))
+                context.SQLite3.sqlite3_free(expandedSQL)
             }
+            return 0
+        }
+    }
+    #endif
+
+    /// Adds a callback that will be invoked with the expanded SQL whenever a statement is executed
+    public func trace(_ action: TraceAction?) {
+        guard let action else {
+            // disable trace
+            _ = SQLite3.sqlite3_trace_v2(db, 0, nil, nil)
+            self.traceHook = nil
+            return
         }
 
         #if !SKIP
-        typealias RowIteratorType = IteratorProtocol
-
-        public func makeIterator() -> RowIterator {
-            createIterator()
+        let box: TraceBox = { (pointer: UnsafeRawPointer) in
+            if let expandedSQL: sqlite3_cstring_mutptr = self.SQLite3.sqlite3_expanded_sql(OpaquePointer(pointer)) {
+                action(String(cString: expandedSQL))
+                self.SQLite3.sqlite3_free(expandedSQL)
+            }
         }
+
+        _ = SQLite3.sqlite3_trace_v2(db, UInt32(SQLITE_TRACE_STMT), {
+                 (_: UInt32, context: UnsafeMutableRawPointer?, pointer: UnsafeMutableRawPointer?, _: UnsafeMutableRawPointer?) in
+                if let pointer {
+                     unsafeBitCast(context, to: TraceBox.self)(pointer)
+                 }
+                 return Int32(0)
+             },
+             unsafeBitCast(box, to: UnsafeMutableRawPointer.self)
+        )
+        traceHook = box
         #else
-        typealias RowIteratorType = kotlin.collections.Iterable<Element>
-
-        override var iterable: RowIterator {
-            createIterator()
-        }
+        self.traceHook = TraceHook(action: action, context: self) // need to retain or it will be garbage collected eventually
+        // The Kotlin update mechanism is different; it uses a TraceHook implementation, and doesn't pass a context pointer
+        SQLite3.sqlite3_trace_v2(db, SQLITE_TRACE_STMT, self.traceHook, nil)
         #endif
-
-        private func createIterator() -> RowIterator {
-            RowIterator(statement: statement)
-        }
-
-        public class RowIterator : RowIteratorType {
-            let stmnt: SQLStatement
-            var errorOccurred = false
-
-            init(statement: SQLStatement) {
-                self.stmnt = statement
-            }
-
-            deinit {
-                do {
-                    try stmnt.close()
-                } catch {
-                    // ignore
-                }
-            }
-
-            #if !SKIP
-            public func next() -> Element? {
-                if errorOccurred {
-                    return nil
-                }
-                do {
-                    if try stmnt.next() == false { return nil }
-                    return Result.success(stmnt.rowValues())
-                } catch {
-                    errorOccurred = true
-                    return Result.failure(error)
-                }
-            }
-            #else
-            override func iterator() -> RowIteratorImpl {
-                RowIteratorImpl(statement: stmnt)
-            }
-
-            public class RowIteratorImpl: kotlin.collections.Iterator<Element> {
-                let stmnt: SQLStatement
-                var nextElement: Element = Element.success([])
-                var errorOccurred = false
-
-                init(statement: SQLStatement) {
-                    self.stmnt = statement
-                }
-
-                func close() {
-                    do {
-                        try stmnt.close()
-                    } catch {
-                        // ignore
-                    }
-                }
-
-                override func hasNext() -> Bool {
-                    if errorOccurred {
-                        return false
-                    }
-                    do {
-                        if try stmnt.next() == false {
-                            close()
-                            return false
-                        }
-                        nextElement = Result.success(stmnt.rowValues())
-                        return true
-                    } catch {
-                        errorOccurred = true
-                        nextElement = Result.failure(error)
-                        close()
-                        return false
-                    }
-                }
-
-                override func next() -> Element {
-                    return nextElement
-                }
-            }
-            #endif
-        }
     }
+
+
+    // MARK: onUpdate
+
+    private var updateHook: UpdateHook? = nil
 
     /// An action that can be registered to receive updates whenever a ROWID table changes.
     public typealias UpdateAction = (_ action: SQLAction, _ rowid: Int64, _ dbname: String, _ tblname: String) -> Void
 
+    #if !SKIP
+    private typealias UpdateHook = UpdateAction
+    #else
+    private final class UpdateHook : sqlite3_update_hook {
+        let updateAction: UpdateAction
+
+        init(action: UpdateAction) {
+            self.updateAction = action
+        }
+
+        override func callback(ptr: OpaquePointer?, operation: Int32, databaseName: OpaquePointer?, tableName: OpaquePointer?, rowid: Int64) {
+            if let operation = SQLAction(rawValue: operation),
+               let dbnamePtr = databaseName, let tblnamePtr = tableName {
+                updateAction(operation, rowid, String(cString: dbnamePtr), String(cString: tblnamePtr))
+            }
+        }
+    }
+    #endif
+
     /// Registers a function to be invoked whenever a ROWID table is changed.
     ///
     /// As described at https://www.sqlite.org/c3ref/update_hook.html , a given connection can only have a single update hook at a time, so setting this function will replace any pre-existing update hook.
-    public func onUpdate(hook: @escaping UpdateAction) {
+    public func onUpdate(hook: UpdateAction?) {
+        guard let hook else {
+            // clear the update hook
+            self.updateHook = nil
+            return
+        }
         #if !SKIP
         self.updateHook = hook
         let updateActionPtr = Unmanaged.passRetained(hook as AnyObject).toOpaque()
@@ -354,22 +337,147 @@ public final class SQLContext {
         SQLite3.sqlite3_update_hook(db, self.updateHook, nil)
         #endif
     }
+}
+
+public struct SQLExpression {
+    public var template: String
+    public var bindings: [SQLValue]
+
+    public init(_ template: String, _ bindings: [SQLValue] = []) {
+        self.template = template
+        self.bindings = bindings
+    }
+}
+
+extension String {
+    /// Encodes the String so the given mark is doubled in the resulting string.
+    public func quote(_ mark: Character = "\"") -> String {
+        var quoted = ""
+        quoted += mark.description
+        for character in self {
+            quoted += character.description
+            if character == mark {
+                quoted += character.description
+            }
+        }
+        quoted += mark.description
+        return quoted
+    }
+}
+
+/// A lazy sequence of rows from the database
+public class RowCursor<Row> : Sequence {
+    public typealias Element = Result<Row, Error>
+    let statement: SQLStatement
+    let creator: (SQLStatement) throws -> Row
+
+    init(statement: SQLStatement, creator: @escaping (SQLStatement) throws -> Row) {
+        self.statement = statement
+        self.creator = creator
+    }
+
+    public func close() {
+        do {
+            try statement.close()
+        } catch {
+        }
+    }
+
 
     #if !SKIP
-    private typealias UpdateHook = UpdateAction
+    public func makeIterator() -> RowIterator<Row> {
+        RowIterator<Row>(statement: statement, creator: creator)
+    }
     #else
-    private final class UpdateHook : sqlite3_update_hook {
-        let updateAction: UpdateAction
-
-        init(action: UpdateAction) {
-            self.updateAction = action
+    override var iterable: kotlin.collections.Iterable<Element> {
+        AbstractIterable<Row> {
+            RowIterator<Row>(statement: statement, creator: creator)
         }
+    }
+    #endif
+}
 
-        override func callback(ptr: OpaquePointer?, operation: Int32, databaseName: OpaquePointer?, tableName: OpaquePointer?, rowid: Int64) {
-            if let operation = SQLAction(rawValue: operation),
-               let dbnamePtr = databaseName, let tblnamePtr = tableName {
-                updateAction(operation, rowid, String(cString: dbnamePtr), String(cString: tblnamePtr))
+#if !SKIP
+typealias RowIteratorType<T> = IteratorProtocol
+#else
+typealias RowIteratorType<T> = kotlin.collections.Iterator<Result<T, Error>>
+
+class AbstractIterable<T> : kotlin.collections.Iterable<Result<T, Error>> {
+    let makeIterator: () -> RowIterator<T>
+
+    init(makeIterator: () -> RowIterator<T>) {
+        self.makeIterator = makeIterator
+    }
+
+    override func iterator() -> RowIterator<T> {
+        makeIterator()
+    }
+}
+#endif
+
+public class RowIterator<Row> : RowIteratorType<Row> {
+    public typealias Element = Result<Row, Error>
+    let stmnt: SQLStatement
+    let creator: (SQLStatement) throws -> Row
+    var errorOccurred = false
+
+    init(statement: SQLStatement, creator: @escaping (SQLStatement) throws -> Row) {
+        self.stmnt = statement
+        self.creator = creator
+    }
+
+    deinit {
+        close()
+    }
+
+    func close() {
+        do {
+            try stmnt.close()
+        } catch {
+            // ignore
+        }
+    }
+
+    #if !SKIP
+    public func next() -> Element? {
+        if errorOccurred {
+            return nil
+        }
+        do {
+            if try stmnt.next() == false { return nil }
+            return Result.success(try creator(stmnt))
+        } catch {
+            errorOccurred = true
+            return Result.failure(error)
+        }
+    }
+    #else
+    var nextElement: Element? = nil
+
+    override func next() -> Element {
+        if let nextElement = nextElement {
+            return nextElement
+        } else {
+            throw java.util.NoSuchElementException()
+        }
+    }
+
+    override func hasNext() -> Bool {
+        if errorOccurred {
+            return false
+        }
+        do {
+            if try stmnt.next() == false {
+                close()
+                return false
             }
+            nextElement = Result.success(try creator(stmnt))
+            return true
+        } catch {
+            errorOccurred = true
+            nextElement = Result.failure(error)
+            close()
+            return false
         }
     }
     #endif

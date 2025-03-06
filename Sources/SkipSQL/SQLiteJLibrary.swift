@@ -7,7 +7,14 @@ import SkipFFI
 
 /// The argument to `sqlite3_update_hook`
 public protocol sqlite3_update_hook : NativeCallback {
+    // public typealias sqlite3_update_hook = @convention(c) (_ updateActionPtr: UnsafeMutableRawPointer?, _ operation: Int32, _ dbname: UnsafePointer<CChar>?, _ tblname: UnsafePointer<CChar>?, _ rowid: sqlite3_int64) -> ()
     func callback(userData: OpaquePointer?, operation: Int32, databaseName: OpaquePointer?, tableName: OpaquePointer?, rowid: Int64)
+}
+
+/// The argument to `sqlite3_trace_v2`
+public protocol sqlite3_trace_hook : NativeCallback {
+    // public typealias sqlite3_trace_hook = @convention(c) (_ type: UInt32, _ context: UnsafeMutableRawPointer?, _ p: UnsafeMutableRawPointer?, _ px: UnsafeMutableRawPointer?) -> Int32
+    func callback(type: sqlite3_unsigned, context: OpaquePointer?, p: OpaquePointer?, px: OpaquePointer?) -> Int32
 }
 
 
@@ -50,6 +57,7 @@ internal final class SQLiteJNALibrary : SQLiteLibrary {
     // /* SKIP INSERT: external */ func sqlite3_column_origin_name(_ stmt: OpaquePointer, _ columnIndex: Int32) -> sqlite3_cstring_ptr?
     /* SKIP INSERT: external */ func sqlite3_column_decltype(_ stmt: OpaquePointer, _ columnIndex: Int32) -> sqlite3_cstring_ptr?
     /* SKIP INSERT: external */ func sqlite3_sql(_ stmt: OpaquePointer) -> sqlite3_cstring_ptr?
+    /* SKIP INSERT: external */ func sqlite3_expanded_sql(_ stmt: OpaquePointer) -> sqlite3_cstring_mutptr?
     /* SKIP INSERT: external */ func sqlite3_db_handle(_ stmt: OpaquePointer) -> OpaquePointer
     /* SKIP INSERT: external */ func sqlite3_bind_null(_ stmt: OpaquePointer, _ paramIndex: Int32) -> Int32
     /* SKIP INSERT: external */ func sqlite3_bind_int(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: Int32) -> Int32
@@ -73,11 +81,13 @@ internal final class SQLiteJNALibrary : SQLiteLibrary {
     /* SKIP INSERT: external */ func sqlite3_initialize() -> Int32
     /* SKIP INSERT: external */ func sqlite3_shutdown() -> Int32
     /* SKIP INSERT: external */ func sqlite3_extended_result_codes(_ db: OpaquePointer, _ on: Int32) -> Int32
+    /* SKIP INSERT: external */ func sqlite3_free(_ ptr: OpaquePointer)
     /* SKIP INSERT: external */ func sqlite3_db_mutex(_ db: OpaquePointer?) -> OpaquePointer?
     /* SKIP INSERT: external */ func sqlite3_mutex_free(_ lock: OpaquePointer?)
     /* SKIP INSERT: external */ func sqlite3_mutex_enter(_ lock: OpaquePointer?)
     /* SKIP INSERT: external */ func sqlite3_mutex_leave(_ lock: OpaquePointer?)
     /* SKIP INSERT: external */ func sqlite3_update_hook(_ db: OpaquePointer?, _ callback: sqlite3_update_hook?, _ pArg: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?
+    /* SKIP INSERT: external */ func sqlite3_trace_v2(_ db: OpaquePointer?, _ mask: sqlite3_unsigned, _ callback: sqlite3_trace_hook?, _ pCtx: UnsafeMutableRawPointer?) -> Int32
 }
 
 #endif

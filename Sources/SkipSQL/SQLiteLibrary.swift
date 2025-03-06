@@ -8,6 +8,7 @@ public typealias NativeCallback = com.sun.jna.Callback
 
 public typealias sqlite3_openarg = UnsafeMutableRawPointer
 public typealias sqlite3_cstring_ptr = OpaquePointer
+public typealias sqlite3_cstring_mutptr = OpaquePointer
 public typealias sqlite3_uint8_ptr = OpaquePointer
 public typealias sqlite_error_ptr = UnsafeMutableRawPointer
 public typealias sqlite3_destructor_type = Int64
@@ -15,17 +16,27 @@ public typealias sqlite3_callback = UnsafeMutableRawPointer
 
 public typealias UnsafeRawPointer = OpaquePointer
 public typealias sqlite_tail_ptr = UnsafeMutableRawPointer
+
+//public typealias sqlite3_pointer_type = UnsafeMutableRawPointer
+public typealias sqlite3_pointer_type = OpaquePointer
+
+public typealias sqlite3_unsigned = Int32 // JNA has no UInt understanding
+
 #else
 public typealias NativeLibrary = AnyObject
 public typealias NativeCallback = AnyObject
 
 public typealias sqlite3_openarg = UnsafeMutablePointer<OpaquePointer?> // UnsafeMutableRawPointer?
 public typealias sqlite3_cstring_ptr = UnsafePointer<CChar>
+public typealias sqlite3_cstring_mutptr = UnsafeMutablePointer<CChar>
 public typealias sqlite3_uint8_ptr = UnsafePointer<UInt8>
 
 public typealias sqlite_error_ptr = UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>
 //typealias sqlite3_destructor_type = (@convention(c) (UnsafeMutableRawPointer?) -> Void)
 public typealias sqlite_tail_ptr = UnsafeMutablePointer<UnsafePointer<CChar>?>
+
+public typealias sqlite3_unsigned = UInt32
+public typealias sqlite3_pointer_type = UnsafeMutableRawPointer
 #endif
 
 public protocol SQLiteLibrary : NativeLibrary {
@@ -64,6 +75,7 @@ public protocol SQLiteLibrary : NativeLibrary {
     func sqlite3_column_decltype(_ stmt: OpaquePointer, _ columnIndex: Int32) -> sqlite3_cstring_ptr?
 
     func sqlite3_sql(_ stmt: OpaquePointer) -> sqlite3_cstring_ptr?
+    func sqlite3_expanded_sql(_ stmt: OpaquePointer) -> sqlite3_cstring_mutptr?
     func sqlite3_db_handle(_ stmt: OpaquePointer) -> OpaquePointer
 
     // Parameter Binding
@@ -97,6 +109,12 @@ public protocol SQLiteLibrary : NativeLibrary {
     func sqlite3_shutdown() -> Int32
     //func sqlite3_config(option: Int32, values: Object...) -> Int32
     func sqlite3_extended_result_codes(_ db: OpaquePointer, _ on: Int32) -> Int32
+    #if SKIP
+    // otherwise: 'sqlite3_free' hides member of supertype 'SQLiteLibrary' and needs an 'override' modifier.
+    func sqlite3_free(_ ptr: OpaquePointer)
+    #else
+    func sqlite3_free(_ ptr: sqlite3_pointer_type)
+    #endif
 
     // Locks
     func sqlite3_db_mutex(_ db: OpaquePointer?) -> OpaquePointer?
@@ -106,4 +124,6 @@ public protocol SQLiteLibrary : NativeLibrary {
     //func int sqlite3_mutex_try(sqlite3_mutex*);
 
     func sqlite3_update_hook(_ db: OpaquePointer?, _ callback: sqlite3_update_hook?, _ pArg: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?
+
+    func sqlite3_trace_v2(_ db: OpaquePointer?, _ mask: sqlite3_unsigned, _ callback: sqlite3_trace_hook?, _ pCtx: UnsafeMutableRawPointer?) -> Int32
 }

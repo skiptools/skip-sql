@@ -15,6 +15,22 @@ import SkipSQL
 final class SQLContextTests: XCTestCase {
     let logger: Logger = Logger(subsystem: "skip.sql", category: "SQLiteTests")
 
+    func testSQLiteTrace() throws {
+        let ctx = SQLContext(configuration: .test)
+
+        // track executed SQL statements
+        var sql: [String] = []
+        ctx.trace { sql.append($0) }
+
+        do {
+            _ = try ctx.query(sql: "SELECT ?", parameters: [.text("ABC")])
+            XCTAssertEqual("SELECT 'ABC'", sql.last)
+        }
+
+        ctx.trace(nil)
+        try ctx.close()
+    }
+
     func testSQLite() throws {
         let sqlite = SQLContext(configuration: .test)
 
@@ -65,27 +81,27 @@ final class SQLContextTests: XCTestCase {
 
         XCTAssertEqual(.null, stmnt.type(at: -1)) // underflow
         XCTAssertEqual(.text, stmnt.type(at: 0))
-        XCTAssertEqual(.float, stmnt.type(at: 1))
-        XCTAssertEqual(.integer, stmnt.type(at: 2))
-        XCTAssertEqual(.float, stmnt.type(at: 3))
+        XCTAssertEqual(.real, stmnt.type(at: 1))
+        XCTAssertEqual(.long, stmnt.type(at: 2))
+        XCTAssertEqual(.real, stmnt.type(at: 3))
         //XCTAssertEqual(.blob, stmnt.type(at: 4))
         XCTAssertEqual(.null, stmnt.type(at: stmnt.columnCount + 1)) // overflow
 
-        XCTAssertEqual(0.0, stmnt.double(at: -1)) // underflow
-        XCTAssertEqual(0.0, stmnt.double(at: 0))
-        XCTAssertEqual(1.1, stmnt.double(at: 1))
-        XCTAssertEqual(1.0, stmnt.double(at: 2))
-        XCTAssertEqual(2.2, stmnt.double(at: 3))
-        XCTAssertEqual(0.0, stmnt.double(at: 4))
-        XCTAssertEqual(0.0, stmnt.double(at: stmnt.columnCount + 1)) // overflow
+        XCTAssertEqual(0.0, stmnt.real(at: -1)) // underflow
+        XCTAssertEqual(0.0, stmnt.real(at: 0))
+        XCTAssertEqual(1.1, stmnt.real(at: 1))
+        XCTAssertEqual(1.0, stmnt.real(at: 2))
+        XCTAssertEqual(2.2, stmnt.real(at: 3))
+        XCTAssertEqual(0.0, stmnt.real(at: 4))
+        XCTAssertEqual(0.0, stmnt.real(at: stmnt.columnCount + 1)) // overflow
 
-        XCTAssertEqual(0, stmnt.integer(at: -1))
-        XCTAssertEqual(0, stmnt.integer(at: 0))
-        XCTAssertEqual(1, stmnt.integer(at: 1))
-        XCTAssertEqual(1, stmnt.integer(at: 2))
-        XCTAssertEqual(2, stmnt.integer(at: 3))
-        XCTAssertEqual(0, stmnt.integer(at: 4))
-        XCTAssertEqual(0, stmnt.integer(at: stmnt.columnCount + 1))
+        XCTAssertEqual(0, stmnt.long(at: -1))
+        XCTAssertEqual(0, stmnt.long(at: 0))
+        XCTAssertEqual(1, stmnt.long(at: 1))
+        XCTAssertEqual(1, stmnt.long(at: 2))
+        XCTAssertEqual(2, stmnt.long(at: 3))
+        XCTAssertEqual(0, stmnt.long(at: 4))
+        XCTAssertEqual(0, stmnt.long(at: stmnt.columnCount + 1))
 
         XCTAssertEqual(nil, stmnt.blob(at: -1))
         XCTAssertEqual("ABC".data(using: .utf8), stmnt.blob(at: 0))
@@ -114,7 +130,7 @@ final class SQLContextTests: XCTestCase {
         }
 
         try sqlite.mutex {
-            XCTAssertEqual(.integer(1), try count(table: "SQLTYPES"))
+            XCTAssertEqual(.long(1), try count(table: "SQLTYPES"))
         }
 
         // interrupt a transaction to issue a rollback, an make sure the row wasn't inserted
@@ -123,34 +139,34 @@ final class SQLContextTests: XCTestCase {
             try sqlite.exec(sql: "skip_sql_throws_error_and_issues_rollback()")
         }
 
-        XCTAssertEqual(.integer(1), try count(table: "SQLTYPES"))
+        XCTAssertEqual(.long(1), try count(table: "SQLTYPES"))
 
         // now really insert the row and try some more queries
         try sqlite.transaction {
             //try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES('XYZ', 1.1, 1, 3.3, X'78797A')")
-            try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES(?, ?, ?, ?, ?)", parameters: [.text("XYZ"), .float(1.1), .integer(1), .float(3.3), .blob(Data())])
+            try sqlite.exec(sql: "INSERT INTO SQLTYPES VALUES(?, ?, ?, ?, ?)", parameters: [.text("XYZ"), .real(1.1), .long(1), .real(3.3), .blob(Data())])
         }
 
-        XCTAssertEqual(SQLValue.integer(2), try count(table: "SQLTYPES"))
-        XCTAssertEqual(SQLValue.integer(1), try count(distinct: true, columns: "NUM", table: "SQLTYPES"))
+        XCTAssertEqual(SQLValue.long(2), try count(table: "SQLTYPES"))
+        XCTAssertEqual(SQLValue.long(1), try count(distinct: true, columns: "NUM", table: "SQLTYPES"))
 
         do {
             let numquery = try sqlite.prepare(sql: "SELECT COUNT(*) FROM SQLTYPES WHERE DBL >= ?")
-            try numquery.bind(.float(2.0), at: 1)
-            XCTAssertEqual(SQLValue.integer(2), try numquery.nextValues(close: false)?.first)
+            try numquery.bind(.real(2.0), at: 1)
+            XCTAssertEqual(SQLValue.long(2), try numquery.nextValues(close: false)?.first)
 
             numquery.reset()
-            try numquery.bind(.float(3.0), at: 1)
-            XCTAssertEqual(SQLValue.integer(1), try numquery.nextValues(close: false)?.first)
+            try numquery.bind(.real(3.0), at: 1)
+            XCTAssertEqual(SQLValue.long(1), try numquery.nextValues(close: false)?.first)
 
             try numquery.close()
         }
 
         do {
             for value in [
-                SQLValue.integer(Int64(9)),
-                SQLValue.float(9.9),
-                SQLValue.float(Double.pi),
+                SQLValue.long(Int64(9)),
+                SQLValue.real(9.9),
+                SQLValue.real(Double.pi),
                 SQLValue.text(""),
                 SQLValue.text("ABCXYZ123"),
                 //SQLValue.blob(Data()),
@@ -163,9 +179,9 @@ final class SQLContextTests: XCTestCase {
         do {
             let squery = try sqlite.prepare(sql: "SELECT TXT FROM SQLTYPES")
             XCTAssertTrue(try squery.next())
-            XCTAssertEqual("ABC", squery.string(at: 0))
+            XCTAssertEqual("ABC", squery.text(at: 0))
             XCTAssertTrue(try squery.next())
-            XCTAssertEqual("XYZ", squery.string(at: 0))
+            XCTAssertEqual("XYZ", squery.text(at: 0))
             try squery.close()
         }
 
@@ -173,15 +189,15 @@ final class SQLContextTests: XCTestCase {
             let strquery = try sqlite.prepare(sql: "SELECT COUNT(*) FROM SQLTYPES WHERE TXT = ?")
 
             try strquery.bind(parameters: [.text("XYZ")])
-            XCTAssertEqual(SQLValue.integer(1), try strquery.nextValues(close: false)?.first)
+            XCTAssertEqual(SQLValue.long(1), try strquery.nextValues(close: false)?.first)
 
             strquery.reset()
             try strquery.bind(parameters: [.text("QRS")])
-            XCTAssertEqual(SQLValue.integer(0), try strquery.nextValues(close: false)?.first)
+            XCTAssertEqual(SQLValue.long(0), try strquery.nextValues(close: false)?.first)
 
             strquery.reset()
             try strquery.bind(parameters: [.text("ABC")])
-            XCTAssertEqual(SQLValue.integer(1), try strquery.nextValues(close: false)?.first)
+            XCTAssertEqual(SQLValue.long(1), try strquery.nextValues(close: false)?.first)
 
             try strquery.close()
         }
@@ -190,25 +206,25 @@ final class SQLContextTests: XCTestCase {
             let blbquery = try sqlite.prepare(sql: "SELECT COUNT(*) FROM SQLTYPES WHERE BLB = ?")
 
             try blbquery.bind(.blob(Data()), at: 1)
-            XCTAssertEqual(SQLValue.integer(1), try blbquery.nextValues(close: false)?.first)
+            XCTAssertEqual(SQLValue.long(1), try blbquery.nextValues(close: false)?.first)
 
             blbquery.reset()
             try blbquery.bind(.blob(Data([UInt8(0x78), UInt8(0x79), UInt8(0x7A)])), at: 1)
-            XCTAssertEqual(SQLValue.integer(1), try blbquery.nextValues(close: false)?.first)
+            XCTAssertEqual(SQLValue.long(1), try blbquery.nextValues(close: false)?.first)
 
             blbquery.reset()
             // bind a 1mb param
             try blbquery.bind(.blob(Data(Array(repeating: UInt8(0x78), count: 1024 * 1024))), at: 1)
-            XCTAssertEqual(SQLValue.integer(0), try blbquery.nextValues(close: false)?.first)
+            XCTAssertEqual(SQLValue.long(0), try blbquery.nextValues(close: false)?.first)
 
             try blbquery.close()
         }
 
         // XCTAssertEqual(1, try sqlite.exec(sql: "DELETE FROM SQLTYPES LIMIT 1")) // Android fail: SQLiteLog: (1) near "LIMIT": syntax error in "DELETE FROM SQLTYPES LIMIT 1"
-        // XCTAssertEqual(.integer(1), try count(table: "SQLTYPES"))
+        // XCTAssertEqual(.long(1), try count(table: "SQLTYPES"))
 
         try sqlite.exec(sql: "DELETE FROM SQLTYPES")
-        XCTAssertEqual(SQLValue.integer(0), try count(table: "SQLTYPES"))
+        XCTAssertEqual(SQLValue.long(0), try count(table: "SQLTYPES"))
 
         try sqlite.exec(sql: "DROP TABLE SQLTYPES")
 
@@ -280,7 +296,7 @@ final class SQLContextTests: XCTestCase {
 
         for _ in 1...1000 { // iterate through the first bunch of rows
             XCTAssertTrue(try stmnt.next())
-            XCTAssertNotEqual(0, stmnt.integer(at: 0))
+            XCTAssertNotEqual(0, stmnt.long(at: 0))
         }
 
         for _ in 1...5 { // try a few rounds of statement cancellation
@@ -291,7 +307,7 @@ final class SQLContextTests: XCTestCase {
 
             do {
                 while try stmnt.next() {
-                    XCTAssertNotEqual(0, stmnt.integer(at: 0))
+                    XCTAssertNotEqual(0, stmnt.long(at: 0))
                 }
                 XCTFail("should have been interrupted before iterating over all the rows")
             } catch let e as SQLError {
@@ -335,107 +351,113 @@ final class SQLContextTests: XCTestCase {
             try sqlite.prepare(sql: "SELECT COUNT(\(distinct ? "DISTINCT" : "") \(columns)) FROM \"\(table)\"").nextValues(close: true)?.first
         }
 
-        try sqlite.exec(expr: SQLTYPES.create())
+        try sqlite.exec(SQLTYPES.createSQL())
         var ob = SQLTYPES(txt: "ABC", num: 12.3, int: 456, dbl: 7.89, blb: "XYZ".data(using: .utf8))
-        try sqlite.exec(expr: ob.insert())
-        XCTAssertEqual(SQLValue.integer(1), try count(table: "SQLTYPES"))
+        try sqlite.insert(&ob)
+        XCTAssertEqual(1, ob.id, "primary key should have been assigned")
+        let initialInstance = ob
+
+        XCTAssertEqual(SQLValue.long(1), try count(table: "SQLTYPES"))
+
         ob.txt = "DEF"
-        try sqlite.exec(expr: ob.insert())
-        XCTAssertEqual(SQLValue.integer(2), try count(table: "SQLTYPES"))
+        ob.id = nil // need to manually clear the ID so it doesn't attempt to set it in the instance
+        try sqlite.insert(&ob)
+        XCTAssertEqual(2, ob.id, "primary key should have been assigned")
 
-        // if we don't close the cursor before dropping the table, results in the error:
-        // SQLite error code 6: database table is locked
-        let cursor = try sqlite.cursor(sql: "SELECT * FROM SQLTYPES")
+        XCTAssertEqual(SQLValue.long(2), try count(table: "SQLTYPES"))
 
-        ob.txt = "ABC"
-        XCTAssertEqual(ob.parameters, try? cursor.makeIterator().next()?.get())
-        cursor.close()
+        // now manually set the ID to ensure that it is used
 
-        try sqlite.exec(expr: SQLTYPES.drop())
-    }
-}
+        ob.txt = "GHI"
+        ob.id = 5
+        try sqlite.insert(&ob)
+        XCTAssertEqual(5, ob.id, "manual primary key specification should have been used")
 
+        XCTAssertEqual(SQLValue.long(3), try count(table: "SQLTYPES"))
 
-extension String {
-    func quote(_ mark: Character = "\"") -> String {
-        var quoted = ""
-        quoted += mark.description
-        for character in self {
-            quoted += character.description
-            if character == mark {
-                quoted += character.description
-            }
+        do {
+            let cursor = try sqlite.cursor(SQLTYPES.selectSQL())
+
+            // if we don't close the cursor before dropping the table, results in the error in Kotlin (GC'd):
+            // SQLite error code 6: database table is locked
+            defer { cursor.close() }
+
+            XCTAssertEqual(initialInstance.bindings, try? cursor.makeIterator().next()?.get())
         }
-        quoted += mark.description
-        return quoted
+
+        // now try a cursored read of database instances
+//        do {
+//            let cursor = try sqlite.select(type: SQLTYPES.self)
+//
+//            // if we don't close the cursor before dropping the table, results in the error in Kotlin (GC'd):
+//            // SQLite error code 6: database table is locked
+//            defer { cursor.close() }
+//
+//            XCTAssertEqual(initialInstance, try? cursor.makeIterator().next()?.get())
+//        }
+
+
+        try sqlite.exec(SQLTYPES.dropSQL())
     }
 }
 
-struct SQLTYPES : SQLTable {
-    static var tableName = "SQLTYPES"
 
-    var txt: String?
-    static let txtColumn = SQLColumn(name: "TXT", type: "TEXT")
-    var num: Double?
-    static let numColumn = SQLColumn(name: "NUM", type: "NUMERIC")
-    var int: Int?
-    static let intColumn = SQLColumn(name: "INT", type: "INTEGER")
-    var dbl: Double?
-    static let dblColumn = SQLColumn(name: "DBL", type: "REAL")
-    var blb: Data?
-    static let blbColumn = SQLColumn(name: "BLB", type: "BLOB")
+public enum SQLErrors : Error {
+    case unknownColumn(SQLColumn)
+    case nullColumn(SQLColumn)
+    case columnValuesMismatch(Int, Int)
 
-    static var columns: [SQLColumn] {
-        [
-            txtColumn,
-            numColumn,
-            intColumn,
-            dblColumn,
-            blbColumn,
-        ]
-    }
-
-    var parameters: [SQLValue] {
-        [
-            SQLValue(txt),
-            SQLValue(num),
-            SQLValue(int),
-            SQLValue(dbl),
-            SQLValue(blb),
-        ]
+    /// Verifies that the value is not null, throwing a `nullColumn` error if it is null.
+    public static func checkNonNull<T>(_ value: T?, _ column: SQLColumn) throws -> T {
+        guard let value else { throw nullColumn(column) }
+        return value
     }
 }
 
-public struct SQLColumn {
-    let name: String
-    let type: String
-}
+public struct SQLColumn : Hashable {
+    public var name: String
+    public var type: SQLType
+    public var primaryKey: Bool
 
-public struct SQLExpression {
-    public var template: String
-    public var bindings: [SQLValue]
-
-    public init(_ template: String, _ bindings: [SQLValue] = []) {
-        self.template = template
-        self.bindings = bindings
+    public init(name: String, type: SQLType, primaryKey: Bool = false) {
+        self.name = name
+        self.type = type
+        self.primaryKey = primaryKey
     }
 
+    public var definition: String {
+        var def = name.quote() + " " + type.typeName
+        if primaryKey {
+            def += " PRIMARY KEY"
+        }
+        return def
+    }
 }
 
 public protocol SQLTable {
+    /// The name of the table
     static var tableName: String { get }
+    /// The table's columns
     static var columns: [SQLColumn] { get }
-    var parameters: [SQLValue] { get }
-}
-
-public extension SQLContext {
-    func exec(expr: SQLExpression) throws {
-        try exec(sql: expr.template, parameters: expr.bindings)
-    }
+    /// The current instance's properties in the form of `SQLValue` bindings
+    var bindings: [SQLValue] { get }
+    /// Instantiate this item with the given rows with the (optional) corresponding columns.
+    init(withRow row: [SQLValue], fromColumns: [SQLColumn]?) throws
+    /// Updates the property in this instance with the value of the given column, which must exactly match one of the `columns` values
+    mutating func update(column: SQLColumn, value: SQLValue) throws
 }
 
 public extension SQLTable {
-    static func drop(ifExists: Bool = false) -> SQLExpression {
+    static func selectSQL() -> SQLExpression {
+        var sql = "SELECT "
+        sql += columns.map({ $0.name.quote() }).joined(separator: ", ")
+        sql += " FROM "
+        sql += tableName.quote()
+
+        return SQLExpression(sql)
+    }
+
+    static func dropSQL(ifExists: Bool = false) -> SQLExpression {
         var sql = "DROP TABLE "
         if ifExists {
             sql += "IF EXISTS "
@@ -444,25 +466,118 @@ public extension SQLTable {
         return SQLExpression(sql)
     }
 
-    static func create(ifNotExists: Bool = false) -> SQLExpression {
+    static func createSQL(ifNotExists: Bool = false) -> SQLExpression {
         var sql = "CREATE TABLE "
         if ifNotExists {
             sql += "IF NOT EXISTS "
         }
         sql += tableName.quote()
         sql += " ("
-        sql += columns.map({ $0.name.quote() + " " + $0.type }).joined(separator: ", ")
+        sql += columns.map({ $0.definition }).joined(separator: ", ")
         sql += ")"
         return SQLExpression(sql)
     }
 
-    func insert() -> SQLExpression {
+    func insertSQL() -> SQLExpression {
         var sql = "INSERT INTO \(type(of: self).tableName) ("
         sql += type(of: self).columns.map({ $0.name }).joined(separator: ", ")
         sql += ") VALUES ("
         sql += type(of: self).columns.map({ _ in "?" }).joined(separator: ", ")
         sql += ")"
-        return SQLExpression(sql, self.parameters)
+        return SQLExpression(sql, self.bindings)
     }
 }
 
+public extension SQLContext {
+    /// Performs an insert of the given `SQLTable` instance and updates it with the expected ROWID
+    func insert<T: SQLTable>(_ ob: inout T) throws {
+        try exec(ob.insertSQL())
+
+        // check for primary key column and update it with the last insert Row ID
+        //let columns = T.columns
+        let columns = type(of: ob).columns // needed for Kotlin
+        for col in columns {
+            if col.primaryKey && col.type == .long {
+                // get the last inserted row id and update it in the object
+                try ob.update(column: col, value: .long(lastInsertRowID))
+                break // only a single primary key is supported for auto-update
+            }
+        }
+    }
+
+//    func select<T: SQLTable>(_ type: T.Type) throws {
+//        try cursor(T.selectSQL())
+//    }
+}
+
+struct SQLTYPES : SQLTable, Hashable {
+    static var tableName = "SQLTYPES"
+
+    var id: Int64?
+    static let idColumn = SQLColumn(name: "ID", type: .long, primaryKey: true)
+    var txt: String?
+    static let txtColumn = SQLColumn(name: "TXT", type: .text)
+    var num: Double?
+    static let numColumn = SQLColumn(name: "NUM", type: .real)
+    var int: Int
+    static let intColumn = SQLColumn(name: "INT", type: .long)
+    var dbl: Double?
+    static let dblColumn = SQLColumn(name: "DBL", type: .real)
+    var blb: Data?
+    static let blbColumn = SQLColumn(name: "BLB", type: .blob)
+
+    static var columns: [SQLColumn] {
+        [
+            idColumn,
+            txtColumn,
+            numColumn,
+            intColumn,
+            dblColumn,
+            blbColumn,
+        ]
+    }
+
+    var bindings: [SQLValue] {
+        [
+            SQLValue(id),
+            SQLValue(txt),
+            SQLValue(num),
+            SQLValue(int),
+            SQLValue(dbl),
+            SQLValue(blb),
+        ]
+    }
+
+    init(id: Int64? = nil, txt: String? = nil, num: Double? = nil, int: Int, dbl: Double? = nil, blb: Data? = nil) {
+        self.id = id
+        self.txt = txt
+        self.num = num
+        self.int = int
+        self.dbl = dbl
+        self.blb = blb
+    }
+
+    init(withRow row: [SQLValue], fromColumns: [SQLColumn]? = nil) throws {
+        self.int = 0 // need to initialize any non-nil instances with placeholder values
+        let columns = fromColumns ?? Self.columns
+        if row.count != columns.count {
+            throw SQLErrors.columnValuesMismatch(row.count, columns.count)
+        }
+        for (value, column) in zip(row, columns) {
+            try update(column: column, value: value)
+        }
+    }
+
+    /// Updates the value of the given column with the given value
+    mutating func update(column: SQLColumn, value: SQLValue) throws {
+        switch column {
+        case Self.idColumn: self.id = value.longValue
+        case Self.txtColumn: self.txt = value.textValue
+        case Self.numColumn: self.num = value.realValue
+        case Self.intColumn: self.int = .init(try SQLErrors.checkNonNull(value.longValue, column))
+        case Self.dblColumn: self.dbl = value.realValue
+        case Self.blbColumn: self.blb = value.blobValue
+        default: throw SQLErrors.unknownColumn(column)
+        }
+    }
+}

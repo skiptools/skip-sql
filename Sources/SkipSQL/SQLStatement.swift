@@ -59,12 +59,12 @@ public final class SQLStatement {
         switch value {
         case .null:
             try check(SQLite3, db: db, code: SQLite3.sqlite3_bind_null(stmnt, index))
-        case .integer(let int):
-            try check(SQLite3, db: db, code: SQLite3.sqlite3_bind_int64(stmnt, index, int))
-        case .text(let str):
-            try check(SQLite3, db: db, code: SQLite3.sqlite3_bind_text(stmnt, index, str, -1, SQLITE_TRANSIENT))
-        case .float(let double):
-            try check(SQLite3, db: db, code: SQLite3.sqlite3_bind_double(stmnt, index, double))
+        case .long(let long):
+            try check(SQLite3, db: db, code: SQLite3.sqlite3_bind_int64(stmnt, index, long))
+        case .text(let text):
+            try check(SQLite3, db: db, code: SQLite3.sqlite3_bind_text(stmnt, index, text, -1, SQLITE_TRANSIENT))
+        case .real(let real):
+            try check(SQLite3, db: db, code: SQLite3.sqlite3_bind_double(stmnt, index, real))
         case .blob(let blob):
             let size = Int32(blob.count)
             if size == 0 {
@@ -143,18 +143,33 @@ public final class SQLStatement {
     }
 
     /// Returns the integer at the given index, coercing if necessary according to https://www.sqlite.org/datatype3.html
-    public func integer(at idx: Int32) -> Int64 {
+    public func long(at idx: Int32) -> Int64 {
         SQLite3.sqlite3_column_int64(stmnt, idx)
     }
 
+    @available(*, deprecated, renamed: "long")
+    public func integer(at idx: Int32) -> Int64 {
+        long(at: idx)
+    }
+
     /// Returns the double at the given index, coercing if necessary according to https://www.sqlite.org/datatype3.html
-    public func double(at idx: Int32) -> Double {
+    public func real(at idx: Int32) -> Double {
         SQLite3.sqlite3_column_double(stmnt, idx)
     }
 
+    @available(*, deprecated, renamed: "real")
+    public func double(at idx: Int32) -> Double {
+        real(at: idx)
+    }
+
     /// Returns the string at the given index, coercing if necessary according to https://www.sqlite.org/datatype3.html
-    public func string(at idx: Int32) -> String? {
+    public func text(at idx: Int32) -> String? {
         strptr(SQLite3.sqlite3_column_text(stmnt, idx))
+    }
+
+    @available(*, deprecated, renamed: "text")
+    public func string(at idx: Int32) -> String? {
+        text(at: idx)
     }
 
     /// Returns the blob Data at the given index, coercing if necessary according to https://www.sqlite.org/datatype3.html
@@ -177,12 +192,12 @@ public final class SQLStatement {
     /// Returns the value at the given index, based on the type returned from `type(at:)`.
     public func value(at idx: Int32) -> SQLValue {
         switch type(at: idx) {
-        case SQLType.integer: 
-            return SQLValue.integer(integer(at: idx))
-        case SQLType.float: 
-            return SQLValue.float(double(at: idx))
-        case SQLType.text: 
-            if let string = string(at: idx) {
+        case SQLType.long:
+            return SQLValue.long(long(at: idx))
+        case SQLType.real:
+            return SQLValue.real(real(at: idx))
+        case SQLType.text:
+            if let string = text(at: idx) {
                 return SQLValue.text(string)
             } else {
                 return SQLValue.null
@@ -221,7 +236,7 @@ public final class SQLStatement {
 
     /// Returns the values of the current row as an array of strings, coercing if necessary according to https://www.sqlite.org/datatype3.html
     public func stringValues() -> [String?] {
-        Array((0..<columnCount).map { string(at: $0) })
+        Array((0..<columnCount).map { text(at: $0) })
     }
 
     /// It is a grievous error for the application to try to use a prepared statement after it has been finalized.
