@@ -371,7 +371,7 @@ public class RowCursor<Row> : Sequence {
     let statement: SQLStatement
     let creator: (SQLStatement) throws -> Row
 
-    init(statement: SQLStatement, creator: @escaping (SQLStatement) throws -> Row) {
+    public init(statement: SQLStatement, creator: @escaping (SQLStatement) throws -> Row) {
         self.statement = statement
         self.creator = creator
     }
