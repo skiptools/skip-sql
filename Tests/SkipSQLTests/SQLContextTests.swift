@@ -4,6 +4,9 @@ import XCTest
 import OSLog
 import Foundation
 import SkipSQL
+#if SKIP
+import kotlin.reflect.full.__
+#endif
 
 /*
  This test is shared between SkipSQLTests and SkipSQLPlusTests using a symbolic link.
@@ -126,7 +129,7 @@ final class SQLContextTests: XCTestCase {
 
         /// Issues a count query
         func count(distinct: Bool = false, columns: String = "*", table: String) throws -> SQLValue? {
-            try sqlite.prepare(sql: "SELECT COUNT(\(distinct ? "DISTINCT" : "") \(columns)) FROM \"\(table)\"").nextValues(close: true)?.first
+            try sqlite.prepare(sql: "SELECT COUNT(\(distinct ? "DISTINCT " : "")\(columns)) FROM \"\(table)\"").nextValues(close: true)?.first
         }
 
         try sqlite.mutex {
@@ -346,6 +349,7 @@ final class SQLContextTests: XCTestCase {
 
     func testMiniORM() throws {
         let sqlite = SQLContext(configuration: .test)
+        sqlite.trace { self.logger.info("SQL: \($0)") }
 
         func count(distinct: Bool = false, columns: String = "*", table: String) throws -> SQLValue? {
             try sqlite.prepare(sql: "SELECT COUNT(\(distinct ? "DISTINCT" : "") \(columns)) FROM \"\(table)\"").nextValues(close: true)?.first
@@ -386,15 +390,15 @@ final class SQLContextTests: XCTestCase {
         }
 
         // now try a cursored read of database instances
-//        do {
-//            let cursor = try sqlite.select(type: SQLTYPES.self)
-//
-//            // if we don't close the cursor before dropping the table, results in the error in Kotlin (GC'd):
-//            // SQLite error code 6: database table is locked
-//            defer { cursor.close() }
-//
-//            XCTAssertEqual(initialInstance, try? cursor.makeIterator().next()?.get())
-//        }
+        do {
+            let cursor = try SQLTYPES.select(context: sqlite)
+
+            // if we don't close the cursor before dropping the table, results in the error in Kotlin (GC'd):
+            // SQLite error code 6: database table is locked
+            defer { cursor.close() }
+
+            XCTAssertEqual(initialInstance, try? cursor.makeIterator().next()?.get())
+        }
 
 
         try sqlite.exec(SQLTYPES.dropSQL())
@@ -442,7 +446,7 @@ public protocol SQLTable {
     /// The current instance's properties in the form of `SQLValue` bindings
     var bindings: [SQLValue] { get }
     /// Instantiate this item with the given rows with the (optional) corresponding columns.
-    init(withRow row: [SQLValue], fromColumns: [SQLColumn]?) throws
+    static func create(withRow row: [SQLValue], fromColumns: [SQLColumn]?) throws -> Self
     /// Updates the property in this instance with the value of the given column, which must exactly match one of the `columns` values
     mutating func update(column: SQLColumn, value: SQLValue) throws
 }
@@ -486,9 +490,24 @@ public extension SQLTable {
         sql += ")"
         return SQLExpression(sql, self.bindings)
     }
+
+    static func select(context: SQLContext) throws -> RowCursor<Self> {
+        RowCursor(statement: try context.prepare(expr: selectSQL())) {
+            try create(withRow: $0.rowValues(), fromColumns: columns)
+        }
+    }
 }
 
 public extension SQLContext {
+    /// Prepares the given SQL as a statement, which can be executed with parameter bindings.
+    func prepare(expr: SQLExpression) throws -> SQLStatement {
+        let stmnt = try prepare(sql: expr.template)
+        if !expr.bindings.isEmpty {
+            try stmnt.bind(parameters: expr.bindings)
+        }
+        return stmnt
+    }
+
     /// Performs an insert of the given `SQLTable` instance and updates it with the expected ROWID
     func insert<T: SQLTable>(_ ob: inout T) throws {
         try exec(ob.insertSQL())
@@ -505,9 +524,22 @@ public extension SQLContext {
         }
     }
 
-//    func select<T: SQLTable>(_ type: T.Type) throws {
-//        try cursor(T.selectSQL())
-//    }
+    #if !SKIP
+    @inline(__always) func select<T: SQLTable>(_ type: T.Type, _ expr: SQLExpression? = nil) throws -> RowCursor<T> {
+        // Type parameter 'T' cannot have or inherit a companion object, so it cannot be on the left-hand side of a dot.
+        // SKIP REPLACE: val TType = T::class.companionObjectInstance as T.Companion
+        typealias TType = T
+        return RowCursor(statement: try prepare(expr: expr ?? TType.selectSQL()), creator: { try TType.create(withRow: $0.rowValues(), fromColumns: TType.columns) })
+    }
+    #endif
+
+    // non-generic example
+    internal func selectSQLTYPES(_ expr: SQLExpression = SQLTYPES.selectSQL()) throws -> RowCursor<SQLTYPES> {
+        RowCursor(statement: try prepare(expr: expr)) {
+            try SQLTYPES(withRow: $0.rowValues(), fromColumns: SQLTYPES.columns)
+        }
+    }
+
 }
 
 struct SQLTYPES : SQLTable, Hashable {
@@ -555,6 +587,10 @@ struct SQLTYPES : SQLTable, Hashable {
         self.int = int
         self.dbl = dbl
         self.blb = blb
+    }
+
+    static func create(withRow row: [SQLValue], fromColumns: [SQLColumn]? = nil) throws -> Self {
+        try SQLTYPES(withRow: row, fromColumns: fromColumns)
     }
 
     init(withRow row: [SQLValue], fromColumns: [SQLColumn]? = nil) throws {
