@@ -357,7 +357,7 @@ final class SQLContextTests: XCTestCase {
 
         try sqlite.exec(SQLTYPES.createSQL())
         var ob = SQLTYPES(txt: "ABC", num: 12.3, int: 456, dbl: 7.89, blb: "XYZ".data(using: .utf8))
-        try sqlite.insert(&ob)
+        try sqlite.inserted(&ob)
         XCTAssertEqual(1, ob.id, "primary key should have been assigned")
         let initialInstance = ob
 
@@ -365,7 +365,7 @@ final class SQLContextTests: XCTestCase {
 
         ob.txt = "DEF"
         ob.id = nil // need to manually clear the ID so it doesn't attempt to set it in the instance
-        try sqlite.insert(&ob)
+        try sqlite.inserted(&ob)
         XCTAssertEqual(2, ob.id, "primary key should have been assigned")
 
         XCTAssertEqual(SQLValue.long(2), try count(table: "SQLTYPES"))
@@ -373,11 +373,30 @@ final class SQLContextTests: XCTestCase {
         // now manually set the ID to ensure that it is used
 
         ob.txt = "GHI"
-        ob.id = 5
-        try sqlite.insert(&ob)
-        XCTAssertEqual(5, ob.id, "manual primary key specification should have been used")
+        ob.id = 6
+        try sqlite.inserted(&ob)
+        XCTAssertEqual(6, ob.id, "manual primary key specification should have been used")
 
-        XCTAssertEqual(SQLValue.long(3), try count(table: "SQLTYPES"))
+        ob.id = nil // auto-assign the next row
+        try sqlite.inserted(&ob)
+        XCTAssertEqual(7, ob.id)
+
+        ob.id = 4
+        try sqlite.insert(ob, upsert: false)
+
+        ob.txt = "ZZZ"
+        do {
+            try sqlite.insert(ob, upsert: false)
+            XCTFail("insert duplicate PK should have failed")
+        } catch let error as SQLError {
+            // expected
+            XCTAssertEqual("UNIQUE constraint failed: SQLTYPES.ID", error.msg)
+        }
+
+        // try again as an upsert
+        try sqlite.insert(ob, upsert: true)
+
+        XCTAssertEqual(SQLValue.long(5), try count(table: "SQLTYPES"))
 
         do {
             let cursor = try sqlite.cursor(SQLTYPES.selectSQL())
@@ -400,6 +419,43 @@ final class SQLContextTests: XCTestCase {
             XCTAssertEqual(initialInstance, try? cursor.makeIterator().next()?.get())
         }
 
+        do {
+            let idRanges = try sqlite.query(sql: "SELECT GROUP_CONCAT(ROWID, ',') AS ids FROM SQLTYPES")
+            XCTAssertEqual("1,2,4,6,7", idRanges.first?.first?.textValue)
+        }
+
+        do {
+            // select a compact set of ranges of ROWIDs from the table
+            let idRanges = try sqlite.query(sql: """
+            WITH numbered_rows AS (
+              SELECT 
+                ROWID,
+                ROWID - ROW_NUMBER() OVER (ORDER BY ROWID) AS grp
+              FROM SQLTYPES
+            ),
+            ranges AS (
+              SELECT 
+                grp,
+                MIN(ROWID) AS range_start,
+                MAX(ROWID) AS range_end,
+                COUNT(*) AS range_count
+              FROM numbered_rows
+              GROUP BY grp
+            )
+            SELECT 
+              GROUP_CONCAT(
+                CASE 
+                  WHEN range_start = range_end THEN range_start
+                  ELSE range_start || '-' || range_end
+                END,
+                ','
+              ) AS compact_ranges
+            FROM ranges
+            ORDER BY range_start;
+            """)
+
+            XCTAssertEqual("1-2,4,6-7", idRanges.first?.first?.textValue)
+        }
 
         try sqlite.exec(SQLTYPES.dropSQL())
     }
@@ -482,12 +538,24 @@ public extension SQLTable {
         return SQLExpression(sql)
     }
 
-    func insertSQL() -> SQLExpression {
+    func insertSQL(upsert: Bool) -> SQLExpression {
+        let columns = type(of: self).columns
         var sql = "INSERT INTO \(type(of: self).tableName) ("
-        sql += type(of: self).columns.map({ $0.name }).joined(separator: ", ")
+        sql += columns.map({ $0.name.quote() }).joined(separator: ", ")
         sql += ") VALUES ("
-        sql += type(of: self).columns.map({ _ in "?" }).joined(separator: ", ")
+        sql += columns.map({ _ in "?" }).joined(separator: ", ")
         sql += ")"
+        if upsert, let pkColumn = columns.first(where: { $0.primaryKey == true }) {
+            sql += " ON CONFLICT("
+            sql += pkColumn.name.quote()
+            sql += ") DO UPDATE SET"
+            for (index, col) in columns.enumerated() {
+                if index != 0 {
+                    sql += ","
+                }
+                sql += " " + col.name.quote() + " = EXCLUDED." + col.name.quote()
+            }
+        }
         return SQLExpression(sql, self.bindings)
     }
 
@@ -508,9 +576,14 @@ public extension SQLContext {
         return stmnt
     }
 
-    /// Performs an insert of the given `SQLTable` instance and updates it with the expected ROWID
-    func insert<T: SQLTable>(_ ob: inout T) throws {
-        try exec(ob.insertSQL())
+    /// Performs an insert of the given `SQLTable` instance
+    func insert<T: SQLTable>(_ ob: T, upsert: Bool = false) throws {
+        try exec(ob.insertSQL(upsert: upsert))
+    }
+
+    /// Performs an insert of the given `SQLTable` instance and updates it with the expected ROWID for any primary key columns in the instance
+    func inserted<T: SQLTable>(_ ob: inout T) throws {
+        try insert(ob, upsert: false)
 
         // check for primary key column and update it with the last insert Row ID
         //let columns = T.columns
