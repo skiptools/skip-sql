@@ -1,5 +1,6 @@
+# SkipSQL
 
-The SkipSQL module is a dual-platform Skip framework that provides access to sqlite database in Darwin and Android systems.
+The SkipSQL module is a dual-platform [Skip Lite](https://skip.tools) framework that provides access to sqlite database in Darwin and Android systems.
 
 ## Usage
 
