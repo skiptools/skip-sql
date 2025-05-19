@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.3)
 
-project(sqlext, LANGUAGES C)
+project(sqlext LANGUAGES C)
 
 file(GLOB_RECURSE SOURCES sqlite/*.c)
 add_library(sqlext SHARED ${SOURCES})
@@ -50,7 +50,7 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)
 set(CMAKE_FIND_DEBUG_MODE ON)
 
 get_filename_component(CMAKE_PARENT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} DIRECTORY)
-message("CMAKE FINDING LIBRARY FOR ABI: ${ANDROID_ABI} in: ${CMAKE_PARENT_SOURCE_DIR} for build type: ${CMAKE_BUILD_TYPE}")
+#message("CMAKE FINDING LIBRARY FOR ABI: ${ANDROID_ABI} in: ${CMAKE_PARENT_SOURCE_DIR} for build type: ${CMAKE_BUILD_TYPE}")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(BUILD_MODE "Release")
@@ -92,3 +92,6 @@ target_link_libraries(sqlext ${TOMCRYPT})
 
 # sqlite has calls to __android_log_print
 target_link_libraries(sqlext log)
+
+# support 16 KB page sizes: https://developer.android.com/guide/practices/page-sizes
+target_link_options(${CMAKE_PROJECT_NAME} PRIVATE "-Wl,-z,max-page-size=16384")
