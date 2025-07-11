@@ -148,7 +148,7 @@ Also be aware that the availability of some SQL features are contingent on the c
 | iOS 16                 | 3.39           |
 | Android 14 (API 34)    | 3.39           |
 | Android 15 (API 35)    | 3.42           |
-| SQLPlus                | 3.44           |
+| SQLPlus                | 3.46           |
 
 
 ---
@@ -161,7 +161,7 @@ which creates a local build with the following extensions enabled:
  - Full Text Search (FTS)
  - Encryption (sqlcipher)
 
-The `SQLPlus` module uses sqlite version 3.44.2, which means
+The `SQLPlus` module uses sqlite version 3.46.1, which means
 that it will be safe to use newer sqlite features like
 the [`json`](https://sqlite.org/json1.html) function,
 regardless of the Android API and iOS versions of the 
