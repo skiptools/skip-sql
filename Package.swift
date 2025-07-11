@@ -14,7 +14,7 @@ let package = Package(
         .package(url: "https://source.skip.tools/skip-foundation.git", from: "1.1.11"),
         .package(url: "https://source.skip.tools/skip-unit.git", from: "1.0.1"),
         .package(url: "https://source.skip.tools/skip-ffi.git", from: "1.0.0"),
-        .package(url: "https://source.skip.tools/skip-ltc.git", "0.0.0"..<"2.0.0"),
+        .package(url: "https://source.skip.tools/skip-ltc.git", from: "1.0.0"),
     ],
     targets: [
         .target(name: "SkipSQL", dependencies: [
@@ -65,12 +65,15 @@ let package = Package(
                 .define("SQLITE_USE_URI"),
                 .define("SQLITE_ENABLE_SNAPSHOT"),
                 .define("SQLITE_HAS_CODEC"),
+                .define("SQLITE_HOMEGROWN_RECURSIVE_MUTEX"), // needed or we see hangs in test cases
                 .define("SQLITE_TEMP_STORE", to: "2"),
+                .define("SQLITE_EXTRA_INIT", to: "sqlcipher_extra_init"),
+                .define("SQLITE_EXTRA_SHUTDOWN", to: "sqlcipher_extra_shutdown"),
                 .define("HAVE_GETHOSTUUID", to: "0"),
+                .define("HAVE_STDINT_H"),
                 .define("SQLCIPHER_CRYPTO_LIBTOMCRYPT"),
                 //.unsafeFlags(["-Wno-shorten-64-to-32", "-Wno-ambiguous-macro"]), // enabled manually in libs
             ],
             plugins: [.plugin(name: "skipstone", package: "skip")]),
-        
     ]
 )
