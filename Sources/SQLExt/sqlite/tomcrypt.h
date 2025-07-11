@@ -1,6 +1,8 @@
 /* LibTomCrypt, modular cryptographic library -- Tom St Denis */
 /* SPDX-License-Identifier: Unlicense */
 
+#pragma once
+
 #ifndef TOMCRYPT_H_
 #define TOMCRYPT_H_
 #include <assert.h>

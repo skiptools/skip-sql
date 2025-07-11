@@ -33,8 +33,12 @@ add_compile_definitions(SQLITE_THREADSAFE=2)
 add_compile_definitions(SQLITE_USE_URI)
 add_compile_definitions(SQLITE_ENABLE_SNAPSHOT)
 add_compile_definitions(SQLITE_HAS_CODEC)
+add_compile_definitions(SQLITE_HOMEGROWN_RECURSIVE_MUTEX)
 add_compile_definitions(SQLITE_TEMP_STORE=2)
+add_compile_definitions(SQLITE_EXTRA_INIT=sqlcipher_extra_init)
+add_compile_definitions(SQLITE_EXTRA_SHUTDOWN=sqlcipher_extra_shutdown)
 add_compile_definitions(HAVE_GETHOSTUUID=0)
+add_compile_definitions(HAVE_STDINT_H)
 add_compile_definitions(SQLCIPHER_CRYPTO_LIBTOMCRYPT)
 
 
