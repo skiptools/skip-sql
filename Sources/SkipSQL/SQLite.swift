@@ -57,7 +57,7 @@ public enum SQLAction : Int32 {
 /// is undefined, though harmless.  Future
 /// versions of SQLite may change the behavior of `sqlite3_column_type()`
 /// following a type conversion.
-public enum SQLType : Int32, CaseIterable, Hashable {
+public enum SQLType : Int32, CaseIterable, Hashable, Sendable {
     case long = 1 // SQLITE_INTEGER
     case real = 2 // SQLITE_FLOAT
     case text = 3 // SQLITE_TEXT
@@ -76,7 +76,7 @@ public enum SQLType : Int32, CaseIterable, Hashable {
 }
 
 /// A database value.
-public enum SQLValue : Hashable, CustomStringConvertible {
+public enum SQLValue : Hashable, Sendable, CustomStringConvertible {
     case long(Int64)
     case real(Double)
     case text(String)
@@ -101,6 +101,21 @@ public enum SQLValue : Hashable, CustomStringConvertible {
         case .text(let text): return text.description
         case .blob(let blob): return blob.description
         case .null: return "null"
+        }
+    }
+    
+    /// A literal for direct inclusion in a SQL statement.
+    ///
+    /// It is generally preferable to use bindings to set values in statements,
+    /// but it is sometimes unavoidable, such as with a `CREATE TABLE`
+    /// statement with a default value for a colum definition.
+    public var literalValue: String {
+        switch self {
+        case .long(let long): return long.description
+        case .real(let real): return real.description
+        case .text(let text): return text.quote("\"")
+        case .blob(let blob): return "x" + blob.hexValue.quote("'")
+        case .null: return "NULL"
         }
     }
 
@@ -140,6 +155,19 @@ public enum SQLValue : Hashable, CustomStringConvertible {
         case .blob(let blob): return blob
         default: return nil
         }
+    }
+}
+
+extension Data {
+    /// Convert this sequence of bytes into a hex string
+    var hexValue: String {
+        #if !SKIP
+        map { String(format: "%02x", $0) }.joined()
+        #else
+        platformValue.joinToString("") {
+            java.lang.Byte.toUnsignedInt($0).toString(radix: 16).padStart(2, "0".get(0))
+        }
+        #endif
     }
 }
 

@@ -116,10 +116,112 @@ As a thin layer over a SQLite connection, SkipSQL itself performs no locking or 
 
 The SQLite guide on [Locking And Concurrency](https://www.sqlite.org/lockingv3.html) can provide additional guidance.
 
+## SQLCodable
+
+SkipSQL includes a basic mechanism for mapping Swift types to tables through the `SQLCodable` protocol and `SQLColumn` type. An example of a type that implements this is:
+
+```swift
+/// A struct that can read and write its values to the `DEMO_TABLE` table.
+public struct DemoTable : SQLCodable, Equatable {
+    public static var tableName = "DEMO_TABLE"
+
+    /// All the columns defined for this table
+    public static var columns: [SQLColumn] {
+        [id, txt, num, int, dbl, blb]
+    }
+
+    public var id: Int64?
+    static let id = SQLColumn(name: "ID", type: .long, primaryKey: true, autoincrement: true)
+
+    public var txt: String?
+    static let txt = SQLColumn(name: "TXT", type: .text, unique: true, nullable: false)
+
+    public var num: Double?
+    static let num = SQLColumn(name: "NUM", type: .real)
+
+    public var int: Int
+    static let int = SQLColumn(name: "INT", type: .long, nullable: false)
+
+    public var dbl: Double?
+    static let dbl = SQLColumn(name: "DBL", type: .real, defaultValue: SQLValue(Double.pi))
+
+    public var blb: Data?
+    static let blb = SQLColumn(name: "BLB", type: .blob)
+
+    /// Returns a `SQLValue` for the specified `SQLColumn`
+    public func binding(forColumn column: SQLColumn) throws -> SQLValue {
+        switch column {
+        case Self.id: return SQLValue(self.id)
+        case Self.txt: return SQLValue(self.txt)
+        case Self.num: return SQLValue(self.num)
+        case Self.int: return SQLValue(self.int)
+        case Self.dbl: return SQLValue(self.dbl)
+        case Self.blb: return SQLValue(self.blb)
+        default: throw SQLBindingError.unknownColumn(column)
+        }
+    }
+
+    /// Updates the value of the given column with the given value
+    public mutating func update(column: SQLColumn, value: SQLValue) throws {
+        switch column {
+        case Self.id: self.id = value.longValue
+        case Self.txt: self.txt = value.textValue
+        case Self.num: self.num = value.realValue
+        case Self.int: self.int = .init(try SQLBindingError.checkNonNull(value.longValue, column))
+        case Self.dbl: self.dbl = value.realValue
+        case Self.blb: self.blb = value.blobValue
+        default: throw SQLBindingError.unknownColumn(column)
+        }
+    }
+
+    /// Create an instance of this type from the given row values
+    public static func create(withRow row: [SQLValue], fromColumns: [SQLColumn]? = nil) throws -> Self {
+        try DemoTable(withRow: row, fromColumns: fromColumns)
+    }
+
+    init(withRow row: [SQLValue], fromColumns: [SQLColumn]? = nil) throws {
+        self.int = 0 // need to initialize any non-nil instances with placeholder values
+        let columns = fromColumns ?? Self.columns
+        if row.count != columns.count {
+            throw SQLBindingError.columnValuesMismatch(row.count, columns.count)
+        }
+        for (value, column) in zip(row, columns) {
+            try update(column: column, value: value)
+        }
+    }
+
+    public init(id: Int64? = nil, txt: String? = nil, num: Double? = nil, int: Int, dbl: Double? = nil, blb: Data? = nil) {
+        self.id = id
+        self.txt = txt
+        self.num = num
+        self.int = int
+        self.dbl = dbl
+        self.blb = blb
+    }
+}
+```
+
+### Querying with SQLPredicate
+
+The `SQLPredicate` type enables querying the database for instances of a `SQLCodable` instance. For example:
+
+```swift
+// issues: SELECT "ID", "TXT", "NUM", "INT", "DBL", "BLB" FROM "DEMO_TABLE" WHERE ("NUM" IS NULL OR "TXT" = 'ABC')
+let predicate = DemoTable.num.isNull().or(DemoTable.txt.equals(SQLValue("ABC")))
+
+let resultSet = try sqlite.query(DemoTable.self, with: [predicate])
+defer { resultSet.close() }
+
+let cursor = resultSet.makeIterator()
+while let row = cursor.next() {
+    let instance = try row.get() // instantiate the type from the row
+    logger.log("got instance: \(instance)")
+}
+```
 
 ## Implementation
 
-SkipSQL speaks directly to the low-level SQLite3 C library that is included with all Darwin/iOS/Android operating systems.
+SkipSQL speaks directly to the low-level SQLite3 C library that is pre-installed on all iOS and Android devices.
 On Darwin/iOS, it communicates directly through Swift's C bridging support.
 On Android, it uses the [SkipFFI](https://source.skip.tools/skip-ffi) module to interact directly with the underlying sqlite installation on Android.
 (For performance and a consistent API, SkipSQL eschews Android's `android.database.sqlite` Java wrapper, and uses JNA to directly access the SQLite C API.)
