@@ -9,7 +9,7 @@ import SkipFFI
 let logger: Logger = Logger(subsystem: "skip.sql", category: "SQL")
 
 /// A context for performing operations on a SQLite database.
-public final class SQLContext {
+public class SQLContext {
     /// The SQLite3 library to use.
     fileprivate let SQLite3: SQLiteLibrary
 
@@ -351,7 +351,7 @@ public struct SQLExpression {
 
 extension String {
     /// Encodes the String so the given mark is doubled in the resulting string.
-    public func quote(_ mark: Character = "\"") -> String {
+    func quote(_ mark: Character = "\"") -> String {
         var quoted = ""
         quoted += mark.description
         for character in self {
