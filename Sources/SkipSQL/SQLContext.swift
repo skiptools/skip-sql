@@ -24,6 +24,13 @@ public class SQLContext {
         SQLite3.sqlite3_changes(db)
     }
 
+    /// Returns a number signifying the major, minor, and patch release of the underlying SQLite library.
+    ///
+    /// E.g., 3001002 == 3.1.2
+    public var versionNumber: Int32 {
+        SQLite3.sqlite3_libversion_number()
+    }
+
     /// The total number of rows inserted, modified or deleted by all [INSERT], [UPDATE] or [DELETE] statements completed since the database connection was opened, including those executed as part of triggers.
     public var totalChanges: Int32 {
         SQLite3.sqlite3_total_changes(db)
@@ -65,6 +72,10 @@ public class SQLContext {
         })
 
         return db
+    }
+
+    public func supports(feature: SQLiteFeature) -> Bool {
+        self.versionNumber >= feature.minimumSupportedVersion
     }
 
     public struct OpenFlags: OptionSet {

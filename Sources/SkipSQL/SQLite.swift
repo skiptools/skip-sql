@@ -49,6 +49,31 @@ public enum SQLAction : Int32 {
     }
 }
 
+public enum SQLiteFeature {
+    case rightJoin                  // RIGHT JOIN
+    case fullOuterJoin              // FULL OUTER JOIN
+    case jsonFunction               // JSON()
+    case selectReturning            // SELECT ... RETURNING
+    case partialIntegrityCheck      // PRAGMA integrity_check(table)
+    case sqliteSchemaTable          // sqlite_master => sqlite_schema
+    case dropColumn                 // ALTER TABLE ... DROP COLUMN
+    case renameColumn               // ALTER TABLE ... RENAME COLUMN
+
+    /// The minimum SQLite version for the given feature
+    public var minimumSupportedVersion: Int32 {
+        switch self {
+        case .rightJoin: return 3_039_000
+        case .fullOuterJoin: return 3_039_000
+        case .jsonFunction: return 3_038_000 // 2022-02-22
+        case .selectReturning: return 3_035_000
+        case .partialIntegrityCheck: return 3_033_000
+        case .sqliteSchemaTable: return 3_033_000
+        case .dropColumn: return 3_035_000
+        case .renameColumn: return 3_025_000
+        }
+    }
+}
+
 /// The return value of `sqlite3_column_type()` can be used to decide which
 /// of the first six interface should be used to extract the column value.
 /// The value returned by `sqlite3_column_type()` is only meaningful if no

@@ -63,6 +63,7 @@ internal final class SQLPlusJNALibrary : SQLiteLibrary {
     /* SKIP INSERT: external */ func sqlite3_backup_pagecount(_ backup: OpaquePointer) -> Int32
     /* SKIP INSERT: external */ func sqlite3_initialize() -> Int32
     /* SKIP INSERT: external */ func sqlite3_shutdown() -> Int32
+    /* SKIP INSERT: external */ func sqlite3_libversion_number() -> Int32
     /* SKIP INSERT: external */ func sqlite3_extended_result_codes(_ db: OpaquePointer, _ on: Int32) -> Int32
     /* SKIP INSERT: external */ func sqlite3_free(_ ptr: OpaquePointer)
     /* SKIP INSERT: external */ func sqlite3_db_mutex(_ db: OpaquePointer?) -> OpaquePointer?

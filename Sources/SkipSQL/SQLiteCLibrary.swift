@@ -211,6 +211,10 @@ final class SQLiteCLibrary : SQLiteLibrary {
         SQLite3.sqlite3_shutdown()
     }
 
+    func sqlite3_libversion_number() -> Int32 {
+        SQLite3.sqlite3_libversion_number()
+    }
+
     func sqlite3_extended_result_codes(_ db: OpaquePointer, _ on: Int32) -> Int32 {
         SQLite3.sqlite3_extended_result_codes(db, on)
     }

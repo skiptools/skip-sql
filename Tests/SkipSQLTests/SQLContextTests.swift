@@ -653,7 +653,7 @@ final class SQLContextTests: XCTestCase {
             XCTAssertEqual(#"SELECT "ID", "TXT", "NUM", "INT", "DBL", "BLB", "ID1", "ID2" FROM "DEMO_TABLE" INNER JOIN "DEMO_JOIN_TABLE" ON "DEMO_TABLE"."ID" = "DEMO_JOIN_TABLE"."ID2""#, statements.last)
         }
 
-        do { // a three-way RIGHT/LEFT join
+        if sqlite.supports(feature: .rightJoin) { // a three-way RIGHT/LEFT join
             let rightLeftJoined = try sqlite.query(DemoTable.self, "t0",
                                                    join1: .right, on1: DemoJoinTable.id1,
                                                    DemoJoinTable.self, "t1",
@@ -671,7 +671,7 @@ final class SQLContextTests: XCTestCase {
             XCTAssertEqual(#"SELECT t0."ID", t0."TXT", t0."NUM", t0."INT", t0."DBL", t0."BLB", t1."ID1", t1."ID2", t2."ID", t2."TXT", t2."NUM", t2."INT", t2."DBL", t2."BLB" FROM "DEMO_TABLE" AS t0 RIGHT OUTER JOIN "DEMO_JOIN_TABLE" AS t1 ON t0."ID" = t1."ID1" LEFT OUTER JOIN "DEMO_TABLE" AS t2 ON t2."ID" = t1."ID2""#, statements.last)
         }
 
-        do { // a three-way LEFT/RIGHT join (where some items will be expected to be nil)
+        if sqlite.supports(feature: .rightJoin) { // a three-way LEFT/RIGHT join (where some items will be expected to be nil)
             let leftRightJoined = try sqlite.query(DemoTable.self, "t0",
                                                    join1: .left, on1: DemoJoinTable.id1,
                                                    DemoJoinTable.self, "t1",
@@ -691,7 +691,7 @@ final class SQLContextTests: XCTestCase {
             XCTAssertEqual(#"SELECT t0."ID", t0."TXT", t0."NUM", t0."INT", t0."DBL", t0."BLB", t1."ID1", t1."ID2", t2."ID", t2."TXT", t2."NUM", t2."INT", t2."DBL", t2."BLB" FROM "DEMO_TABLE" AS t0 LEFT OUTER JOIN "DEMO_JOIN_TABLE" AS t1 ON t0."ID" = t1."ID1" RIGHT OUTER JOIN "DEMO_TABLE" AS t2 ON t2."ID" = t1."ID2" WHERE t2."INT" IS NOT NULL"#, statements.last)
         }
 
-        do { // a three-way full outer join
+        if sqlite.supports(feature: .fullOuterJoin) { // a three-way full outer join
             let leftRightJoined = try sqlite.query(DemoTable.self, "t0",
                                                    join1: .full, on1: DemoJoinTable.id1,
                                                    DemoJoinTable.self, "t1",

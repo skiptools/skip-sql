@@ -744,8 +744,8 @@ public enum SQLOrder {
 /// A type of join
 public enum SQLJoinType {
     case left
-    case right
-    case full
+    case right // needs 3.39.0+
+    case full // needs 3.39.0+
     case inner
     case cross
 
