@@ -1,20 +1,14 @@
 // Copyright 2023–2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 import Foundation
-import OSLog
 #if SKIP
 import SkipFFI
 #endif
-
-let logger: Logger = Logger(subsystem: "skip.sql", category: "SQL")
 
 /// A context for performing operations on a SQLite database.
 public class SQLContext {
     /// The SQLite3 library to use.
     fileprivate let SQLite3: SQLiteLibrary
-
-    /// The logging level for this context; SQL statements and warnings will be sent to this log.
-    public var logLevel: OSLogType? = nil
 
     /// The pointer to the SQLite database.
     private let db: OpaquePointer
@@ -54,14 +48,9 @@ public class SQLContext {
     /// - Parameters:
     ///   - path: The path to the local file, or ":memory:" for an in-memory database.
     ///   - flags: The flags to use to open the database.
-    public init(path: String, flags: OpenFlags? = nil, logLevel: OSLogType? = nil, configuration: SQLiteConfiguration = .platform) throws {
-        self.logLevel = logLevel
+    public init(path: String, flags: OpenFlags? = nil, configuration: SQLiteConfiguration = .platform) throws {
         self.SQLite3 = configuration.library
         self.db = try Self.connect(path: path, flags: flags, configuration: configuration)!
-
-        if let logLevel = logLevel {
-            logger.log(level: logLevel, "opened database: \(path)")
-        }
     }
 
     private static func connect(path: String, flags: OpenFlags? = nil, configuration: SQLiteConfiguration = .platform) throws -> OpaquePointer? {
@@ -79,7 +68,7 @@ public class SQLContext {
     }
 
     public struct OpenFlags: OptionSet {
-       public let rawValue: Int32
+        public let rawValue: Int32
 
         public init(rawValue: Int32) {
             self.rawValue = rawValue
@@ -98,7 +87,7 @@ public class SQLContext {
 
     public func exec(_ expr: SQLExpression) throws {
         try checkClosed()
-        let stmnt = try prepare(sql: expr.template)
+        let stmnt = try prepare(sql: expr.sql)
         var err: Error? = nil
         do {
             try stmnt.update(parameters: expr.bindings)
@@ -138,9 +127,6 @@ public class SQLContext {
     /// Prepares the given SQL as a statement, which can be executed with parameter bindings.
     public func prepare(sql: String) throws -> SQLStatement {
         try checkClosed()
-        if let logLevel = self.logLevel {
-            logger.log(level: logLevel, "prepare: \(sql)")
-        }
         var stmntPtr: OpaquePointer? = nil
 
         try check(SQLite3, db: db, code: withUnsafeMutablePointer(to: &stmntPtr) { ptr in
@@ -206,13 +192,13 @@ public class SQLContext {
     }
 
     /// Issue a query and return all the rows in a single batch
-    public func query(sql: String, parameters: [SQLValue] = []) throws -> [[SQLValue]] {
+    public func selectAll(sql: String, parameters: [SQLValue] = []) throws -> [[SQLValue]] {
         try cursor(SQLExpression(sql, parameters)).map({ try $0.get() })
     }
 
     /// Issues a SQL query with the optional parameters and returns all the values.
     public func cursor(_ expr: SQLExpression) throws -> RowCursor<[SQLValue]> {
-        let stmnt = try prepare(sql: expr.template)
+        let stmnt = try prepare(sql: expr.sql)
         if !expr.bindings.isEmpty {
             try stmnt.bind(parameters: expr.bindings)
         }
@@ -267,13 +253,13 @@ public class SQLContext {
         }
 
         _ = SQLite3.sqlite3_trace_v2(db, UInt32(SQLITE_TRACE_STMT), {
-                 (_: UInt32, context: UnsafeMutableRawPointer?, pointer: UnsafeMutableRawPointer?, _: UnsafeMutableRawPointer?) in
-                if let pointer {
-                     unsafeBitCast(context, to: TraceBox.self)(pointer)
-                 }
-                 return Int32(0)
-             },
-             unsafeBitCast(box, to: UnsafeMutableRawPointer.self)
+            (_: UInt32, context: UnsafeMutableRawPointer?, pointer: UnsafeMutableRawPointer?, _: UnsafeMutableRawPointer?) in
+            if let pointer {
+                unsafeBitCast(context, to: TraceBox.self)(pointer)
+            }
+            return Int32(0)
+        },
+                                     unsafeBitCast(box, to: UnsafeMutableRawPointer.self)
         )
         traceHook = box
         #else
@@ -337,15 +323,56 @@ public class SQLContext {
         SQLite3.sqlite3_update_hook(db, self.updateHook, nil)
         #endif
     }
+
+    // MARK: PRAGMAs
+
+    /// Query, set, or clear the enforcement of foreign key constraints.
+    ///
+    /// - SeeAlso: [https://sqlite.org/pragma.html#pragma_foreign_keys](https://sqlite.org/pragma.html#pragma_foreign_keys)
+    public var foreignKeysEnabled: Bool {
+        get { (try? selectAll(sql: "PRAGMA foreign_keys").first?.first) == SQLValue(1) }
+        set { try? exec(sql: "PRAGMA foreign_keys = " + (newValue ? "ON" : "OFF")) }
+    }
+
+    /// Query, set, or clear the enforcement of foreign key constraints.
+    ///
+    /// - SeeAlso: [https://sqlite.org/pragma.html#encoding](https://sqlite.org/pragma.html#encoding)
+    public var encoding: String? {
+        get { (try? selectAll(sql: "PRAGMA encoding").first?.first)?.textValue }
+        set { try? exec(sql: "PRAGMA encoding = ?", parameters: [SQLValue(newValue)]) }
+    }
+
+    /// Query, set, or clear READ UNCOMMITTED isolation.
+    ///
+    /// The default isolation level for SQLite is SERIALIZABLE. Any process or thread can select READ UNCOMMITTED isolation, but SERIALIZABLE will still be used except between connections that share a common page and schema cache. Cache sharing is enabled using the sqlite3_enable_shared_cache() API. Cache sharing is disabled by default.
+    ///
+    /// - SeeAlso: [https://sqlite.org/pragma.html#read_uncommitted](https://sqlite.org/pragma.html#read_uncommitted)
+    public var readUncommitted: Bool {
+        get { (try? selectAll(sql: "PRAGMA read_uncommitted").first?.first) == SQLValue(1) }
+        set { try? exec(sql: "PRAGMA read_uncommitted = " + (newValue ? "ON" : "OFF")) }
+    }
 }
 
 public struct SQLExpression {
-    public var template: String
-    public var bindings: [SQLValue]
+    public var parts: [(String, SQLValue?)] = []
 
-    public init(_ template: String, _ bindings: [SQLValue] = []) {
-        self.template = template
-        self.bindings = bindings
+    public init(_ sql: String, _ bindings: [SQLValue] = []) {
+        self.parts += [(sql, nil)]
+        for binding in bindings {
+            self.parts += [("", binding)]
+        }
+    }
+
+    public var sql: String {
+        parts.map(\.0).joined()
+    }
+
+    public var bindings: [SQLValue] {
+        parts.compactMap(\.1)
+    }
+
+    public mutating func append(_ sql: String, _ binding: SQLValue? = nil) {
+        parts += [(sql, binding)]
     }
 }
 
@@ -362,6 +389,10 @@ extension String {
         }
         quoted += mark.description
         return quoted
+    }
+
+    func appendingString(_ other: String) -> String {
+        self + other
     }
 }
 
@@ -382,7 +413,20 @@ public class RowCursor<Row> : Sequence {
         } catch {
         }
     }
-
+    
+    /// Loads the specified number of elements.
+    public func load(count: Int = Int.max) throws -> [Row] {
+        let cursor = makeIterator()
+        var instances: [Row] = []
+        while let row = cursor.next() {
+            let instance = try row.get() // instantiate the type from the row
+            instances.append(instance)
+            if instances.count >= count {
+                break
+            }
+        }
+        return instances
+    }
 
     #if !SKIP
     public func makeIterator() -> RowIterator<Row> {
