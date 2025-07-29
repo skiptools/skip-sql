@@ -292,10 +292,20 @@ public extension SQLContext {
                 return SQLPredicate.in(pkColumn, pks.map({ $0 }))
             }
         } else {
-            let columnsTuple: SQLRepresentable = SQLTuple(columns: pkColumns)
-            let valuesTuples: [SQLRepresentable] = pkValues.map({ SQLTuple(values: $0) })
-            // multiple primary keys: query based on the tuple
-            return SQLPredicate.in(columnsTuple, valuesTuples)
+            if supports(feature: .rowValueSyntax) {
+                let columnsTuple: SQLRepresentable = SQLTuple(columns: pkColumns)
+                let valuesTuples: [SQLRepresentable] = pkValues.map({ SQLTuple(values: $0) })
+                // multiple primary keys: query based on the tuple
+                return SQLPredicate.in(columnsTuple, valuesTuples)
+            } else {
+                // no support for tuple IN queries, so we need to fall back to: (ID1 = X1 AND ID2 = Y1) OR (ID1 = X2 AND ID2 = Y2)…
+                var equalsQueries: [SQLPredicate] = []
+                for pkValueTuple in pkValues {
+                    let parts = zip(pkColumns, pkValueTuple).map({ $0.equals($1) })
+                    equalsQueries.append(SQLPredicate.and(parts))
+                }
+                return SQLPredicate.or(equalsQueries)
+            }
         }
     }
 

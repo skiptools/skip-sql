@@ -731,7 +731,11 @@ final class SQLContextTests: XCTestCase {
         try checkJoin(count: 0) // ID 4 has 2 join rows which should have both cascaded
 
         try sqlite.delete(instances: [joinOb1, joinOb2, joinOb3]) // delete with compound primary key (already deleted, but we are just checking the SQL)
-        XCTAssertEqual(#"DELETE FROM "DEMO_JOIN_TABLE" WHERE ("ID1", "ID2") IN ((1, 1), (2, 4), (4, 6))"#, statements.last)
+        if sqlite.supports(feature: .rowValueSyntax) {
+            XCTAssertEqual(#"DELETE FROM "DEMO_JOIN_TABLE" WHERE ("ID1", "ID2") IN ((1, 1), (2, 4), (4, 6))"#, statements.last)
+        } else {
+            XCTAssertEqual(#"DELETE FROM "DEMO_JOIN_TABLE" WHERE (("ID1" = 1 AND "ID2" = 1) OR ("ID1" = 2 AND "ID2" = 4) OR ("ID1" = 4 AND "ID2" = 6))"#, statements.last)
+        }
         XCTAssertEqual(0, sqlite.changes, "delete with no matching instances should not have reported changes")
 
         do {

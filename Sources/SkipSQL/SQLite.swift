@@ -58,6 +58,7 @@ public enum SQLiteFeature {
     case sqliteSchemaTable          // sqlite_master => sqlite_schema
     case dropColumn                 // ALTER TABLE ... DROP COLUMN
     case renameColumn               // ALTER TABLE ... RENAME COLUMN
+    case rowValueSyntax             // (a,b) IN ((1,2), (3,4))
 
     /// The minimum SQLite version for the given feature
     public var minimumSupportedVersion: Int32 {
@@ -70,6 +71,7 @@ public enum SQLiteFeature {
         case .sqliteSchemaTable: return 3_033_000
         case .dropColumn: return 3_035_000
         case .renameColumn: return 3_025_000
+        case .rowValueSyntax: return 3_015_000 // https://sqlite.org/rowvalue.html#backwards_compatibility
         }
     }
 }
