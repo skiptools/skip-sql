@@ -51,7 +51,6 @@ public enum SQLAction : Int32 {
 
 public enum SQLiteFeature {
     case rowValueSyntax               // WHERE (a,b) = (1,2)
-    case rowValueInSyntax             // WHERE (a,b) IN ((1,2), (3,4))
     case renameColumn                 // ALTER TABLE ... RENAME COLUMN
     case partialIntegrityCheck        // PRAGMA integrity_check(table)
     case sqliteSchemaTable            // sqlite_master => sqlite_schema
@@ -60,12 +59,12 @@ public enum SQLiteFeature {
     case jsonFunction                 // JSON()
     case rightJoin                    // RIGHT JOIN
     case fullOuterJoin                // FULL OUTER JOIN
+    case rowValueInSyntax             // WHERE (a,b) IN ((1,2), (3,4))
 
     /// The minimum SQLite version for the given feature
     public var minimumSupportedVersion: Int32 {
         switch self {
         case .rowValueSyntax:         return 3_015_000 // https://sqlite.org/rowvalue.html#backwards_compatibility
-        case .rowValueInSyntax:       return 3_024_000
         case .renameColumn:           return 3_025_000
         case .partialIntegrityCheck:  return 3_033_000
         case .sqliteSchemaTable:      return 3_033_000
@@ -74,6 +73,7 @@ public enum SQLiteFeature {
         case .jsonFunction:           return 3_038_000 // 2022-02-22
         case .rightJoin:              return 3_039_000
         case .fullOuterJoin:          return 3_039_000
+        case .rowValueInSyntax:       return 3_039_000
         }
     }
 }
