@@ -231,6 +231,15 @@ public extension SQLCodable {
         }
     }
 
+    /// Returns true if this is a new instance without a primary key value assigned, or nil if it is unknown (i.e., no primary key values)
+    var isNewInstance: Bool? {
+        get throws {
+            let pks = try self.primaryKeyValues
+            if pks.isEmpty { return nil }
+            return pks.allSatisfy({ $0 == .null || $0 == .defaultPrimaryKeyValue })
+        }
+    }
+
     static func selectSQL(alias: String? = nil) -> SQLExpression {
         let aliasName = alias == nil ? "" : alias!
         let aliasSuffix = alias == nil ? "" : (" AS " + aliasName)
@@ -320,21 +329,22 @@ public extension SQLContext {
         let allBindings = allColumns.map({ row[$0] ?? .null })
         var columns: [SQLColumn] = []
         var bindings: [SQLValue] = []
-        if explicitNulls {
-            columns = allColumns
-            bindings = allBindings
-        } else {
-            // filter out any NULL values so that defaults defined in the column are used
-            for (col, value) in zip(allColumns, allBindings) {
+        let update = upsert == nil
+
+        // filter out any NULL values so that defaults defined in the column are used
+        for (col, value) in zip(allColumns, allBindings) {
+            if !update {
+                if col.primaryKey && col.autoincrement && value == SQLValue.defaultPrimaryKeyValue {
+                    // for insert with autoincrement primary key values, filter out zero so that pk fields don't need to be null
+                    continue
+                }
                 if value == SQLValue.null {
                     continue
                 }
-                columns.append(col)
-                bindings.append(value)
             }
+            columns.append(col)
+            bindings.append(value)
         }
-
-        let update = upsert == nil
 
         var expression = SQLExpression("")
         if update {
@@ -401,18 +411,17 @@ public extension SQLContext {
         var rowMap = try _createSQLRow(columns, columns.map({ row[$0] ?? .null }))
         var changedFields = 0
         for col in columns {
-            if row[col] == .null {
-                if col.primaryKey && col.autoincrement {
-                    // get the last inserted row id and update it in the object
-                    if rowMap[col] != .long(lastInsertRowID) {
-                        rowMap[col] = .long(lastInsertRowID)
-                        changedFields += 1
-                    }
-                } else if let defaultValue = col.defaultValue {
-                    if rowMap[col] != defaultValue {
-                        rowMap[col] = defaultValue
-                        changedFields += 1
-                    }
+            if col.primaryKey && col.autoincrement && (row[col] == .null || row[col] == SQLValue.defaultPrimaryKeyValue) {
+                // get the last inserted row id and update it in the object
+                let lastID = SQLValue(lastInsertRowID)
+                if rowMap[col] != lastID {
+                    rowMap[col] = lastID
+                    changedFields += 1
+                }
+            } else if let defaultValue = col.defaultValue, row[col] == .null {
+                if rowMap[col] != defaultValue {
+                    rowMap[col] = defaultValue
+                    changedFields += 1
                 }
             }
         }
@@ -690,6 +699,9 @@ extension SQLColumn : SQLRepresentable {
 }
 
 extension SQLValue : SQLRepresentable {
+    /// The empty primary key value, signifying that the primary key should be assigned
+    public static let defaultPrimaryKeyValue = SQLValue.long(0)
+
     public func apply(to expression: inout SQLExpression) {
         expression.append("?", self)
     }

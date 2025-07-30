@@ -33,6 +33,7 @@ final class SQLContextTests: XCTestCase {
     func testSQLiteVersion() throws {
         let sqlite = SQLContext(configuration: .test)
         logger.info("connected to SQLite version: \(sqlite.versionNumber)")
+        // this is just to get the Android CI to output the SQLite version number it is currently using
         throw XCTSkip("Skip test for SQLite version: \(sqlite.versionNumber)")
     }
 
@@ -718,7 +719,10 @@ final class SQLContextTests: XCTestCase {
         }
 
         // 1-to-many relation
-        var relOb = try sqlite.insert(DemoRelation(fk: ob1.id, info: "XYZ"))
+        var relOb = DemoRelation(fk: ob1.id, info: "XYZ")
+        XCTAssertEqual(true, try relOb.isNewInstance)
+        relOb = try sqlite.insert(relOb)
+        XCTAssertEqual(false, try relOb.isNewInstance)
         XCTAssertEqual(Int64(1), relOb.pk)
         XCTAssertEqual([relOb], try ob1.oneToManyRelation(in: sqlite), "relation fetch should have returned relations")
 
@@ -729,7 +733,7 @@ final class SQLContextTests: XCTestCase {
 
         XCTAssertEqual(ob1.id, relOb.fk)
         try sqlite.refresh(&relOb)
-        XCTAssertEqual(nil, relOb.fk) // delete should have nulled the foreign key relation
+        XCTAssertEqual(nil, relOb.fk, "delete should have nulled the foreign key relation")
 
         try check(count: 5)
         try checkJoin(count: 2) // delete should have cascaded to join table
@@ -738,7 +742,7 @@ final class SQLContextTests: XCTestCase {
         try checkJoin(count: 0) // ID 4 has 2 join rows which should have both cascaded
 
         try sqlite.delete(instances: [joinOb1, joinOb2, joinOb3]) // delete with compound primary key (already deleted, but we are just checking the SQL)
-        if sqlite.supports(feature: .rowValueSyntax) {
+        if sqlite.supports(feature: .rowValueInSyntax) {
             XCTAssertEqual(#"DELETE FROM "DEMO_JOIN_TABLE" WHERE ("ID1", "ID2") IN ((1, 1), (2, 4), (4, 6))"#, statements.last)
         } else {
             XCTAssertEqual(#"DELETE FROM "DEMO_JOIN_TABLE" WHERE (("ID1" = 1 AND "ID2" = 1) OR ("ID1" = 2 AND "ID2" = 4) OR ("ID1" = 4 AND "ID2" = 6))"#, statements.last)
@@ -794,10 +798,10 @@ final class SQLContextTests: XCTestCase {
         XCTAssertEqual(#"DELETE FROM "SQL_REF" WHERE "ROWID" = 1"#, statements.last)
 
         let ref2 = try SQLRefType(context: sqlite, str: "ABC")
-        XCTAssertEqual(1, ref2.rowid, "non-autoicrement rowid should have been reused after delete")
+        XCTAssertEqual(2, ref2.rowid, "autoincrement rowid should not have been reused after delete")
 
         let ref3 = try SQLRefType(context: sqlite, str: "ABC")
-        XCTAssertEqual(2, ref3.rowid)
+        XCTAssertEqual(3, ref3.rowid)
 
         try sqlite.exec(SQLRefType.table.dropTableSQL())
     }
@@ -880,7 +884,7 @@ public extension DemoTable {
 }
 
 public struct DemoRelation : SQLCodable, Equatable {
-    public let pk: Int64?
+    public let pk: Int64
     static let pk = SQLColumn(name: "PK", type: .long, primaryKey: true, autoincrement: true)
 
     public let fk: Int64?
@@ -891,7 +895,7 @@ public struct DemoRelation : SQLCodable, Equatable {
 
     public static let table = SQLTable(name: "DEMO_RELATION", columns: [pk, fk, info])
 
-    public init(pk: Int64? = nil, fk: Int64? = nil, info: String) {
+    public init(pk: Int64 = 0, fk: Int64? = nil, info: String) {
         self.pk = pk
         self.fk = fk
         self.info = info
@@ -958,8 +962,8 @@ internal final class DemoJoinTable : DemoJoinTableBase {
 public class SQLRefType : SQLCodable {
     private let context: SQLContext
 
-    fileprivate var rowid: Int64?
-    static let rowid = SQLColumn(name: "ROWID", type: .long, primaryKey: true, autoincrement: false)
+    fileprivate var rowid: Int64
+    static let rowid = SQLColumn(name: "ROWID", type: .long, primaryKey: true, autoincrement: true)
 
     public var str: String { didSet { try? update() } }
     static let str = SQLColumn(name: "STR", type: .text, nullable: false, index: SQLIndex(name: "IDX_TXT"))
@@ -968,6 +972,7 @@ public class SQLRefType : SQLCodable {
 
     /// Create a new instance and insert it into the database
     public init(context: SQLContext, str: String) throws {
+        self.rowid = 0 // zero means it is unassigned
         self.context = context
         self.str = str
         try context.insert(self)
