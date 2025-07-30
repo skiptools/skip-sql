@@ -30,6 +30,12 @@ final class SQLContextTests: XCTestCase {
         try ctx.close()
     }
 
+    func testSQLiteVersion() throws {
+        let sqlite = SQLContext(configuration: .test)
+        logger.info("connected to SQLite version: \(sqlite.versionNumber)")
+        throw XCTSkip("Skip test for SQLite version: \(sqlite.versionNumber)")
+    }
+
     func testSQLite() throws {
         let sqlite = SQLContext(configuration: .test)
         logger.info("connected to SQLite version: \(sqlite.versionNumber)")

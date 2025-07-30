@@ -73,7 +73,7 @@ public enum SQLiteFeature {
         case .jsonFunction:           return 3_038_000 // 2022-02-22
         case .rightJoin:              return 3_039_000
         case .fullOuterJoin:          return 3_039_000
-        case .rowValueInSyntax:       return 3_039_000
+        case .rowValueInSyntax:       return 3_039_000 // https://sqlite.org/rowvalue.html#rvinop
         }
     }
 }
