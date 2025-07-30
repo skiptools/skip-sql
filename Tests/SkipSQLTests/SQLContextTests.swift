@@ -17,7 +17,6 @@ final class SQLContextTests: XCTestCase {
 
     func testSQLiteTrace() throws {
         let ctx = SQLContext(configuration: .test)
-
         // track executed SQL statements
         var sql: [String] = []
         ctx.trace { sql.append($0) }
@@ -33,6 +32,7 @@ final class SQLContextTests: XCTestCase {
 
     func testSQLite() throws {
         let sqlite = SQLContext(configuration: .test)
+        logger.info("connected to SQLite version: \(sqlite.versionNumber)")
 
         _ = try sqlite.selectAll(sql: "SELECT 1")
         _ = try sqlite.selectAll(sql: "SELECT CURRENT_TIMESTAMP")
@@ -443,6 +443,7 @@ final class SQLContextTests: XCTestCase {
         ob.id = nil // auto-assign the next row
         try sqlite.inserted(&ob)
         let ob7 = ob
+        let _ = ob7
         XCTAssertEqual(7, ob.id)
 
         ob.txt = "NMO"

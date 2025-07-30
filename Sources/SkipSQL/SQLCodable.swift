@@ -292,7 +292,7 @@ public extension SQLContext {
                 return SQLPredicate.in(pkColumn, pks.map({ $0 }))
             }
         } else {
-            if supports(feature: .rowValueSyntax) {
+            if supports(feature: .rowValueInSyntax) {
                 let columnsTuple: SQLRepresentable = SQLTuple(columns: pkColumns)
                 let valuesTuples: [SQLRepresentable] = pkValues.map({ SQLTuple(values: $0) })
                 // multiple primary keys: query based on the tuple
