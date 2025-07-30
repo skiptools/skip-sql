@@ -265,6 +265,16 @@ public extension SQLContext {
         return stmnt
     }
 
+    @inline(__always) func count<T: SQLCodable>(_ type: T.Type, where: SQLPredicate? = nil) throws -> Int64 {
+        // SKIP INSERT: val T = T::class.companionObjectInstance as SQLCodableCompanion // needed to access statics in generic constrained type
+        var countSQL = SQLExpression("SELECT COUNT(*) FROM " + T.table.quotedName)
+        if let `where` {
+            countSQL.append(" WHERE ")
+            `where`.apply(to: &countSQL)
+        }
+        return try cursor(countSQL).map({ try $0.get() }).first?.first?.longValue ?? 0
+    }
+
     /// Delete the given instances from the database. Instances must have at least one primary key defined.
     @inline(__always) func delete<T: SQLCodable>(instances: [T]) throws {
         try delete(T.self, where: primaryKeyQuery(instances))
