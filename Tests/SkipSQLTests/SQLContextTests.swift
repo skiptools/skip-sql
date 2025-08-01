@@ -392,7 +392,9 @@ final class SQLContextTests: XCTestCase {
             try sqlite.prepare(sql: "SELECT COUNT(\(distinct ? "DISTINCT" : "") \(columns)) FROM \"\(table)\"").nextValues(close: true)?.first
         }
 
-        try sqlite.exec(DemoTable.table.createTableSQL())
+        for ddl in DemoTable.table.createTableSQL(withIndexes: false) {
+            try sqlite.exec(ddl)
+        }
         XCTAssertEqual(#"CREATE TABLE "DEMO_TABLE" ("ID" INTEGER PRIMARY KEY AUTOINCREMENT, "TXT" TEXT UNIQUE NOT NULL, "NUM" REAL, "INT" INTEGER NOT NULL, "DBL" REAL DEFAULT 3.141592653589793, "BLB" BLOB)"#, statements.last)
 
         try check(count: 0)
@@ -569,13 +571,19 @@ final class SQLContextTests: XCTestCase {
         try check(count: 5, .equals(DemoTable.dbl, SQLValue(Double.pi)),
                   sql: #"SELECT "ID", "TXT", "NUM", "INT", "DBL", "BLB" FROM "DEMO_TABLE" WHERE "DBL" = 3.14159265358979"#)
 
-        try sqlite.exec(DemoRelation.table.createTableSQL())
+        for ddl in DemoRelation.table.createTableSQL(withIndexes: false) {
+            try sqlite.exec(ddl)
+        }
         XCTAssertEqual(#"CREATE TABLE "DEMO_RELATION" ("PK" INTEGER PRIMARY KEY AUTOINCREMENT, "FK" INTEGER, "INFO" TEXT UNIQUE NOT NULL, FOREIGN KEY ("FK") REFERENCES "DEMO_TABLE"("ID") ON DELETE SET NULL)"#, statements.last)
 
-        try sqlite.exec(DemoJoinTable.table.createTableSQL())
+        for ddl in DemoJoinTable.table.createTableSQL(withIndexes: false) {
+            try sqlite.exec(ddl)
+        }
         XCTAssertEqual(#"CREATE TABLE "DEMO_JOIN_TABLE" ("ID1" INTEGER NOT NULL, "ID2" INTEGER NOT NULL, PRIMARY KEY ("ID1", "ID2"), FOREIGN KEY ("ID1") REFERENCES "DEMO_TABLE"("ID") ON DELETE CASCADE, FOREIGN KEY ("ID2") REFERENCES "DEMO_TABLE"("ID") ON DELETE CASCADE)"#, statements.last)
 
-        try DemoTable.table.createIndexSQL().forEach { try sqlite.exec($0) }
+        try DemoTable.table.createIndexSQL().forEach {
+            try sqlite.exec($0)
+        }
         XCTAssertEqual(#"CREATE INDEX "IDX_DBL" ON "DEMO_TABLE"("DBL")"#, statements.last)
 
         let joinOb1 = try sqlite.insert(DemoJoinTable(id1: 1, id2: 1))
@@ -780,7 +788,7 @@ final class SQLContextTests: XCTestCase {
             statements.append(sql)
         }
 
-        try ([SQLRefType.table.createTableSQL()] + SQLRefType.table.createIndexSQL()).forEach {
+        try (SQLRefType.table.createTableSQL(withIndexes: true)).forEach {
             try sqlite.exec($0)
         }
 

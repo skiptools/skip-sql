@@ -42,19 +42,22 @@ public struct SQLTable : Hashable, Sendable {
     }
     
     /// Returns the SQL to create this table.
-    public func createTableSQL(ifNotExists: Bool = false, clauses additionalClauses: [String] = []) -> SQLExpression {
+    public func createTableSQL(ifNotExists: Bool = false, withIndexes: Bool = true, columns: [SQLColumn]? = nil, additionalClauses: [String] = []) -> [SQLExpression] {
         var sql = "CREATE TABLE "
         if ifNotExists {
             sql += "IF NOT EXISTS "
         }
+
+        let columns = columns ?? self.columns
+
         var clauses: [String] = []
-        let pkColumns = self.columns.filter(\.primaryKey)
+        let pkColumns = columns.filter(\.primaryKey)
         if pkColumns.count >= 2 {
             // primary key clause added to the end only when there are multiple PKs for the table
             clauses.append("PRIMARY KEY (\(pkColumns.map(\.quotedName).joined(separator: ", ")))")
         }
 
-        let fkColumns = self.columns.filter({ $0.references != nil })
+        let fkColumns = columns.filter({ $0.references != nil })
         for fkColumn in fkColumns {
             // add in any foreign key clauses
             if let reference = fkColumn.references {
@@ -67,18 +70,32 @@ public struct SQLTable : Hashable, Sendable {
 
         sql += self.quotedName
         sql += " ("
-        sql += (self.columns.map({ col in
+        sql += (columns.map({ col in
             col.definition(withPrimaryKey: pkColumns.count == 1)
         }) + clauses).joined(separator: ", ")
         sql += ")"
 
+        return [SQLExpression(sql)] + (withIndexes ? createIndexSQL(ifNotExists: ifNotExists, columns: columns) : [])
+    }
+    
+    /// Returns the SQL to add a column to the given table
+    public func addColumnSQL(column: SQLColumn, withIndexes: Bool = true) -> [SQLExpression] {
+        var sql = "ALTER TABLE \(self.quotedName) ADD COLUMN "
+        sql += column.definition(withPrimaryKey: false)
+        return [SQLExpression(sql)] + (withIndexes ? createIndexSQL(columns: [column]) : [])
+    }
+
+    /// Returns the SQL to add a column to the given table
+    public func dropColumnSQL(column: SQLColumn) -> SQLExpression {
+        var sql = "ALTER TABLE \(self.quotedName) DROP COLUMN "
+        sql += column.quotedName
         return SQLExpression(sql)
     }
 
     /// Returns the SQL to create any indices on this table.
-    public func createIndexSQL(ifNotExists: Bool = false) -> [SQLExpression] {
+    public func createIndexSQL(ifNotExists: Bool = false, columns: [SQLColumn]? = nil) -> [SQLExpression] {
         var stmnts: [SQLExpression] = []
-        for column in self.columns {
+        for column in columns ?? self.columns {
             if let index = column.index {
                 var sql = "CREATE INDEX "
                 if ifNotExists {
@@ -387,11 +404,10 @@ public extension SQLContext {
             expression.append(")")
         }
 
-        if update == false,
-            upsert == true,
-            let pkColumn = columns.first(where: { $0.primaryKey == true }) {
+        let pkColumns = T.primaryKeyColumns
+        if update == false, upsert == true, !pkColumns.isEmpty {
             expression.append(" ON CONFLICT(")
-            expression.append(pkColumn.quotedName)
+            expression.append(pkColumns.map(\.quotedName).joined(separator: ", "))
             expression.append(") DO UPDATE SET ")
             for (index, col) in columns.enumerated() {
                 if index != 0 {

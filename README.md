@@ -123,7 +123,7 @@ SkipSQL includes a basic mechanism for mapping Swift types to tables through the
 ```swift
 /// A struct that can read and write its values to the `DEMO_TABLE` table.
 public struct DemoTable : SQLCodable, Equatable {
-    public var id: Int64?
+    public var id: Int64
     static let id = SQLColumn(name: "ID", type: .long, primaryKey: true, autoincrement: true)
 
     public var txt: String?
@@ -143,7 +143,7 @@ public struct DemoTable : SQLCodable, Equatable {
 
     public static let table = SQLTable(name: "DEMO_TABLE", columns: [id, txt, num, int, dbl, blb])
 
-    public init(id: Int64? = nil, txt: String? = nil, num: Double? = nil, int: Int, dbl: Double? = nil, blb: Data? = nil) {
+    public init(id: Int64 = 0, txt: String? = nil, num: Double? = nil, int: Int, dbl: Double? = nil, blb: Data? = nil) {
         self.id = id
         self.txt = txt
         self.num = num
@@ -189,6 +189,74 @@ while let row = cursor.next() {
     logger.log("got instance: \(instance)")
 }
 ```
+
+### Primary keys and auto-increment columns
+
+SkipSQL supports primary keys that work with SQLite's ROWID mechanism,
+such that when an `INTEGER` column (i.e., `SQLValue.long`) is the primary
+key, the same storage is used as the underlying `ROWID` that all tables
+automatically have.
+
+The property that be either an optional `Int64?`, or if it marked with
+`autoincrement: true` and the type is a non-optional `Int64`, then inserting
+a value with the id property set to `0` will automatically assign the
+primary key when `.insert(ob)` is called. This enables a table to
+have a required primary key (which is useful when implementing `Identifiable`)
+with the special sentinal calue of `0` that indicates that it is a new instance.
+
+```swift
+public var id: Int64
+static let id = SQLColumn(name: "ID", type: .long, primaryKey: true, autoincrement: true)
+```
+
+If the primary key is not marked with `autoincrement: true` and the
+property is not optional, then it is assumed that the primary key
+is manually assigned by the developer and care must be taken to
+ensure that duplicate values are not inserted.
+
+### Relations and joins
+
+SkipSQL is not a complete object-relational mapping (ORM) package,
+but it does contain the ability to perform joins across multiple
+`SQLCodable` tables.
+
+```swift
+/// A struct that can read and write its values to the `DEMO_TABLE` table.
+public struct DemoParent : SQLCodable {
+    public var id: Int64
+    static let id = SQLColumn(name: "ID", type: .long, primaryKey: true, autoincrement: true)
+
+    public var parentInfo: String?
+    static let parentInfo = SQLColumn(name: "PARENT_INFO", type: .text)
+    
+    public static let table = SQLTable(name: "DEMO_TABLE", columns: [id, parentInfo])
+}
+
+public struct DemoChild : SQLCodable {
+    public var id: Int64
+    static let id = SQLColumn(name: "ID", type: .long, primaryKey: true, autoincrement: true)
+
+    public var parentID: Int64
+    static let parentID = SQLColumn(name: "PARENT_ID", type: .long, references: SQLForeignKey(table: DemoParent.table, column: DemoParent.id, onDelete: .cascade))
+
+    public var childInfo: String?
+    static let childInfo = SQLColumn(name: "CHILD_INFO", type: .text)
+    
+    public static let table = SQLTable(name: "DEMO_CHILD", columns: [id, parentID, childInfo])
+}
+
+// perform a join between all the parents and children
+let joined2: [(DemoParent?, DemoChild?)] = try sqlite.query(DemoParent.self, "t0",
+    join: .inner, on: DemoChild.parentID,
+    DemoChild.self, "t1").load()
+
+```
+
+This operation will perform a one-to-many inner join from the `DemoParent`
+to the `DemoChild` tables, and return a list of tuples between the matching
+instances. Note that the tuple values are types as optionals, because for
+outer join types, it is possible to have empty rows, which would map to
+`nil` values.
 
 ## Implementation
 

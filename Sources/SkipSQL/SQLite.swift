@@ -147,7 +147,7 @@ public enum SQLValue : Hashable, Sendable, CustomStringConvertible {
         case .null: return "NULL"
         }
     }
-
+    
     public var longValue: Int64? {
         switch self {
         case .long(let long): return long
