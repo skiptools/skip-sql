@@ -123,18 +123,11 @@ SkipSQL includes a basic mechanism for mapping Swift types to tables through the
 ```swift
 /// A struct that can read and write its values to the `DEMO_TABLE` table.
 public struct DemoTable : SQLCodable, Equatable {
-    public static var tableName = "DEMO_TABLE"
-
-    /// All the columns defined for this table
-    public static var columns: [SQLColumn] {
-        [id, txt, num, int, dbl, blb]
-    }
-
-    public var id: Int64?
+    public var id: Int64
     static let id = SQLColumn(name: "ID", type: .long, primaryKey: true, autoincrement: true)
 
     public var txt: String?
-    static let txt = SQLColumn(name: "TXT", type: .text, unique: true, nullable: false)
+    static let txt = SQLColumn(name: "TXT", type: .text, unique: true, nullable: false, index: SQLIndex(name: "IDX_TXT"))
 
     public var num: Double?
     static let num = SQLColumn(name: "NUM", type: .real)
@@ -143,60 +136,38 @@ public struct DemoTable : SQLCodable, Equatable {
     static let int = SQLColumn(name: "INT", type: .long, nullable: false)
 
     public var dbl: Double?
-    static let dbl = SQLColumn(name: "DBL", type: .real, defaultValue: SQLValue(Double.pi))
+    static let dbl = SQLColumn(name: "DBL", type: .real, defaultValue: SQLValue(Double.pi), index: SQLIndex(name: "IDX_DBL", unique: false))
 
     public var blb: Data?
     static let blb = SQLColumn(name: "BLB", type: .blob)
 
-    /// Returns a `SQLValue` for the specified `SQLColumn`
-    public func binding(forColumn column: SQLColumn) throws -> SQLValue {
-        switch column {
-        case Self.id: return SQLValue(self.id)
-        case Self.txt: return SQLValue(self.txt)
-        case Self.num: return SQLValue(self.num)
-        case Self.int: return SQLValue(self.int)
-        case Self.dbl: return SQLValue(self.dbl)
-        case Self.blb: return SQLValue(self.blb)
-        default: throw SQLBindingError.unknownColumn(column)
-        }
-    }
+    public static let table = SQLTable(name: "DEMO_TABLE", columns: [id, txt, num, int, dbl, blb])
 
-    /// Updates the value of the given column with the given value
-    public mutating func update(column: SQLColumn, value: SQLValue) throws {
-        switch column {
-        case Self.id: self.id = value.longValue
-        case Self.txt: self.txt = value.textValue
-        case Self.num: self.num = value.realValue
-        case Self.int: self.int = .init(try SQLBindingError.checkNonNull(value.longValue, column))
-        case Self.dbl: self.dbl = value.realValue
-        case Self.blb: self.blb = value.blobValue
-        default: throw SQLBindingError.unknownColumn(column)
-        }
-    }
-
-    /// Create an instance of this type from the given row values
-    public static func create(withRow row: [SQLValue], fromColumns: [SQLColumn]? = nil) throws -> Self {
-        try DemoTable(withRow: row, fromColumns: fromColumns)
-    }
-
-    init(withRow row: [SQLValue], fromColumns: [SQLColumn]? = nil) throws {
-        self.int = 0 // need to initialize any non-nil instances with placeholder values
-        let columns = fromColumns ?? Self.columns
-        if row.count != columns.count {
-            throw SQLBindingError.columnValuesMismatch(row.count, columns.count)
-        }
-        for (value, column) in zip(row, columns) {
-            try update(column: column, value: value)
-        }
-    }
-
-    public init(id: Int64? = nil, txt: String? = nil, num: Double? = nil, int: Int, dbl: Double? = nil, blb: Data? = nil) {
+    public init(id: Int64 = 0, txt: String? = nil, num: Double? = nil, int: Int, dbl: Double? = nil, blb: Data? = nil) {
         self.id = id
         self.txt = txt
         self.num = num
         self.int = int
         self.dbl = dbl
         self.blb = blb
+    }
+
+    public init(row: SQLRow) throws {
+        self.id = try Self.id.longValueRequired(in: row)
+        self.txt = try Self.txt.textValueRequired(in: row)
+        self.num = Self.num.realValue(in: row)
+        self.int = try Int(Self.int.longValueRequired(in: row))
+        self.dbl = Self.dbl.realValue(in: row)
+        self.blb = Self.blb.blobValue(in: row)
+    }
+
+    public func encode(row: inout SQLRow) throws {
+        row[Self.id] = SQLValue(self.id)
+        row[Self.txt] = SQLValue(self.txt)
+        row[Self.num] = SQLValue(self.num)
+        row[Self.int] = SQLValue(self.int)
+        row[Self.dbl] = SQLValue(self.dbl)
+        row[Self.blb] = SQLValue(self.blb)
     }
 }
 ```
@@ -209,7 +180,7 @@ The `SQLPredicate` type enables querying the database for instances of a `SQLCod
 // issues: SELECT "ID", "TXT", "NUM", "INT", "DBL", "BLB" FROM "DEMO_TABLE" WHERE ("NUM" IS NULL OR "TXT" = 'ABC')
 let predicate = DemoTable.num.isNull().or(DemoTable.txt.equals(SQLValue("ABC")))
 
-let resultSet = try sqlite.query(DemoTable.self, with: [predicate])
+let resultSet = try sqlite.query(DemoTable.self, where: predicate)
 defer { resultSet.close() }
 
 let cursor = resultSet.makeIterator()
@@ -218,6 +189,74 @@ while let row = cursor.next() {
     logger.log("got instance: \(instance)")
 }
 ```
+
+### Primary keys and auto-increment columns
+
+SkipSQL supports primary keys that work with SQLite's ROWID mechanism,
+such that when an `INTEGER` column (i.e., `SQLValue.long`) is the primary
+key, the same storage is used as the underlying `ROWID` that all tables
+automatically have.
+
+The property that be either an optional `Int64?`, or if it marked with
+`autoincrement: true` and the type is a non-optional `Int64`, then inserting
+a value with the id property set to `0` will automatically assign the
+primary key when `.insert(ob)` is called. This enables a table to
+have a required primary key (which is useful when implementing `Identifiable`)
+with the special sentinal calue of `0` that indicates that it is a new instance.
+
+```swift
+public var id: Int64
+static let id = SQLColumn(name: "ID", type: .long, primaryKey: true, autoincrement: true)
+```
+
+If the primary key is not marked with `autoincrement: true` and the
+property is not optional, then it is assumed that the primary key
+is manually assigned by the developer and care must be taken to
+ensure that duplicate values are not inserted.
+
+### Relations and joins
+
+SkipSQL is not a complete object-relational mapping (ORM) package,
+but it does contain the ability to perform joins across multiple
+`SQLCodable` tables.
+
+```swift
+/// A struct that can read and write its values to the `DEMO_TABLE` table.
+public struct DemoParent : SQLCodable {
+    public var id: Int64
+    static let id = SQLColumn(name: "ID", type: .long, primaryKey: true, autoincrement: true)
+
+    public var parentInfo: String?
+    static let parentInfo = SQLColumn(name: "PARENT_INFO", type: .text)
+    
+    public static let table = SQLTable(name: "DEMO_TABLE", columns: [id, parentInfo])
+}
+
+public struct DemoChild : SQLCodable {
+    public var id: Int64
+    static let id = SQLColumn(name: "ID", type: .long, primaryKey: true, autoincrement: true)
+
+    public var parentID: Int64
+    static let parentID = SQLColumn(name: "PARENT_ID", type: .long, references: SQLForeignKey(table: DemoParent.table, column: DemoParent.id, onDelete: .cascade))
+
+    public var childInfo: String?
+    static let childInfo = SQLColumn(name: "CHILD_INFO", type: .text)
+    
+    public static let table = SQLTable(name: "DEMO_CHILD", columns: [id, parentID, childInfo])
+}
+
+// perform a join between all the parents and children
+let joined2: [(DemoParent?, DemoChild?)] = try sqlite.query(DemoParent.self, "t0",
+    join: .inner, on: DemoChild.parentID,
+    DemoChild.self, "t1").load()
+
+```
+
+This operation will perform a one-to-many inner join from the `DemoParent`
+to the `DemoChild` tables, and return a list of tuples between the matching
+instances. Note that the tuple values are types as optionals, because for
+outer join types, it is possible to have empty rows, which would map to
+`nil` values.
 
 ## Implementation
 

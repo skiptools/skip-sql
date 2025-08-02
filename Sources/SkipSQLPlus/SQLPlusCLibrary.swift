@@ -197,6 +197,10 @@ internal final class SQLPlusCLibrary : SQLiteLibrary {
         SQLExt.sqlite3_shutdown()
     }
 
+    func sqlite3_libversion_number() -> Int32 {
+        SQLExt.sqlite3_libversion_number()
+    }
+
     func sqlite3_extended_result_codes(_ db: OpaquePointer, _ on: Int32) -> Int32 {
         SQLExt.sqlite3_extended_result_codes(db, on)
     }

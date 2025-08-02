@@ -49,6 +49,35 @@ public enum SQLAction : Int32 {
     }
 }
 
+public enum SQLiteFeature {
+    case rowValueSyntax               // WHERE (a,b) = (1,2)
+    case renameColumn                 // ALTER TABLE ... RENAME COLUMN
+    case partialIntegrityCheck        // PRAGMA integrity_check(table)
+    case sqliteSchemaTable            // sqlite_master => sqlite_schema
+    case selectReturning              // SELECT ... RETURNING
+    case dropColumn                   // ALTER TABLE ... DROP COLUMN
+    case jsonFunction                 // JSON()
+    case rightJoin                    // RIGHT JOIN
+    case fullOuterJoin                // FULL OUTER JOIN
+    case rowValueInSyntax             // WHERE (a,b) IN ((1,2), (3,4))
+
+    /// The minimum SQLite version for the given feature
+    public var minimumSupportedVersion: Int32 {
+        switch self {
+        case .rowValueSyntax:         return 3_015_000 // https://sqlite.org/rowvalue.html#backwards_compatibility
+        case .renameColumn:           return 3_025_000
+        case .partialIntegrityCheck:  return 3_033_000
+        case .sqliteSchemaTable:      return 3_033_000
+        case .selectReturning:        return 3_035_000
+        case .dropColumn:             return 3_035_000
+        case .jsonFunction:           return 3_038_000 // 2022-02-22
+        case .rightJoin:              return 3_039_000
+        case .fullOuterJoin:          return 3_039_000
+        case .rowValueInSyntax:       return 3_039_000 // https://sqlite.org/rowvalue.html#rvinop, supposedly 3.24, but observed to fail in 3.28
+        }
+    }
+}
+
 /// The return value of `sqlite3_column_type()` can be used to decide which
 /// of the first six interface should be used to extract the column value.
 /// The value returned by `sqlite3_column_type()` is only meaningful if no
@@ -118,7 +147,7 @@ public enum SQLValue : Hashable, Sendable, CustomStringConvertible {
         case .null: return "NULL"
         }
     }
-
+    
     public var longValue: Int64? {
         switch self {
         case .long(let long): return long

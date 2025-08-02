@@ -11,12 +11,12 @@ final class SQLPlusTests: XCTestCase {
 
     func testSQLPlus() throws {
         let sqlplus = SQLContext(configuration: .plus)
-        _ = try sqlplus.query(sql: "SELECT 1")
-        _ = try sqlplus.query(sql: "SELECT CURRENT_TIMESTAMP")
-        _ = try sqlplus.query(sql: "PRAGMA compile_options")
+        _ = try sqlplus.selectAll(sql: "SELECT 1")
+        _ = try sqlplus.selectAll(sql: "SELECT CURRENT_TIMESTAMP")
+        _ = try sqlplus.selectAll(sql: "PRAGMA compile_options")
 
         // ensure that FTS works
-        _ = try sqlplus.query(sql: "CREATE VIRTUAL TABLE \"documents\" USING fts5(content)")
+        _ = try sqlplus.selectAll(sql: "CREATE VIRTUAL TABLE \"documents\" USING fts5(content)")
 
         let stmnt = try sqlplus.prepare(sql: "SELECT 1")
         XCTAssertEqual("SELECT 1", stmnt.sql)
@@ -25,45 +25,45 @@ final class SQLPlusTests: XCTestCase {
         try stmnt.close()
 
         // the locally built SQLite version (contrast with the macOS version 3.43.2)
-        XCTAssertEqual([SQLValue.text("3.49.2")], try sqlplus.query(sql: "SELECT sqlite_version()").first)
-        XCTAssertEqual([SQLValue.text("ATOMIC_INTRINSICS=1")], try sqlplus.query(sql: "PRAGMA compile_options").first)
-        XCTAssertEqual([SQLValue.text("4.9.0 community")], try sqlplus.query(sql: "PRAGMA cipher_version").first)
-        //XCTAssertEqual([SQLValue.text("PRAGMA cipher_default_kdf_iter = 256000")], try sqlplus.query(sql: "PRAGMA cipher_default_settings").first)
-        //XCTAssertEqual([SQLValue.text("XXX")], try sqlplus.query(sql: "PRAGMA cipher_provider").first)
-        //XCTAssertEqual([SQLValue.text("XXX")], try sqlplus.query(sql: "PRAGMA cipher_provider_version").first)
+        XCTAssertEqual([SQLValue.text("3.49.2")], try sqlplus.selectAll(sql: "SELECT sqlite_version()").first)
+        XCTAssertEqual([SQLValue.text("ATOMIC_INTRINSICS=1")], try sqlplus.selectAll(sql: "PRAGMA compile_options").first)
+        XCTAssertEqual([SQLValue.text("4.9.0 community")], try sqlplus.selectAll(sql: "PRAGMA cipher_version").first)
+        //XCTAssertEqual([SQLValue.text("PRAGMA cipher_default_kdf_iter = 256000")], try sqlplus.selectAll(sql: "PRAGMA cipher_default_settings").first)
+        //XCTAssertEqual([SQLValue.text("XXX")], try sqlplus.selectAll(sql: "PRAGMA cipher_provider").first)
+        //XCTAssertEqual([SQLValue.text("XXX")], try sqlplus.selectAll(sql: "PRAGMA cipher_provider_version").first)
     }
 
     func testSQLiteJSON() throws {
         let sqlplus = SQLContext(configuration: .plus)
         // The $[#] path feature in the JSON functions was added in version 3.31.0
-        XCTAssertEqual([SQLValue.text("3.49.2")], try sqlplus.query(sql: "SELECT sqlite_version()").first)
+        XCTAssertEqual([SQLValue.text("3.49.2")], try sqlplus.selectAll(sql: "SELECT sqlite_version()").first)
 
         try sqlplus.exec(sql: #"CREATE TABLE users (id INTEGER PRIMARY KEY, profile JSON)"#)
 
         try sqlplus.exec(sql: #"INSERT INTO users (id, profile) VALUES (1, ?)"#, parameters: [.text(#"{"name": "Alice", "age": 30}"#)])
         try sqlplus.exec(sql: #"INSERT INTO users (id, profile) VALUES (2, ?)"#, parameters: [.text(#"{"name": "Bob", "age": 25}"#)])
 
-        let j1 = try sqlplus.query(sql: "SELECT json_extract(profile, '$.name') as name FROM users WHERE id = ?", parameters: [.long(1)]).first
+        let j1 = try sqlplus.selectAll(sql: "SELECT json_extract(profile, '$.name') as name FROM users WHERE id = ?", parameters: [.long(1)]).first
         XCTAssertEqual([.text("Alice")], j1)
 
-        let j2 = try sqlplus.query(sql: "SELECT json_extract(profile, '$.name') as name, json_extract(profile, '$.age') as age FROM users WHERE id = ?", parameters: [.long(2)]).first
+        let j2 = try sqlplus.selectAll(sql: "SELECT json_extract(profile, '$.name') as name, json_extract(profile, '$.age') as age FROM users WHERE id = ?", parameters: [.long(2)]).first
         XCTAssertEqual([.text("Bob"), .long(25)], j2)
 
-        XCTAssertEqual([.text("[1]")], try sqlplus.query(sql: "SELECT JSON_QUOTE(JSON('[1]'))").first)
-        XCTAssertEqual([.long(0)], try sqlplus.query(sql: "SELECT JSON_VALID('{\"x\":35')").first)
-        XCTAssertEqual([.text("array")], try sqlplus.query(sql: "SELECT JSON_TYPE('{\"a\":[2,3.5,true,false,null,\"x\"]}', '$.a')").first)
-        XCTAssertEqual([.text("[1,3,4]")], try sqlplus.query(sql: "SELECT JSON_REMOVE('[0,1,2,3,4]', '$[2]','$[0]')").first)
-        XCTAssertEqual([.text("[1,3,4]")], try sqlplus.query(sql: "SELECT JSON_REMOVE('[0,1,2,3,4]', '$[2]','$[0]')").first)
-        XCTAssertEqual([.text("{\"a\":1,\"b\":2,\"c\":3,\"d\":4}")], try sqlplus.query(sql: "SELECT JSON_PATCH('{\"a\":1,\"b\":2}','{\"c\":3,\"d\":4}')").first)
-        XCTAssertEqual([.text("{\"c\":{\"e\":5}}")], try sqlplus.query(sql: "SELECT JSON_OBJECT('c', JSON('{\"e\":5}'))").first)
-        XCTAssertEqual([.text("{\"a\":99,\"c\":4}")], try sqlplus.query(sql: "SELECT JSON_SET('{\"a\":2,\"c\":4}', '$.a', 99)").first)
-        XCTAssertEqual([.text("{\"a\":99,\"c\":4}")], try sqlplus.query(sql: "SELECT JSON_REPLACE('{\"a\":2,\"c\":4}', '$.a', 99)").first)
-        XCTAssertEqual([.text("[1,2,3,4,99]")], try sqlplus.query(sql: "SELECT JSON_INSERT('[1,2,3,4]','$[#]',99)").first)
-        XCTAssertEqual([.text("[[4,5],2]")], try sqlplus.query(sql: "SELECT JSON_EXTRACT('{\"a\":2,\"c\":[4,5]}','$.c','$.a')").first)
-        XCTAssertEqual([.long(3)], try sqlplus.query(sql: "SELECT JSON_ARRAY_LENGTH('{\"one\":[1,2,3]}', '$.one')").first)
-        XCTAssertEqual([.long(4)], try sqlplus.query(sql: "SELECT JSON_ARRAY_LENGTH('[1,2,3,4]')").first)
-        XCTAssertEqual([.text("[1,2,\"3\",4]")], try sqlplus.query(sql: "SELECT JSON_ARRAY(1, 2, '3', 4)").first)
-        XCTAssertEqual([.text("{\"a\":1,\"b\":2,\"c\":3,\"d\":4}")], try sqlplus.query(sql: "SELECT JSON_PATCH('{\"a\":1,\"b\":2}', '{\"c\":3,\"d\":4}')").first)
+        XCTAssertEqual([.text("[1]")], try sqlplus.selectAll(sql: "SELECT JSON_QUOTE(JSON('[1]'))").first)
+        XCTAssertEqual([.long(0)], try sqlplus.selectAll(sql: "SELECT JSON_VALID('{\"x\":35')").first)
+        XCTAssertEqual([.text("array")], try sqlplus.selectAll(sql: "SELECT JSON_TYPE('{\"a\":[2,3.5,true,false,null,\"x\"]}', '$.a')").first)
+        XCTAssertEqual([.text("[1,3,4]")], try sqlplus.selectAll(sql: "SELECT JSON_REMOVE('[0,1,2,3,4]', '$[2]','$[0]')").first)
+        XCTAssertEqual([.text("[1,3,4]")], try sqlplus.selectAll(sql: "SELECT JSON_REMOVE('[0,1,2,3,4]', '$[2]','$[0]')").first)
+        XCTAssertEqual([.text("{\"a\":1,\"b\":2,\"c\":3,\"d\":4}")], try sqlplus.selectAll(sql: "SELECT JSON_PATCH('{\"a\":1,\"b\":2}','{\"c\":3,\"d\":4}')").first)
+        XCTAssertEqual([.text("{\"c\":{\"e\":5}}")], try sqlplus.selectAll(sql: "SELECT JSON_OBJECT('c', JSON('{\"e\":5}'))").first)
+        XCTAssertEqual([.text("{\"a\":99,\"c\":4}")], try sqlplus.selectAll(sql: "SELECT JSON_SET('{\"a\":2,\"c\":4}', '$.a', 99)").first)
+        XCTAssertEqual([.text("{\"a\":99,\"c\":4}")], try sqlplus.selectAll(sql: "SELECT JSON_REPLACE('{\"a\":2,\"c\":4}', '$.a', 99)").first)
+        XCTAssertEqual([.text("[1,2,3,4,99]")], try sqlplus.selectAll(sql: "SELECT JSON_INSERT('[1,2,3,4]','$[#]',99)").first)
+        XCTAssertEqual([.text("[[4,5],2]")], try sqlplus.selectAll(sql: "SELECT JSON_EXTRACT('{\"a\":2,\"c\":[4,5]}','$.c','$.a')").first)
+        XCTAssertEqual([.long(3)], try sqlplus.selectAll(sql: "SELECT JSON_ARRAY_LENGTH('{\"one\":[1,2,3]}', '$.one')").first)
+        XCTAssertEqual([.long(4)], try sqlplus.selectAll(sql: "SELECT JSON_ARRAY_LENGTH('[1,2,3,4]')").first)
+        XCTAssertEqual([.text("[1,2,\"3\",4]")], try sqlplus.selectAll(sql: "SELECT JSON_ARRAY(1, 2, '3', 4)").first)
+        XCTAssertEqual([.text("{\"a\":1,\"b\":2,\"c\":3,\"d\":4}")], try sqlplus.selectAll(sql: "SELECT JSON_PATCH('{\"a\":1,\"b\":2}', '{\"c\":3,\"d\":4}')").first)
     }
 
     func testSQLCipher() throws {
@@ -73,15 +73,15 @@ final class SQLPlusTests: XCTestCase {
             logger.log("testEncryption: checking db: \(dbPath.path)")
             let db = try SQLContext(path: dbPath.path, flags: [.create, .readWrite], configuration: .plus)
             if let key = key {
-                _ = try db.query(sql: "PRAGMA key = '\(key)'")
+                _ = try db.selectAll(sql: "PRAGMA key = '\(key)'")
             }
             if let plaintextHeader = plaintextHeader {
-                _ = try db.query(sql: "PRAGMA cipher_plaintext_header_size = \(plaintextHeader)")
+                _ = try db.selectAll(sql: "PRAGMA cipher_plaintext_header_size = \(plaintextHeader)")
             }
 
-            //_ = try db.query(sql: #"PRAGMA cipher_plaintext_header_size = 32"#)
-            //_ = try db.query(sql: #"PRAGMA cipher_salt = "x'01010101010101010101010101010101'""#)
-            //_ = try db.query(sql: #"PRAGMA user_version = 1; -- force header write"#)
+            //_ = try db.selectAll(sql: #"PRAGMA cipher_plaintext_header_size = 32"#)
+            //_ = try db.selectAll(sql: #"PRAGMA cipher_salt = "x'01010101010101010101010101010101'""#)
+            //_ = try db.selectAll(sql: #"PRAGMA user_version = 1; -- force header write"#)
 
             try db.exec(sql: #"CREATE TABLE SOME_TABLE(col)"#)
             try db.exec(sql: #"INSERT INTO SOME_TABLE(col) VALUES(?)"#, parameters: [.text(string)])

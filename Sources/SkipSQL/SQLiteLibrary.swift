@@ -107,6 +107,8 @@ public protocol SQLiteLibrary : NativeLibrary {
     // Other Functions
     func sqlite3_initialize() -> Int32
     func sqlite3_shutdown() -> Int32
+    func sqlite3_libversion_number() -> Int32
+
     //func sqlite3_config(option: Int32, values: Object...) -> Int32
     func sqlite3_extended_result_codes(_ db: OpaquePointer, _ on: Int32) -> Int32
     #if SKIP
