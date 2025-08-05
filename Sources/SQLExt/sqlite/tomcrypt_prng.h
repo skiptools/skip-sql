@@ -1,6 +1,8 @@
 /* LibTomCrypt, modular cryptographic library -- Tom St Denis */
 /* SPDX-License-Identifier: Unlicense */
 
+#pragma once
+
 /* ---- PRNG Stuff ---- */
 #ifdef LTC_YARROW
 struct yarrow_prng {

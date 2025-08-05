@@ -1,6 +1,8 @@
 /* LibTomCrypt, modular cryptographic library -- Tom St Denis */
 /* SPDX-License-Identifier: Unlicense */
 
+#pragma once
+
 /* ---- HASH FUNCTIONS ---- */
 #if defined(LTC_SHA3) || defined(LTC_KECCAK)
 struct sha3_state {

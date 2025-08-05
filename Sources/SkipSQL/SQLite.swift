@@ -1,7 +1,6 @@
 // Copyright 2023–2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 import Foundation
-import OSLog
 #if SKIP
 import SkipFFI
 #endif
@@ -28,8 +27,11 @@ public struct SQLiteConfiguration {
     public static let platform: SQLiteConfiguration = {
         #if SKIP
         SQLiteConfiguration(library: SQLiteJNALibrary.shared)
-        #else
+        #elseif canImport(SQLite3)
         SQLiteConfiguration(library: SQLiteCLibrary.shared)
+        #else
+        // on Android you need to use SQLPlus
+        fatalError("no platform SQLiteCLibrary available; use SkipSQLPlus instead")
         #endif
     }()
 }

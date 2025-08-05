@@ -1,6 +1,8 @@
 /* LibTomCrypt, modular cryptographic library -- Tom St Denis */
 /* SPDX-License-Identifier: Unlicense */
 
+#pragma once
+
 /* This is the build config file.
  *
  * With this you can setup what to include/exclude automatically during any build.  Just comment

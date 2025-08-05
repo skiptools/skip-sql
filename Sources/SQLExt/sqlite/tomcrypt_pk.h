@@ -1,6 +1,8 @@
 /* LibTomCrypt, modular cryptographic library -- Tom St Denis */
 /* SPDX-License-Identifier: Unlicense */
 
+#pragma once
+
 /* ---- NUMBER THEORY ---- */
 
 enum public_key_type {
