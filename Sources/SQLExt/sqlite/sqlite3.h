@@ -13463,21 +13463,21 @@ struct Fts5ExtensionApi {
   void (*xPhraseNextColumn)(Fts5Context*, Fts5PhraseIter*, int *piCol);
 
   /* Below this point are iVersion>=3 only */
-  int (*xQueryToken)(Fts5Context*,
-      int iPhrase, int iToken,
-      const char **ppToken, int *pnToken
-  );
-  int (*xInstToken)(Fts5Context*, int iIdx, int iToken, const char**, int*);
-
-  /* Below this point are iVersion>=4 only */
-  int (*xColumnLocale)(Fts5Context*, int iCol, const char **pz, int *pn);
-  int (*xTokenize_v2)(Fts5Context*,
-    const char *pText, int nText,      /* Text to tokenize */
-    const char *pLocale, int nLocale,  /* Locale to pass to tokenizer */
-    void *pCtx,                        /* Context passed to xToken() */
-    int (*xToken)(void*, int, const char*, int, int, int)       /* Callback */
-  );
-};
+//  int (*xQueryToken)(Fts5Context*,
+//      int iPhrase, int iToken,
+//      const char **ppToken, int *pnToken
+//  );
+//  int (*xInstToken)(Fts5Context*, int iIdx, int iToken, const char**, int*);
+//
+//  /* Below this point are iVersion>=4 only */
+//  int (*xColumnLocale)(Fts5Context*, int iCol, const char **pz, int *pn);
+//  int (*xTokenize_v2)(Fts5Context*,
+//    const char *pText, int nText,      /* Text to tokenize */
+//    const char *pLocale, int nLocale,  /* Locale to pass to tokenizer */
+//    void *pCtx,                        /* Context passed to xToken() */
+//    int (*xToken)(void*, int, const char*, int, int, int)       /* Callback */
+//  );
+//};
 
 /*
 ** CUSTOM AUXILIARY FUNCTIONS
@@ -13802,24 +13802,24 @@ struct fts5_api {
   );
 
   /* APIs below this point are only available if iVersion>=3 */
-
-  /* Create a new tokenizer */
-  int (*xCreateTokenizer_v2)(
-    fts5_api *pApi,
-    const char *zName,
-    void *pUserData,
-    fts5_tokenizer_v2 *pTokenizer,
-    void (*xDestroy)(void*)
-  );
-
-  /* Find an existing tokenizer */
-  int (*xFindTokenizer_v2)(
-    fts5_api *pApi,
-    const char *zName,
-    void **ppUserData,
-    fts5_tokenizer_v2 **ppTokenizer
-  );
-};
+//
+//  /* Create a new tokenizer */
+//  int (*xCreateTokenizer_v2)(
+//    fts5_api *pApi,
+//    const char *zName,
+//    void *pUserData,
+//    fts5_tokenizer_v2 *pTokenizer,
+//    void (*xDestroy)(void*)
+//  );
+//
+//  /* Find an existing tokenizer */
+//  int (*xFindTokenizer_v2)(
+//    fts5_api *pApi,
+//    const char *zName,
+//    void **ppUserData,
+//    fts5_tokenizer_v2 **ppTokenizer
+//  );
+//};
 
 /*
 ** END OF REGISTRATION API
