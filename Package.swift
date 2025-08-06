@@ -40,6 +40,7 @@ let package = Package(
             publicHeadersPath: "sqlite",
             cSettings: [
                 .headerSearchPath("sqlite"),
+                .define("NDEBUG"),
                 .define("SQLITE_DQS", to: "0"),
                 .define("SQLITE_ENABLE_API_ARMOR"),
                 .define("SQLITE_ENABLE_COLUMN_METADATA"),
