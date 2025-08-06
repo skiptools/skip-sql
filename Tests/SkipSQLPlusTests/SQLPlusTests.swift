@@ -25,9 +25,9 @@ final class SQLPlusTests: XCTestCase {
         try stmnt.close()
 
         // the locally built SQLite version (contrast with the macOS version 3.43.2)
-        XCTAssertEqual([SQLValue.text("3.49.2")], try sqlplus.selectAll(sql: "SELECT sqlite_version()").first)
+        XCTAssertEqual([SQLValue.text("3.50.4")], try sqlplus.selectAll(sql: "SELECT sqlite_version()").first)
         XCTAssertEqual([SQLValue.text("ATOMIC_INTRINSICS=1")], try sqlplus.selectAll(sql: "PRAGMA compile_options").first)
-        XCTAssertEqual([SQLValue.text("4.9.0 community")], try sqlplus.selectAll(sql: "PRAGMA cipher_version").first)
+        XCTAssertEqual([SQLValue.text("4.10.0 community")], try sqlplus.selectAll(sql: "PRAGMA cipher_version").first)
         //XCTAssertEqual([SQLValue.text("PRAGMA cipher_default_kdf_iter = 256000")], try sqlplus.selectAll(sql: "PRAGMA cipher_default_settings").first)
         //XCTAssertEqual([SQLValue.text("XXX")], try sqlplus.selectAll(sql: "PRAGMA cipher_provider").first)
         //XCTAssertEqual([SQLValue.text("XXX")], try sqlplus.selectAll(sql: "PRAGMA cipher_provider_version").first)
@@ -36,7 +36,7 @@ final class SQLPlusTests: XCTestCase {
     func testSQLiteJSON() throws {
         let sqlplus = SQLContext(configuration: .plus)
         // The $[#] path feature in the JSON functions was added in version 3.31.0
-        XCTAssertEqual([SQLValue.text("3.49.2")], try sqlplus.selectAll(sql: "SELECT sqlite_version()").first)
+        XCTAssertEqual([SQLValue.text("3.50.4")], try sqlplus.selectAll(sql: "SELECT sqlite_version()").first)
 
         try sqlplus.exec(sql: #"CREATE TABLE users (id INTEGER PRIMARY KEY, profile JSON)"#)
 
