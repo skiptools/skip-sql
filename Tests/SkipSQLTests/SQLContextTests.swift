@@ -32,9 +32,14 @@ final class SQLContextTests: XCTestCase {
 
     func testSQLiteVersion() throws {
         let sqlite = SQLContext(configuration: .test)
+        sqlite.trace { sql in
+            self.logger.info("SQL: \(sql)")
+        }
         logger.info("connected to SQLite version: \(sqlite.versionNumber)")
-        // this is just to get the Android CI to output the SQLite version number it is currently using
-        throw XCTSkip("Skip test for SQLite version: \(sqlite.versionNumber)")
+
+        XCTAssertEqual(0, sqlite.userVersion)
+        sqlite.userVersion += 1
+        XCTAssertEqual(1, sqlite.userVersion)
     }
 
     func testSQLite() throws {

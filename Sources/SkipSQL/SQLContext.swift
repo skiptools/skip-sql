@@ -362,6 +362,13 @@ public class SQLContext {
         get { (try? selectAll(sql: "PRAGMA read_uncommitted").first?.first) == SQLValue(1) }
         set { try? exec(sql: "PRAGMA read_uncommitted = " + (newValue ? "ON" : "OFF")) }
     }
+
+    /// The user version of the database.
+    /// See SQLite [PRAGMA user_version](https://sqlite.org/pragma.html#pragma_user_version)
+    public var userVersion: Int64 {
+        get { (try? selectAll(sql: "PRAGMA user_version").first?.first?.longValue) ?? 0 }
+        set { _ = try? exec(sql: "PRAGMA user_version = \(newValue)") }
+    }
 }
 
 public struct SQLExpression {
