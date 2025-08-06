@@ -7615,8 +7615,9 @@ struct sqlite3_module {
   int (*xShadowName)(const char*);
   /* The methods above are in versions 1 through 3 of the sqlite_module object.
   ** Those below are for version 4 and greater. */
-  int (*xIntegrity)(sqlite3_vtab *pVTab, const char *zSchema,
-                    const char *zTabName, int mFlags, char **pzErr);
+    // Removed due to SkipSQLExt build errors
+//  int (*xIntegrity)(sqlite3_vtab *pVTab, const char *zSchema,
+//                    const char *zTabName, int mFlags, char **pzErr);
 };
 
 /*
@@ -13463,6 +13464,7 @@ struct Fts5ExtensionApi {
   void (*xPhraseNextColumn)(Fts5Context*, Fts5PhraseIter*, int *piCol);
 
   /* Below this point are iVersion>=3 only */
+    // Removed due to SkipSQLExt build errors
 //  int (*xQueryToken)(Fts5Context*,
 //      int iPhrase, int iToken,
 //      const char **ppToken, int *pnToken
@@ -13477,7 +13479,7 @@ struct Fts5ExtensionApi {
 //    void *pCtx,                        /* Context passed to xToken() */
 //    int (*xToken)(void*, int, const char*, int, int, int)       /* Callback */
 //  );
-//};
+};
 
 /*
 ** CUSTOM AUXILIARY FUNCTIONS
@@ -13802,6 +13804,7 @@ struct fts5_api {
   );
 
   /* APIs below this point are only available if iVersion>=3 */
+    // Removed due to SkipSQLExt build errors
 //
 //  /* Create a new tokenizer */
 //  int (*xCreateTokenizer_v2)(
@@ -13819,7 +13822,7 @@ struct fts5_api {
 //    void **ppUserData,
 //    fts5_tokenizer_v2 **ppTokenizer
 //  );
-//};
+};
 
 /*
 ** END OF REGISTRATION API
