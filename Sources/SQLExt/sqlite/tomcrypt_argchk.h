@@ -1,6 +1,8 @@
 /* LibTomCrypt, modular cryptographic library -- Tom St Denis */
 /* SPDX-License-Identifier: Unlicense */
 
+#pragma once
+
 /* Defines the LTC_ARGCHK macro used within the library */
 /* ARGTYPE is defined in tomcrypt_cfg.h */
 

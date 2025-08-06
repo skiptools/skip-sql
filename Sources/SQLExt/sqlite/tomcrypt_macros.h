@@ -1,6 +1,8 @@
 /* LibTomCrypt, modular cryptographic library -- Tom St Denis */
 /* SPDX-License-Identifier: Unlicense */
 
+#pragma once
+
 
 #define LTC_TMPVAR__(n, l) n ## l
 #define LTC_TMPVAR_(n, l) LTC_TMPVAR__(n, l)

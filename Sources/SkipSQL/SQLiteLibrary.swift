@@ -37,6 +37,25 @@ public typealias sqlite_tail_ptr = UnsafeMutablePointer<UnsafePointer<CChar>?>
 
 public typealias sqlite3_unsigned = UInt32
 public typealias sqlite3_pointer_type = UnsafeMutableRawPointer
+
+public typealias sqlite3_int64 = Int64 // SQLite3.sqlite3_int64
+
+/// An action that can be registered to receive updates whenever a ROWID table changes
+/// `((UnsafeMutableRawPointer?, Int32, UnsafePointer<CChar>?, UnsafePointer<CChar>?, sqlite3_int64) -> Void)`
+public typealias sqlite3_update_hook = @convention(c) (_ updateActionPtr: UnsafeMutableRawPointer?, _ operation: Int32, _ dbname: UnsafePointer<CChar>?, _ tblname: UnsafePointer<CChar>?, _ rowid: sqlite3_int64) -> ()
+
+
+public typealias sqlite3_destructor_type = @convention(c) (UnsafeMutableRawPointer?) -> Void
+
+public typealias sqlite3_callback = @convention(c) (UnsafeMutableRawPointer?, Int32, UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?, UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?) -> Int32
+
+/// A trace callback is invoked with four arguments: callback(T,C,P,X). The T argument is one of the `SQLITE_TRACE` constants to indicate why the callback was invoked. The C argument is a copy of the context pointer. The P and X arguments are pointers whose meanings depend on T.
+public typealias sqlite3_trace_hook = @convention(c) (_ type: UInt32, _ context: UnsafeMutableRawPointer?, _ p: UnsafeMutableRawPointer?, _ px: UnsafeMutableRawPointer?) -> Int32
+
+public let SQLITE_DONE = 101
+public let SQLITE_ROW = 100
+
+public let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 #endif
 
 public protocol SQLiteLibrary : NativeLibrary {
