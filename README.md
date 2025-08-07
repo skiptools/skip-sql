@@ -15,10 +15,10 @@ defer { ctx.close() }
 
 try sqlite.exec(sql: "CREATE TABLE IF NOT EXISTS SOME_TABLE (STRING TEXT)")
 
-try sqlite.exec(sql: "INSERT INTO SOME_TABLE (STRING) VALUES ('ABC')")
+try sqlite.exec(sql: "INSERT INTO SOME_TABLE (STRING) VALUES (?)", parameters: [SQLValue.text("ABC")])
 
 let rows: [[SQLValue]] = ctx.query(sql: "SELECT STRING FROM SOME_TABLE")
-assert(rows[0][0] == SQLValue.string("ABC"))
+assert(rows[0][0] == SQLValue.text("ABC"))
 
 ```
 
@@ -32,8 +32,8 @@ defer { ctx.close() }
 
 let rows: [[SQLValue]] = ctx.query(sql: "SELECT 1, 1.1+2.2, 'AB'||'C'")
 
-assert(rows[0][0] == SQLValue.integer(1))
-assert(rows[0][1] == SQLValue.float(3.3))
+assert(rows[0][0] == SQLValue.long(1))
+assert(rows[0][1] == SQLValue.real(3.3))
 assert(rows[0][2] == SQLValue.text("ABC"))
 
 ```
@@ -66,7 +66,7 @@ defer { insert.close() }
 try sqlite.transaction {
     for i in 1...1_000 {
         let params: [SQLValue] = [
-            SQLValue.integer(Int64(i)),
+            SQLValue.long(Int64(i)),
             SQLValue.text("Row #\(i)")
         ]
         try insert.update(parameters: params)
@@ -93,7 +93,7 @@ func migrateSchema(v version: Int64, ddl: String) throws {
         try ctx.transaction {
             try ctx.exec(sql: ddl) // perform the DDL operation
             // then update the schema version
-            try ctx.exec(sql: "UPDATE DB_SCHEMA_VERSION SET version = ?", parameters: [SQLValue.integer(version)])
+            try ctx.exec(sql: "UPDATE DB_SCHEMA_VERSION SET version = ?", parameters: [SQLValue.long(version)])
         }
         currentVersion = version
         logger.log("updated database schema to \(version) in \(startTime.durationToNow)")
@@ -118,7 +118,7 @@ The SQLite guide on [Locking And Concurrency](https://www.sqlite.org/lockingv3.h
 
 ## SQLCodable
 
-SkipSQL includes a basic mechanism for mapping Swift types to tables through the `SQLCodable` protocol and `SQLColumn` type. An example of a type that implements this is:
+SkipSQL includes a simple mechanism for mapping Swift types to tables through the `SQLCodable` protocol and `SQLTable` and `SQLColumn` types. An example of a type that implements this is:
 
 ```swift
 /// A struct that can read and write its values to the `DEMO_TABLE` table.
@@ -152,7 +152,8 @@ public struct DemoTable : SQLCodable, Equatable {
         self.blb = blb
     }
 
-    public init(row: SQLRow) throws {
+    /// Required initializer to create an instance from the given `SQLRow = [SQLColumn: SQLValue]`
+    public init(row: SQLRow, context: SQLContext) throws {
         self.id = try Self.id.longValueRequired(in: row)
         self.txt = try Self.txt.textValueRequired(in: row)
         self.num = Self.num.realValue(in: row)
@@ -161,6 +162,7 @@ public struct DemoTable : SQLCodable, Equatable {
         self.blb = Self.blb.blobValue(in: row)
     }
 
+    /// Encode the current instance into the given `SQLRow` dictionary.
     public func encode(row: inout SQLRow) throws {
         row[Self.id] = SQLValue(self.id)
         row[Self.txt] = SQLValue(self.txt)
@@ -168,6 +170,29 @@ public struct DemoTable : SQLCodable, Equatable {
         row[Self.int] = SQLValue(self.int)
         row[Self.dbl] = SQLValue(self.dbl)
         row[Self.blb] = SQLValue(self.blb)
+    }
+}
+```
+
+The `init` and `encode` implementations can be used to coerce the primitive SQLite value types into other Swift types. For example, to have a `UUID` property, you might implement it like:
+
+```swift
+public struct UUIDHolder : SQLCodable, Identifiable {
+    public var id: UUID
+    static let id = SQLColumn(name: "ID", type: .text, primaryKey: true)
+
+    public static let table = SQLTable(name: "UUID_HOLDER", columns: [id])
+
+    public init(id: UUID = UUID()) {
+        self.id = id
+    }
+
+    public init(row: SQLRow, context: SQLContext) throws {
+        self.id = try SQLBindingError.checkNonNull(UUID(uuidString: Self.id.textValueRequired(in: row)), in: Self.id)
+    }
+
+    public func encode(row: inout SQLRow) throws {
+        row[Self.id] = SQLValue(self.id.uuidString)
     }
 }
 ```
@@ -195,14 +220,15 @@ while let row = cursor.next() {
 SkipSQL supports primary keys that work with SQLite's ROWID mechanism,
 such that when an `INTEGER` column (i.e., `SQLValue.long`) is the primary
 key, the same storage is used as the underlying `ROWID` that all tables
-automatically have.
+automatically have (see 
+[ROWIDs and the INTEGER PRIMARY KEY](https://sqlite.org/lang_createtable.html#rowids_and_the_integer_primary_key)).
 
-The property that be either an optional `Int64?`, or if it marked with
+The property should be either an optional `Int64?`, or if it marked with
 `autoincrement: true` and the type is a non-optional `Int64`, then inserting
 a value with the id property set to `0` will automatically assign the
 primary key when `.insert(ob)` is called. This enables a table to
 have a required primary key (which is useful when implementing `Identifiable`)
-with the special sentinal calue of `0` that indicates that it is a new instance.
+with the special sentinal value of `0` that indicates that it is a new instance.
 
 ```swift
 public var id: Int64
@@ -328,9 +354,10 @@ outer join types, it is possible to have empty rows, which would map to
 ## Implementation
 
 SkipSQL speaks directly to the low-level SQLite3 C library that is pre-installed on all iOS and Android devices.
-On Darwin/iOS, it communicates directly through Swift's C bridging support.
-On Android, it uses the [SkipFFI](https://source.skip.tools/skip-ffi) module to interact directly with the underlying sqlite installation on Android.
-(For performance and a consistent API, SkipSQL eschews Android's `android.database.sqlite` Java wrapper, and uses JNA to directly access the SQLite C API.)
+On Darwin/iOS, and with SkipFuse on Android, it communicates directly through Swift's C bridging support.
+With transpiled SkipLite on Android, it uses the [SkipFFI](https://source.skip.tools/skip-ffi) module to interact directly with the underlying sqlite installation on Android for SkipSQL, or with the locally-built SQLite that is packages and bundled with the application as a shared object file.
+
+Note that For performance and a consistent API, SkipSQL eschews Android's `android.database.sqlite` Java wrapper, and instead uses the sample SQLite C API on both Android and Darwin platforms.
 
 ## SQLite Versions
 
@@ -355,9 +382,11 @@ Also be aware that the availability of some SQL features are contingent on the c
 | iOS 15                 | 3.36           |
 | iOS 16                 | 3.39           |
 | Android 14 (API 34)    | 3.39           |
-| Android 15 (API 35)    | 3.42           |
+| Android 15 (API 35)    | 3.44           |
 | SQLPlus                | 3.50           |
 
+
+Note that as cautioned in the [Android documentation](https://developer.android.com/reference/android/database/sqlite/package-summary), some Android device manufacturers include different versions of SQLite on their devices, so if your app depends on a SQLite version that may not be available on a device that your app supports, you may want to consider using [SQLPlus](#SQLPlus) instead.
 
 ---
 
@@ -372,11 +401,14 @@ which creates a local build with the following extensions enabled:
 The `SQLPlus` module uses sqlite version 3.50.4, which means
 that it will be safe to use newer sqlite features like
 the [`json`](https://sqlite.org/json1.html) function,
+RIGHT and FULL outer joins, and full text search,
 regardless of the Android API and iOS versions of the 
 deployment platform.
 
 This comes at the cost of additional build time for the native libraries,
-as well as a larger artifact size (around 1MB on iOS and 4MB on Android).
+as well as a larger artifact size (around 1MB on iOS and 4MB on Android),
+but has the benefit that every device you deploy your app to — on iOS and Android —
+will be using the exact same build of SQLite.
 
 #### Using SQLPlus
 
@@ -397,7 +429,6 @@ db.close()
 
 SQLPlus enables the [`json`](https://sqlite.org/json1.html) extensions:
 
-
 ```swift
 let sqlplus = SQLContext(configuration: .plus)
 try sqlplus.exec(sql: #"CREATE TABLE users (id INTEGER PRIMARY KEY, profile JSON)"#)
@@ -411,7 +442,6 @@ assert j1 == [.text("Alice")]
 let j2 = try sqlplus.query(sql: #"SELECT json_extract(profile, '$.name') as name, json_extract(profile, '$.age') as age FROM users WHERE id = ?"#, parameters: [.integer(2)]).first
 assert j2 == [.text("Bob"), .integer(25)]
 ```
-
 
 #### Encryption
 
