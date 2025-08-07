@@ -245,7 +245,7 @@ ensure that duplicate values are not inserted.
 SQLite does not have any dedicated column type that handles date fields
 (see [Date And Time Functions](https://sqlite.org/lang_datefunc.html#overview)),
 but it can handle dates encoded either as a ISO-8601 string in a column
-of type TEXT, or in a numeric column containing the number of seconds 1970-01-01.
+of type TEXT, or in a numeric column containing the number of seconds since January 1, 1970.
 
 Examples of mapping to each type are as follows:
 
@@ -357,7 +357,7 @@ SkipSQL speaks directly to the low-level SQLite3 C library that is pre-installed
 On Darwin/iOS, and with SkipFuse on Android, it communicates directly through Swift's C bridging support.
 With transpiled SkipLite on Android, it uses the [SkipFFI](https://source.skip.tools/skip-ffi) module to interact directly with the underlying sqlite installation on Android for SkipSQL, or with the locally-built SQLite that is packages and bundled with the application as a shared object file.
 
-Note that For performance and a consistent API, SkipSQL eschews Android's `android.database.sqlite` Java wrapper, and instead uses the sample SQLite C API on both Android and Darwin platforms.
+Note that For performance and a consistent API, SkipSQL eschews Android's `android.database.sqlite` Java wrapper, and instead uses the same SQLite C API on both Android and Darwin platforms.
 
 ## SQLite Versions
 
