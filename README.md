@@ -380,7 +380,7 @@ Also be aware that the availability of some SQL features are contingent on the c
 | SQLPlus                | 3.50           |
 
 
-Note that as cautioned in the [Android documentation](https://developer.android.com/reference/android/database/sqlite/package-summary), some Android device manufacturers include different versions of SQLite on their devices, so if your app depends on a SQLite version that may not be available on a device that your app supports, you may want to consider using [SQLPlus](#SQLPlus) instead.
+Note that as cautioned in the [Android documentation](https://developer.android.com/reference/android/database/sqlite/package-summary), some Android device manufacturers include different versions of SQLite on their devices, so if your app depends on a SQLite version that may not be available on a device that your app supports, you may want to consider using [SQLPlus](#sqlplus) instead.
 
 ---
 
