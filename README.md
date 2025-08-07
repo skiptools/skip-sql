@@ -80,22 +80,16 @@ try sqlite.transaction {
 
 There is no built-in support for schema migrations. Following is a part of a sample of how you might perform migrations in your own app.
 
-
 ```swift
-// track the version of the schema in the database, which can be used for schema migration
-try ctx.exec(sql: "CREATE TABLE IF NOT EXISTS DB_SCHEMA_VERSION (id INTEGER PRIMARY KEY, version INTEGER)")
-try ctx.exec(sql: "INSERT OR IGNORE INTO DB_SCHEMA_VERSION (id, version) VALUES (0, 0)")
-var currentVersion = try ctx.query(sql: "SELECT version FROM DB_SCHEMA_VERSION").first?.first?.integerValue ?? 0
-
+// track the version of the schema with the `userVersion` pragma, which can be used for schema migration
 func migrateSchema(v version: Int64, ddl: String) throws {
-    if currentVersion < version {
+    if ctx.userVersion < version {
         let startTime = Date.now
         try ctx.transaction {
             try ctx.exec(sql: ddl) // perform the DDL operation
             // then update the schema version
-            try ctx.exec(sql: "UPDATE DB_SCHEMA_VERSION SET version = ?", parameters: [SQLValue.long(version)])
+            ctx.userVersion = version
         }
-        currentVersion = version
         logger.log("updated database schema to \(version) in \(startTime.durationToNow)")
     }
 }
