@@ -270,33 +270,37 @@ final class SQLContextTests: XCTestCase {
             func fmt(_ formatSpecifier: String) throws -> SQLValue {
                 try ctx.selectAll(sql: "SELECT strftime('\(formatSpecifier)', DATE, 'auto') FROM \(tableName)").first?.first ?? .null
             }
-            try XCTAssertEqual(SQLValue("07"), fmt("%d")) // day of month: 01-31
-            //try XCTAssertEqual(SQLValue(" 7"), fmt("%e")) // day of month without leading zero: 1-31
-            try XCTAssertEqual(SQLValue("00.000"), fmt("%f")) // fractional seconds: SS.SSS
-            //try XCTAssertEqual(SQLValue("2025-08-07"), fmt("%F")) // ISO 8601 date: YYYY-MM-DD
-            //try XCTAssertEqual(SQLValue("2025"), fmt("%G")) // ISO 8601 year corresponding to %V
-            //try XCTAssertEqual(SQLValue("25"), fmt("%g")) // 2-digit ISO 8601 year corresponding to %V
-            //try XCTAssertEqual(SQLValue("07"), fmt("%H")) // hour: 00-24
-            //try XCTAssertEqual(SQLValue("07"), fmt("%I")) // hour for 12-hour clock: 01-12
-            //try XCTAssertEqual(SQLValue("219"), fmt("%j")) // day of year: 001-366
-            //try XCTAssertEqual(SQLValue("2460894.791666667"), fmt("%J")) // Julian day number (fractional)
-            //try XCTAssertEqual(SQLValue(" 7"), fmt("%k")) // hour without leading zero: 0-24
-            //try XCTAssertEqual(SQLValue(" 7"), fmt("%l")) // %I without leading zero: 1-12
-            //try XCTAssertEqual(SQLValue("08"), fmt("%m")) // month: 01-12
-            //try XCTAssertEqual(SQLValue("00"), fmt("%M")) // minute: 00-59
-            //try XCTAssertEqual(SQLValue("AM"), fmt("%p")) // "AM" or "PM" depending on the hour
-            //try XCTAssertEqual(SQLValue("am"), fmt("%P")) // "am" or "pm" depending on the hour
-            //try XCTAssertEqual(SQLValue("07:00"), fmt("%R")) // ISO 8601 time: HH:MM
-            //try XCTAssertEqual(SQLValue("1754550000"), fmt("%s")) // seconds since 1970-01-01
-            //try XCTAssertEqual(SQLValue("00"), fmt("%S")) // seconds: 00-59
-            //try XCTAssertEqual(SQLValue("07:00:00"), fmt("%T")) // ISO 8601 time: HH:MM:SS
-            //try XCTAssertEqual(SQLValue("31"), fmt("%U")) // week of year (00-53) - week 01 starts on the first Sunday
-            //try XCTAssertEqual(SQLValue("4"), fmt("%u")) // day of week 1-7 with Monday==1
-            //try XCTAssertEqual(SQLValue("32"), fmt("%V")) // ISO 8601 week of year
-            //try XCTAssertEqual(SQLValue("4"), fmt("%w")) // day of week 0-6 with Sunday==0
-            //try XCTAssertEqual(SQLValue("31"), fmt("%W")) // week of year (00-53) - week 01 starts on the first Monday
-            //try XCTAssertEqual(SQLValue("2025"), fmt("%Y")) // year: 0000-9999
+            // FIXME: some of these fail on the Android emulator for a non-SkipSQLPlus vendored builds
+            if !ctx.isSQLPlus {
+                throw XCTSkip("some date/time functions fail with vendored SQLite")
+            }
 
+            try XCTAssertEqual(SQLValue("07"), fmt("%d")) // day of month: 01-31
+            try XCTAssertEqual(SQLValue(" 7"), fmt("%e")) // day of month without leading zero: 1-31
+            try XCTAssertEqual(SQLValue("00.000"), fmt("%f")) // fractional seconds: SS.SSS
+            try XCTAssertEqual(SQLValue("2025-08-07"), fmt("%F")) // ISO 8601 date: YYYY-MM-DD
+            try XCTAssertEqual(SQLValue("2025"), fmt("%G")) // ISO 8601 year corresponding to %V
+            try XCTAssertEqual(SQLValue("25"), fmt("%g")) // 2-digit ISO 8601 year corresponding to %V
+            try XCTAssertEqual(SQLValue("07"), fmt("%H")) // hour: 00-24
+            try XCTAssertEqual(SQLValue("07"), fmt("%I")) // hour for 12-hour clock: 01-12
+            try XCTAssertEqual(SQLValue("219"), fmt("%j")) // day of year: 001-366
+            try XCTAssertEqual(SQLValue("2460894.791666667"), fmt("%J")) // Julian day number (fractional)
+            try XCTAssertEqual(SQLValue(" 7"), fmt("%k")) // hour without leading zero: 0-24
+            try XCTAssertEqual(SQLValue(" 7"), fmt("%l")) // %I without leading zero: 1-12
+            try XCTAssertEqual(SQLValue("08"), fmt("%m")) // month: 01-12
+            try XCTAssertEqual(SQLValue("00"), fmt("%M")) // minute: 00-59
+            try XCTAssertEqual(SQLValue("AM"), fmt("%p")) // "AM" or "PM" depending on the hour
+            try XCTAssertEqual(SQLValue("am"), fmt("%P")) // "am" or "pm" depending on the hour
+            try XCTAssertEqual(SQLValue("07:00"), fmt("%R")) // ISO 8601 time: HH:MM
+            try XCTAssertEqual(SQLValue("1754550000"), fmt("%s")) // seconds since 1970-01-01
+            try XCTAssertEqual(SQLValue("00"), fmt("%S")) // seconds: 00-59
+            try XCTAssertEqual(SQLValue("07:00:00"), fmt("%T")) // ISO 8601 time: HH:MM:SS
+            try XCTAssertEqual(SQLValue("31"), fmt("%U")) // week of year (00-53) - week 01 starts on the first Sunday
+            try XCTAssertEqual(SQLValue("4"), fmt("%u")) // day of week 1-7 with Monday==1
+            try XCTAssertEqual(SQLValue("32"), fmt("%V")) // ISO 8601 week of year
+            try XCTAssertEqual(SQLValue("4"), fmt("%w")) // day of week 0-6 with Sunday==0
+            try XCTAssertEqual(SQLValue("31"), fmt("%W")) // week of year (00-53) - week 01 starts on the first Monday
+            try XCTAssertEqual(SQLValue("2025"), fmt("%Y")) // year: 0000-9999
         }
     }
 
@@ -872,6 +876,12 @@ final class SQLContextTests: XCTestCase {
         XCTAssertEqual(3, ref3.rowid)
 
         try sqlite.exec(SQLRefType.table.dropTableSQL())
+    }
+}
+
+extension SQLContext {
+    var isSQLPlus: Bool {
+        (try? selectAll(sql: "PRAGMA cipher_version").first?.first?.textValue) != nil
     }
 }
 
