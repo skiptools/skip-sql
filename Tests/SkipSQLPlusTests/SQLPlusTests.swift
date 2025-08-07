@@ -109,9 +109,21 @@ final class SQLPlusTests: XCTestCase {
         XCTAssertTrue(data1.hex().contains(str.utf8.hex()), "unencrypted database should have contained the test string")
         XCTAssertFalse(data2.hex().contains(str.utf8.hex()), "encrypted database should not have contained the test string")
         XCTAssertFalse(data3.hex().contains(str.utf8.hex()), "encrypted database should not have contained the test string")
-
-
     }
+
+    func testEncryptDatabase() throws {
+        let dbPath = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("db")
+        let db = try SQLContext(path: dbPath.path, flags: [.create, .readWrite], configuration: .plus)
+        try db.exec(sql: #"CREATE TABLE SOME_TABLE(col)"#)
+        try db.exec(sql: #"INSERT INTO SOME_TABLE(col) VALUES(?)"#, parameters: [.text("SOME_STRING")])
+
+        let db2 = try db.encryptDatabase(key: "secret", at: dbPath)
+        XCTAssertTrue(db.isClosed)
+        XCTAssertFalse(db2.isClosed)
+
+        try db2.close()
+    }
+
 }
 
 extension Sequence where Element == UInt8 {
@@ -126,5 +138,33 @@ extension Sequence where Element == UInt8 {
         #else
         map { String(format: "%02x", $0) }.joined()
         #endif
+    }
+}
+
+extension SQLContext {
+    /// Takes an unencrypted database and encrypts it with the given key
+    func encryptDatabase(key: String, at dbPath: URL) throws -> SQLContext {
+        let v = self.userVersion
+
+        let tmpDBURL = dbPath.appendingPathExtension("rekey")
+
+        // create a new temporary location to encrypt the database
+        try self.export(tmpDBURL.path, key: key)
+
+        try self.close() // disconnect the current DB so we can safely delete and overwrite it
+
+        // move the encrypted database to the new path
+        try FileManager.default.removeItem(at: dbPath)
+        try FileManager.default.moveItem(at: tmpDBURL, to: dbPath)
+
+        // reconnect to the newly converted database
+        let ctx = try SQLContext(path: dbPath.path, flags: .readWrite, configuration: .plus)
+        try ctx.key(key) // set the key on the database
+
+        // re-set the userVersion, which is not copied by pragma sqlcipher_export:
+        // “sqlcipher_export does not alter the user_version of the target database. Applications are free to do this themselves.” – https://www.zetetic.net/sqlcipher/sqlcipher-api/#notes-export
+        ctx.userVersion = v
+
+        return ctx // return the newly-created context
     }
 }

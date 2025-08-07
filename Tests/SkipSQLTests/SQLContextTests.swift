@@ -245,6 +245,61 @@ final class SQLContextTests: XCTestCase {
         XCTAssertEqual(3, updates)
     }
 
+    func testDateTypes() throws {
+        let ctx = SQLContext(configuration: .test)
+        var statements: [String] = []
+        ctx.trace { sql in
+            self.logger.info("SQL: \(sql)")
+            statements.append(sql)
+        }
+
+        for ddl in SQLDateAsText.table.createTableSQL() + SQLDateAsReal.table.createTableSQL() {
+            try ctx.exec(ddl)
+        }
+
+        let date = Date(timeIntervalSince1970: 1754550000.0)
+        let ob1 = try ctx.insert(SQLDateAsText(date: date))
+        XCTAssertEqual(#"INSERT INTO "SQL_DATE_AS_TEXT" ("DATE") VALUES ('2025-08-07T07:00:00Z')"#, statements.last)
+
+        let ob2 = try ctx.insert(SQLDateAsReal(date: date))
+        XCTAssertEqual(#"INSERT INTO "SQL_DATE_AS_REAL" ("DATE") VALUES (1754550000.0)"#, statements.last)
+
+        // test date/time functions on each of the types
+        // https://sqlite.org/lang_datefunc.html#overview
+        for tableName in [SQLDateAsText.table.name, SQLDateAsReal.table.name] {
+            func fmt(_ formatSpecifier: String) throws -> SQLValue {
+                try ctx.selectAll(sql: "SELECT strftime('\(formatSpecifier)', DATE, 'auto') FROM \(tableName)").first?.first ?? .null
+            }
+            try XCTAssertEqual(SQLValue("07"), fmt("%d")) // day of month: 01-31
+            //try XCTAssertEqual(SQLValue(" 7"), fmt("%e")) // day of month without leading zero: 1-31
+            try XCTAssertEqual(SQLValue("00.000"), fmt("%f")) // fractional seconds: SS.SSS
+            //try XCTAssertEqual(SQLValue("2025-08-07"), fmt("%F")) // ISO 8601 date: YYYY-MM-DD
+            //try XCTAssertEqual(SQLValue("2025"), fmt("%G")) // ISO 8601 year corresponding to %V
+            //try XCTAssertEqual(SQLValue("25"), fmt("%g")) // 2-digit ISO 8601 year corresponding to %V
+            //try XCTAssertEqual(SQLValue("07"), fmt("%H")) // hour: 00-24
+            //try XCTAssertEqual(SQLValue("07"), fmt("%I")) // hour for 12-hour clock: 01-12
+            //try XCTAssertEqual(SQLValue("219"), fmt("%j")) // day of year: 001-366
+            //try XCTAssertEqual(SQLValue("2460894.791666667"), fmt("%J")) // Julian day number (fractional)
+            //try XCTAssertEqual(SQLValue(" 7"), fmt("%k")) // hour without leading zero: 0-24
+            //try XCTAssertEqual(SQLValue(" 7"), fmt("%l")) // %I without leading zero: 1-12
+            //try XCTAssertEqual(SQLValue("08"), fmt("%m")) // month: 01-12
+            //try XCTAssertEqual(SQLValue("00"), fmt("%M")) // minute: 00-59
+            //try XCTAssertEqual(SQLValue("AM"), fmt("%p")) // "AM" or "PM" depending on the hour
+            //try XCTAssertEqual(SQLValue("am"), fmt("%P")) // "am" or "pm" depending on the hour
+            //try XCTAssertEqual(SQLValue("07:00"), fmt("%R")) // ISO 8601 time: HH:MM
+            //try XCTAssertEqual(SQLValue("1754550000"), fmt("%s")) // seconds since 1970-01-01
+            //try XCTAssertEqual(SQLValue("00"), fmt("%S")) // seconds: 00-59
+            //try XCTAssertEqual(SQLValue("07:00:00"), fmt("%T")) // ISO 8601 time: HH:MM:SS
+            //try XCTAssertEqual(SQLValue("31"), fmt("%U")) // week of year (00-53) - week 01 starts on the first Sunday
+            //try XCTAssertEqual(SQLValue("4"), fmt("%u")) // day of week 1-7 with Monday==1
+            //try XCTAssertEqual(SQLValue("32"), fmt("%V")) // ISO 8601 week of year
+            //try XCTAssertEqual(SQLValue("4"), fmt("%w")) // day of week 0-6 with Sunday==0
+            //try XCTAssertEqual(SQLValue("31"), fmt("%W")) // week of year (00-53) - week 01 starts on the first Monday
+            //try XCTAssertEqual(SQLValue("2025"), fmt("%Y")) // year: 0000-9999
+
+        }
+    }
+
     func testSQLiteNamedParameters() throws {
         let ctx = SQLContext(configuration: .test)
 
@@ -1009,5 +1064,59 @@ public class SQLRefType : SQLCodable {
 
     public func delete() throws {
         try context.delete(instances: [self])
+    }
+}
+
+public protocol SQLDateType : SQLCodable {
+    var date: Date { get set }
+}
+
+public struct SQLDateAsText : SQLCodable, SQLDateType {
+    public var rowid: Int64
+    static let rowid = SQLColumn(name: "ROWID", type: .long, primaryKey: true, autoincrement: true)
+
+    public var date: Date
+    static let date = SQLColumn(name: "DATE", type: .text)
+
+    public static let table = SQLTable(name: "SQL_DATE_AS_TEXT", columns: [rowid, date])
+
+    public init(date: Date) {
+        self.rowid = 0
+        self.date = date
+    }
+
+    public init(row: SQLRow, context: SQLContext) throws {
+        self.rowid = try Self.rowid.longValueRequired(in: row)
+        self.date = try Self.date.dateValueRequired(in: row)
+    }
+
+    public func encode(row: inout SQLRow) throws {
+        row[Self.rowid] = SQLValue(self.rowid)
+        row[Self.date] = SQLValue(self.date.ISO8601Format())
+    }
+}
+
+public struct SQLDateAsReal : SQLCodable, SQLDateType {
+    public var rowid: Int64
+    static let rowid = SQLColumn(name: "ROWID", type: .long, primaryKey: true, autoincrement: true)
+
+    public var date: Date
+    static let date = SQLColumn(name: "DATE", type: .real)
+
+    public static let table = SQLTable(name: "SQL_DATE_AS_REAL", columns: [rowid, date])
+
+    public init(date: Date) {
+        self.rowid = 0
+        self.date = date
+    }
+
+    public init(row: SQLRow, context: SQLContext) throws {
+        self.rowid = try Self.rowid.longValueRequired(in: row)
+        self.date = try Self.date.dateValueRequired(in: row)
+    }
+
+    public func encode(row: inout SQLRow) throws {
+        row[Self.rowid] = SQLValue(self.rowid)
+        row[Self.date] = SQLValue(self.date.timeIntervalSince1970)
     }
 }

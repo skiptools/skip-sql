@@ -8,7 +8,7 @@ The SkipSQL module is a dual-platform [Skip Lite](https://skip.tools) framework 
 
 To connect 
 ```swift
-let dbpath = URL.documentsDirectory.appendingPathComponent("db.sqlite")
+let dbpath = URL.applicationSupportDirectory.appendingPathComponent("db.sqlite")
 
 let ctx = try SQLContext(path: dbpath, flags: [.create, .readWrite])
 defer { ctx.close() }
@@ -214,6 +214,73 @@ property is not optional, then it is assumed that the primary key
 is manually assigned by the developer and care must be taken to
 ensure that duplicate values are not inserted.
 
+### Date fields
+
+SQLite does not have any dedicated column type that handles date fields
+(see [Date And Time Functions](https://sqlite.org/lang_datefunc.html#overview)),
+but it can handle dates encoded either as a ISO-8601 string in a column
+of type TEXT, or in a numeric column containing the number of seconds 1970-01-01.
+
+Examples of mapping to each type are as follows:
+
+#### Mapping Date to a REAL column
+
+```swift
+public struct SQLDateAsReal : SQLCodable {
+    public var rowid: Int64
+    static let rowid = SQLColumn(name: "ROWID", type: .long, primaryKey: true, autoincrement: true)
+
+    public var date: Date
+    static let date = SQLColumn(name: "DATE", type: .real)
+
+    public static let table = SQLTable(name: "SQL_DATE_AS_REAL", columns: [rowid, date])
+
+    public init(date: Date) {
+        self.rowid = 0
+        self.date = date
+    }
+
+    public init(row: SQLRow, context: SQLContext) throws {
+        self.rowid = try Self.rowid.longValueRequired(in: row)
+        self.date = try Self.date.dateValueRequired(in: row)
+    }
+
+    public func encode(row: inout SQLRow) throws {
+        row[Self.rowid] = SQLValue(self.rowid)
+        row[Self.date] = SQLValue(self.date.timeIntervalSince1970)
+    }
+}
+```
+
+#### Mapping Date to a TEXT column
+
+```swift
+public struct SQLDateAsText : SQLCodable {
+    public var rowid: Int64
+    static let rowid = SQLColumn(name: "ROWID", type: .long, primaryKey: true, autoincrement: true)
+
+    public var date: Date
+    static let date = SQLColumn(name: "DATE", type: .text)
+
+    public static let table = SQLTable(name: "SQL_DATE_AS_TEXT", columns: [rowid, date])
+
+    public init(date: Date) {
+        self.rowid = 0
+        self.date = date
+    }
+
+    public init(row: SQLRow, context: SQLContext) throws {
+        self.rowid = try Self.rowid.longValueRequired(in: row)
+        self.date = try Self.date.dateValueRequired(in: row)
+    }
+
+    public func encode(row: inout SQLRow) throws {
+        row[Self.rowid] = SQLValue(self.rowid)
+        row[Self.date] = SQLValue(self.date.ISO8601Format())
+    }
+}
+```
+
 ### Relations and joins
 
 SkipSQL is not a complete object-relational mapping (ORM) package,
@@ -320,7 +387,7 @@ and passing `configuration: .plus` to the `SQLContext` constructor, like so:
 import SkipSQL
 import SkipSQLPlus
 
-let dbpath = URL.documentsDirectory.appendingPathComponent("db.sqlite")
+let dbpath = URL.applicationSupportDirectory.appendingPathComponent("db.sqlite")
 let db = try SQLContext(path: dbpath.path, flags: [.create, .readWrite], configuration: .plus)
 // do something with the database
 db.close()
@@ -361,15 +428,48 @@ secure local database files. Cryptographic algorithms are provided by the [LibTo
 An example of creating an encryped database:
 
 ```swift
-import SkipSQL
 import SkipSQLPlus
 
-let dbpath = URL.documentsDirectory.appendingPathComponent("encrypted.sqlite")
+let dbpath = URL.applicationSupportDirectory.appendingPathComponent("encrypted.sqlite")
 let db = try SQLContext(path: dbpath.path, flags: [.create, .readWrite], configuration: .plus)
-_ = try db.query(sql: "PRAGMA key = 'password'")
-try db.exec(sql: #"CREATE TABLE SOME_TABLE(col)"#)
-try db.exec(sql: #"INSERT INTO SOME_TABLE(col) VALUES(?)"#, parameters: [.text("SOME SECRET STRING")])
+try db.exec(sql: "PRAGMA key = 'password'")
+try db.exec(sql: "CREATE TABLE SOME_TABLE(col)")
+try db.exec(sql: "INSERT INTO SOME_TABLE(col) VALUES(?)", parameters: [.text("SOME SECRET STRING")])
 try db.close()
+```
+
+##### Encrypting an unencrypted database
+
+Note that setting the key on the database must be the first operation that is performed after the database is opened, before any other SQL is executed. To encrypt an unencryped database that has already been created, the database must be exported with the `export(path, key)` function and then re-opened with the key. An example utility extension to do this is:
+
+```swift
+extension SQLContext {
+    /// Takes an unencrypted database and encrypts it with the given key
+    func encryptDatabase(key: String, at dbPath: URL) throws -> SQLContext {
+        let v = self.userVersion
+
+        let tmpDBURL = dbPath.appendingPathExtension("rekey")
+
+        // create a new temporary location to encrypt the database
+        try self.export(tmpDBURL.path, key: key)
+
+        try self.close() // disconnect the current DB so we can safely delete and overwrite it
+
+        // move the encrypted database to the new path
+        try FileManager.default.removeItem(at: dbPath)
+        try FileManager.default.moveItem(at: tmpDBURL, to: dbPath)
+
+        // reconnect to the newly converted database
+        let ctx = try SQLContext(path: dbPath.path, flags: .readWrite, configuration: .plus)
+        try ctx.key(key) // set the key on the database
+
+        // re-set the userVersion, which is not copied by pragma sqlcipher_export:
+        // “sqlcipher_export does not alter the user_version of the target database. Applications are free to do this themselves.” – https://www.zetetic.net/sqlcipher/sqlcipher-api/#notes-export
+        ctx.userVersion = v
+
+        return ctx // return the newly-created context
+    }
+}
 ```
 
 
