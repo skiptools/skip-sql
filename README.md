@@ -8,17 +8,17 @@ The SkipSQL module is a dual-platform [Skip Lite](https://skip.tools) framework 
 
 To connect 
 ```swift
-let dbpath = URL.documentsDirectory.appendingPathComponent("db.sqlite")
+let dbpath = URL.applicationSupportDirectory.appendingPathComponent("db.sqlite")
 
 let ctx = try SQLContext(path: dbpath, flags: [.create, .readWrite])
 defer { ctx.close() }
 
 try sqlite.exec(sql: "CREATE TABLE IF NOT EXISTS SOME_TABLE (STRING TEXT)")
 
-try sqlite.exec(sql: "INSERT INTO SOME_TABLE (STRING) VALUES ('ABC')")
+try sqlite.exec(sql: "INSERT INTO SOME_TABLE (STRING) VALUES (?)", parameters: [SQLValue.text("ABC")])
 
 let rows: [[SQLValue]] = ctx.query(sql: "SELECT STRING FROM SOME_TABLE")
-assert(rows[0][0] == SQLValue.string("ABC"))
+assert(rows[0][0] == SQLValue.text("ABC"))
 
 ```
 
@@ -32,8 +32,8 @@ defer { ctx.close() }
 
 let rows: [[SQLValue]] = ctx.query(sql: "SELECT 1, 1.1+2.2, 'AB'||'C'")
 
-assert(rows[0][0] == SQLValue.integer(1))
-assert(rows[0][1] == SQLValue.float(3.3))
+assert(rows[0][0] == SQLValue.long(1))
+assert(rows[0][1] == SQLValue.real(3.3))
 assert(rows[0][2] == SQLValue.text("ABC"))
 
 ```
@@ -66,7 +66,7 @@ defer { insert.close() }
 try sqlite.transaction {
     for i in 1...1_000 {
         let params: [SQLValue] = [
-            SQLValue.integer(Int64(i)),
+            SQLValue.long(Int64(i)),
             SQLValue.text("Row #\(i)")
         ]
         try insert.update(parameters: params)
@@ -93,7 +93,7 @@ func migrateSchema(v version: Int64, ddl: String) throws {
         try ctx.transaction {
             try ctx.exec(sql: ddl) // perform the DDL operation
             // then update the schema version
-            try ctx.exec(sql: "UPDATE DB_SCHEMA_VERSION SET version = ?", parameters: [SQLValue.integer(version)])
+            try ctx.exec(sql: "UPDATE DB_SCHEMA_VERSION SET version = ?", parameters: [SQLValue.long(version)])
         }
         currentVersion = version
         logger.log("updated database schema to \(version) in \(startTime.durationToNow)")
@@ -118,7 +118,7 @@ The SQLite guide on [Locking And Concurrency](https://www.sqlite.org/lockingv3.h
 
 ## SQLCodable
 
-SkipSQL includes a basic mechanism for mapping Swift types to tables through the `SQLCodable` protocol and `SQLColumn` type. An example of a type that implements this is:
+SkipSQL includes a simple mechanism for mapping Swift types to tables through the `SQLCodable` protocol and `SQLTable` and `SQLColumn` types. An example of a type that implements this is:
 
 ```swift
 /// A struct that can read and write its values to the `DEMO_TABLE` table.
@@ -152,7 +152,8 @@ public struct DemoTable : SQLCodable, Equatable {
         self.blb = blb
     }
 
-    public init(row: SQLRow) throws {
+    /// Required initializer to create an instance from the given `SQLRow = [SQLColumn: SQLValue]`
+    public init(row: SQLRow, context: SQLContext) throws {
         self.id = try Self.id.longValueRequired(in: row)
         self.txt = try Self.txt.textValueRequired(in: row)
         self.num = Self.num.realValue(in: row)
@@ -161,6 +162,7 @@ public struct DemoTable : SQLCodable, Equatable {
         self.blb = Self.blb.blobValue(in: row)
     }
 
+    /// Encode the current instance into the given `SQLRow` dictionary.
     public func encode(row: inout SQLRow) throws {
         row[Self.id] = SQLValue(self.id)
         row[Self.txt] = SQLValue(self.txt)
@@ -168,6 +170,29 @@ public struct DemoTable : SQLCodable, Equatable {
         row[Self.int] = SQLValue(self.int)
         row[Self.dbl] = SQLValue(self.dbl)
         row[Self.blb] = SQLValue(self.blb)
+    }
+}
+```
+
+The `init` and `encode` implementations can be used to coerce the primitive SQLite value types into other Swift types. For example, to have a `UUID` property, you might implement it like:
+
+```swift
+public struct UUIDHolder : SQLCodable, Identifiable {
+    public var id: UUID
+    static let id = SQLColumn(name: "ID", type: .text, primaryKey: true)
+
+    public static let table = SQLTable(name: "UUID_HOLDER", columns: [id])
+
+    public init(id: UUID = UUID()) {
+        self.id = id
+    }
+
+    public init(row: SQLRow, context: SQLContext) throws {
+        self.id = try SQLBindingError.checkNonNull(UUID(uuidString: Self.id.textValueRequired(in: row)), in: Self.id)
+    }
+
+    public func encode(row: inout SQLRow) throws {
+        row[Self.id] = SQLValue(self.id.uuidString)
     }
 }
 ```
@@ -195,14 +220,15 @@ while let row = cursor.next() {
 SkipSQL supports primary keys that work with SQLite's ROWID mechanism,
 such that when an `INTEGER` column (i.e., `SQLValue.long`) is the primary
 key, the same storage is used as the underlying `ROWID` that all tables
-automatically have.
+automatically have (see 
+[ROWIDs and the INTEGER PRIMARY KEY](https://sqlite.org/lang_createtable.html#rowids_and_the_integer_primary_key)).
 
-The property that be either an optional `Int64?`, or if it marked with
+The property should be either an optional `Int64?`, or if it marked with
 `autoincrement: true` and the type is a non-optional `Int64`, then inserting
 a value with the id property set to `0` will automatically assign the
 primary key when `.insert(ob)` is called. This enables a table to
 have a required primary key (which is useful when implementing `Identifiable`)
-with the special sentinal calue of `0` that indicates that it is a new instance.
+with the special sentinal value of `0` that indicates that it is a new instance.
 
 ```swift
 public var id: Int64
@@ -213,6 +239,73 @@ If the primary key is not marked with `autoincrement: true` and the
 property is not optional, then it is assumed that the primary key
 is manually assigned by the developer and care must be taken to
 ensure that duplicate values are not inserted.
+
+### Date fields
+
+SQLite does not have any dedicated column type that handles date fields
+(see [Date And Time Functions](https://sqlite.org/lang_datefunc.html#overview)),
+but it can handle dates encoded either as a ISO-8601 string in a column
+of type TEXT, or in a numeric column containing the number of seconds 1970-01-01.
+
+Examples of mapping to each type are as follows:
+
+#### Mapping Date to a REAL column
+
+```swift
+public struct SQLDateAsReal : SQLCodable {
+    public var rowid: Int64
+    static let rowid = SQLColumn(name: "ROWID", type: .long, primaryKey: true, autoincrement: true)
+
+    public var date: Date
+    static let date = SQLColumn(name: "DATE", type: .real)
+
+    public static let table = SQLTable(name: "SQL_DATE_AS_REAL", columns: [rowid, date])
+
+    public init(date: Date) {
+        self.rowid = 0
+        self.date = date
+    }
+
+    public init(row: SQLRow, context: SQLContext) throws {
+        self.rowid = try Self.rowid.longValueRequired(in: row)
+        self.date = try Self.date.dateValueRequired(in: row)
+    }
+
+    public func encode(row: inout SQLRow) throws {
+        row[Self.rowid] = SQLValue(self.rowid)
+        row[Self.date] = SQLValue(self.date.timeIntervalSince1970)
+    }
+}
+```
+
+#### Mapping Date to a TEXT column
+
+```swift
+public struct SQLDateAsText : SQLCodable {
+    public var rowid: Int64
+    static let rowid = SQLColumn(name: "ROWID", type: .long, primaryKey: true, autoincrement: true)
+
+    public var date: Date
+    static let date = SQLColumn(name: "DATE", type: .text)
+
+    public static let table = SQLTable(name: "SQL_DATE_AS_TEXT", columns: [rowid, date])
+
+    public init(date: Date) {
+        self.rowid = 0
+        self.date = date
+    }
+
+    public init(row: SQLRow, context: SQLContext) throws {
+        self.rowid = try Self.rowid.longValueRequired(in: row)
+        self.date = try Self.date.dateValueRequired(in: row)
+    }
+
+    public func encode(row: inout SQLRow) throws {
+        row[Self.rowid] = SQLValue(self.rowid)
+        row[Self.date] = SQLValue(self.date.ISO8601Format())
+    }
+}
+```
 
 ### Relations and joins
 
@@ -261,9 +354,10 @@ outer join types, it is possible to have empty rows, which would map to
 ## Implementation
 
 SkipSQL speaks directly to the low-level SQLite3 C library that is pre-installed on all iOS and Android devices.
-On Darwin/iOS, it communicates directly through Swift's C bridging support.
-On Android, it uses the [SkipFFI](https://source.skip.tools/skip-ffi) module to interact directly with the underlying sqlite installation on Android.
-(For performance and a consistent API, SkipSQL eschews Android's `android.database.sqlite` Java wrapper, and uses JNA to directly access the SQLite C API.)
+On Darwin/iOS, and with SkipFuse on Android, it communicates directly through Swift's C bridging support.
+With transpiled SkipLite on Android, it uses the [SkipFFI](https://source.skip.tools/skip-ffi) module to interact directly with the underlying sqlite installation on Android for SkipSQL, or with the locally-built SQLite that is packages and bundled with the application as a shared object file.
+
+Note that For performance and a consistent API, SkipSQL eschews Android's `android.database.sqlite` Java wrapper, and instead uses the sample SQLite C API on both Android and Darwin platforms.
 
 ## SQLite Versions
 
@@ -288,9 +382,11 @@ Also be aware that the availability of some SQL features are contingent on the c
 | iOS 15                 | 3.36           |
 | iOS 16                 | 3.39           |
 | Android 14 (API 34)    | 3.39           |
-| Android 15 (API 35)    | 3.42           |
+| Android 15 (API 35)    | 3.44           |
 | SQLPlus                | 3.50           |
 
+
+Note that as cautioned in the [Android documentation](https://developer.android.com/reference/android/database/sqlite/package-summary), some Android device manufacturers include different versions of SQLite on their devices, so if your app depends on a SQLite version that may not be available on a device that your app supports, you may want to consider using [SQLPlus](#SQLPlus) instead.
 
 ---
 
@@ -305,11 +401,14 @@ which creates a local build with the following extensions enabled:
 The `SQLPlus` module uses sqlite version 3.50.4, which means
 that it will be safe to use newer sqlite features like
 the [`json`](https://sqlite.org/json1.html) function,
+RIGHT and FULL outer joins, and full text search,
 regardless of the Android API and iOS versions of the 
 deployment platform.
 
 This comes at the cost of additional build time for the native libraries,
-as well as a larger artifact size (around 1MB on iOS and 4MB on Android).
+as well as a larger artifact size (around 1MB on iOS and 4MB on Android),
+but has the benefit that every device you deploy your app to — on iOS and Android —
+will be using the exact same build of SQLite.
 
 #### Using SQLPlus
 
@@ -320,7 +419,7 @@ and passing `configuration: .plus` to the `SQLContext` constructor, like so:
 import SkipSQL
 import SkipSQLPlus
 
-let dbpath = URL.documentsDirectory.appendingPathComponent("db.sqlite")
+let dbpath = URL.applicationSupportDirectory.appendingPathComponent("db.sqlite")
 let db = try SQLContext(path: dbpath.path, flags: [.create, .readWrite], configuration: .plus)
 // do something with the database
 db.close()
@@ -329,7 +428,6 @@ db.close()
 #### JSON
 
 SQLPlus enables the [`json`](https://sqlite.org/json1.html) extensions:
-
 
 ```swift
 let sqlplus = SQLContext(configuration: .plus)
@@ -344,7 +442,6 @@ assert j1 == [.text("Alice")]
 let j2 = try sqlplus.query(sql: #"SELECT json_extract(profile, '$.name') as name, json_extract(profile, '$.age') as age FROM users WHERE id = ?"#, parameters: [.integer(2)]).first
 assert j2 == [.text("Bob"), .integer(25)]
 ```
-
 
 #### Encryption
 
@@ -361,15 +458,48 @@ secure local database files. Cryptographic algorithms are provided by the [LibTo
 An example of creating an encryped database:
 
 ```swift
-import SkipSQL
 import SkipSQLPlus
 
-let dbpath = URL.documentsDirectory.appendingPathComponent("encrypted.sqlite")
+let dbpath = URL.applicationSupportDirectory.appendingPathComponent("encrypted.sqlite")
 let db = try SQLContext(path: dbpath.path, flags: [.create, .readWrite], configuration: .plus)
-_ = try db.query(sql: "PRAGMA key = 'password'")
-try db.exec(sql: #"CREATE TABLE SOME_TABLE(col)"#)
-try db.exec(sql: #"INSERT INTO SOME_TABLE(col) VALUES(?)"#, parameters: [.text("SOME SECRET STRING")])
+try db.exec(sql: "PRAGMA key = 'password'")
+try db.exec(sql: "CREATE TABLE SOME_TABLE(col)")
+try db.exec(sql: "INSERT INTO SOME_TABLE(col) VALUES(?)", parameters: [.text("SOME SECRET STRING")])
 try db.close()
+```
+
+##### Encrypting an unencrypted database
+
+Note that setting the key on the database must be the first operation that is performed after the database is opened, before any other SQL is executed. To encrypt an unencryped database that has already been created, the database must be exported with the `export(path, key)` function and then re-opened with the key. An example utility extension to do this is:
+
+```swift
+extension SQLContext {
+    /// Takes an unencrypted database and encrypts it with the given key
+    func encryptDatabase(key: String, at dbPath: URL) throws -> SQLContext {
+        let v = self.userVersion
+
+        let tmpDBURL = dbPath.appendingPathExtension("rekey")
+
+        // create a new temporary location to encrypt the database
+        try self.export(tmpDBURL.path, key: key)
+
+        try self.close() // disconnect the current DB so we can safely delete and overwrite it
+
+        // move the encrypted database to the new path
+        try FileManager.default.removeItem(at: dbPath)
+        try FileManager.default.moveItem(at: tmpDBURL, to: dbPath)
+
+        // reconnect to the newly converted database
+        let ctx = try SQLContext(path: dbPath.path, flags: .readWrite, configuration: .plus)
+        try ctx.key(key) // set the key on the database
+
+        // re-set the userVersion, which is not copied by pragma sqlcipher_export:
+        // “sqlcipher_export does not alter the user_version of the target database. Applications are free to do this themselves.” – https://www.zetetic.net/sqlcipher/sqlcipher-api/#notes-export
+        ctx.userVersion = v
+
+        return ctx // return the newly-created context
+    }
+}
 ```
 
 

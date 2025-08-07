@@ -272,6 +272,7 @@ public extension SQLCodable {
     }
 }
 
+// SKIP NOWARN
 public extension SQLContext {
     /// Prepares the given SQL as a statement, which can be executed with parameter bindings.
     func prepare(expr: SQLExpression) throws -> SQLStatement {
@@ -1078,4 +1079,51 @@ public extension SQLColumn {
     func blobValueRequired(in row: SQLRow) throws -> Data {
         try SQLBindingError.checkNonNull(blobValue(in: row), self)
     }
+
+    /// SQLite does not have a storage class set aside for storing dates and/or times. Instead, the built-in Date And Time Functions of SQLite are capable of storing dates and times as TEXT, REAL, or INTEGER values:
+    ///
+    ///  - TEXT as ISO8601 strings ("YYYY-MM-DD HH:MM:SS.SSS").
+    ///  - REAL as Julian day numbers, the number of days since noon in Greenwich on November 24, 4714 B.C. according to the proleptic Gregorian calendar.
+    ///  - INTEGER as Unix Time, the number of seconds since 1970-01-01 00:00:00 UTC.
+    ///
+    /// Applications can choose to store dates and times in any of these formats and freely convert between formats using the built-in date and time functions.
+    func dateValue(in row: SQLRow) -> Date? {
+        if self.type == .real {
+            return self.realValue(in: row).flatMap({ Date(timeIntervalSince1970: $0) })
+        } else if self.type == .text {
+            guard let textValue = self.textValue(in: row) else {
+                return nil
+            }
+            var dateString = textValue
+            // try to parse the full date, and if it cannot, coerce some common degenerate variants
+            if let date = sharedISO8601DateFormatter.date(from: dateString) {
+                return date
+            }
+            dateString = dateString.replacingOccurrences(of: " ", with: "T")
+            if let date = sharedISO8601DateFormatter.date(from: dateString) {
+                return date
+            }
+
+            dateString += "Z"
+            if let date = sharedISO8601DateFormatter.date(from: dateString) {
+                return date
+            }
+
+            dateString = (dateString.split(separator: ".").first?.description ?? dateString) + "Z"
+            if let date = sharedISO8601DateFormatter.date(from: dateString) {
+                return date
+            }
+
+            //logger.warn("could not parse date string from text field: \(textValue) in column \(self.name)")
+            return nil
+        } else {
+            return nil
+        }
+    }
+
+    func dateValueRequired(in row: SQLRow) throws -> Date {
+        try SQLBindingError.checkNonNull(dateValue(in: row), self)
+    }
 }
+
+private let sharedISO8601DateFormatter = ISO8601DateFormatter()

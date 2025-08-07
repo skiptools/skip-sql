@@ -369,6 +369,16 @@ public class SQLContext {
         get { (try? selectAll(sql: "PRAGMA user_version").first?.first?.longValue) ?? 0 }
         set { _ = try? exec(sql: "PRAGMA user_version = \(newValue)") }
     }
+
+    /// Quotes the given string
+    public func quoteSingle(_ string: String) -> String {
+        string.quote(#"'"#)
+    }
+
+    /// Quotes the given string
+    public func quoteDouble(_ string: String) -> String {
+        string.quote(#"""#)
+    }
 }
 
 public struct SQLExpression {

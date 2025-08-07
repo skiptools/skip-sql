@@ -85,7 +85,7 @@ public final class SQLStatement {
             try bind(parameters: parameters)
         }
         let result = SQLite3.sqlite3_step(stmnt)
-        try check(SQLite3, db: db, code: result, permit: [Int32(SQLITE_DONE)])
+        try check(SQLite3, db: db, code: result, permit: [Int32(SQLITE_DONE), Int32(SQLITE_ROW)])
     }
 
     /// Binds the given parameters to the statement. The parameter count must match the number of `?` parameters in the statement.
