@@ -265,7 +265,8 @@ public extension SQLCodable {
         var sql = "SELECT "
         sql += self.table.columns.map({ aliasPrefix + $0.quotedName }).joined(separator: ", ")
         sql += " FROM "
-        sql += self.table.name.quote()
+        // permit the table name to have a bound parameter so we can select from things like `pragma_table_info(?)`
+        sql += self.table.name.contains("?") ? self.table.name : self.table.name.quote()
         sql += aliasSuffix
 
         return SQLExpression(sql)
@@ -438,7 +439,7 @@ public extension SQLContext {
         var rowMap = try _createSQLRow(columns, columns.map({ row[$0] ?? .null }))
         var changedFields = 0
         for col in columns {
-            if col.primaryKey && col.autoincrement && (row[col] == .null || row[col] == SQLValue.defaultPrimaryKeyValue) {
+            if col.primaryKey && (row[col] == .null || (col.autoincrement && row[col] == SQLValue.defaultPrimaryKeyValue)) {
                 // get the last inserted row id and update it in the object
                 let lastID = SQLValue(lastInsertRowID)
                 if rowMap[col] != lastID {
@@ -725,6 +726,7 @@ extension SQLColumn : SQLRepresentable {
     }
 }
 
+// SKIP NOWARN // "This extension will be moved into its extended type definition when translated to Kotlin. It will not be able to access this file's private types or fileprivate members"
 extension SQLValue : SQLRepresentable {
     /// The empty primary key value, signifying that the primary key should be assigned
     public static let defaultPrimaryKeyValue = SQLValue.long(0)
@@ -1048,6 +1050,14 @@ public enum SQLBindingError : Error {
 }
 
 public extension SQLColumn {
+    func value(in row: SQLRow) -> SQLValue? {
+        row[self]
+    }
+
+    func valueRequired(in row: SQLRow) throws -> SQLValue {
+        try SQLBindingError.checkNonNull(value(in: row), self)
+    }
+
     func longValue(in row: SQLRow) -> Int64? {
         row[self]?.longValue
     }

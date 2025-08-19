@@ -259,9 +259,11 @@ final class SQLContextTests: XCTestCase {
 
         let date = Date(timeIntervalSince1970: 1754550000.0)
         let ob1 = try ctx.insert(SQLDateAsText(date: date))
+        let _ = ob1
         XCTAssertEqual(#"INSERT INTO "SQL_DATE_AS_TEXT" ("DATE") VALUES ('2025-08-07T07:00:00Z')"#, statements.last)
 
         let ob2 = try ctx.insert(SQLDateAsReal(date: date))
+        let _ = ob2
         XCTAssertEqual(#"INSERT INTO "SQL_DATE_AS_REAL" ("DATE") VALUES (1754550000.0)"#, statements.last)
 
         // test date/time functions on each of the types
@@ -459,9 +461,27 @@ final class SQLContextTests: XCTestCase {
         for ddl in DemoTable.table.createTableSQL(withIndexes: false) {
             try sqlite.exec(ddl)
         }
-        XCTAssertEqual(#"CREATE TABLE "DEMO_TABLE" ("ID" INTEGER PRIMARY KEY AUTOINCREMENT, "TXT" TEXT UNIQUE NOT NULL, "NUM" REAL, "INT" INTEGER NOT NULL, "DBL" REAL DEFAULT 3.141592653589793, "BLB" BLOB)"#, statements.last)
+        let createDemoTableSQL = #"CREATE TABLE "DEMO_TABLE" ("ID" INTEGER PRIMARY KEY, "TXT" TEXT UNIQUE NOT NULL, "NUM" REAL, "INT" INTEGER NOT NULL, "DBL" REAL DEFAULT 3.141592653589793, "BLB" BLOB)"#
+        XCTAssertEqual(createDemoTableSQL, statements.last)
 
         try check(count: 0)
+
+        do {
+            let tables = try sqlite.query(TableInfo.self, where: TableInfo.type.equals(SQLValue("table"))).load()
+            XCTAssertEqual(1, tables.count)
+            XCTAssertEqual(tables.dropFirst(0).first, TableInfo(type: "table", name: DemoTable.table.name, tbl_name: DemoTable.table.name, rootpage: 2, sql: createDemoTableSQL))
+            // XCTAssertEqual(tables.dropFirst(1).first, TableInfo(type: "index", name: "sqlite_autoindex_DEMO_TABLE_1", tbl_name: DemoTable.table.name, rootpage: 3, sql: nil)) // if we didn't filter on tables…
+            // XCTAssertEqual(tables.dropFirst(2).first, TableInfo(type: "table", name: "sqlite_sequence", tbl_name: "sqlite_sequence", rootpage: 4, sql: "CREATE TABLE sqlite_sequence(name,seq)")) // if the primary key were autoincrement this sequence table would have been added
+
+            let columns = try sqlite.query(ColumnInfo.self, where: .custom(sql: "true", bindings: [.text(DemoTable.table.name)])).load()
+            XCTAssertEqual(6, columns.count)
+            XCTAssertEqual(columns.dropFirst(0).first, ColumnInfo(cid: 0, name: "ID", type: "INTEGER", notnull: 0, dflt_value: .null, pk: 1))
+            XCTAssertEqual(columns.dropFirst(1).first, ColumnInfo(cid: 1, name: "TXT", type: "TEXT", notnull: 1, dflt_value: .null, pk: 0))
+            XCTAssertEqual(columns.dropFirst(2).first, ColumnInfo(cid: 2, name: "NUM", type: "REAL", notnull: 0, dflt_value: .null, pk: 0))
+            XCTAssertEqual(columns.dropFirst(3).first, ColumnInfo(cid: 3, name: "INT", type: "INTEGER", notnull: 1, dflt_value: .null, pk: 0))
+            XCTAssertEqual(columns.dropFirst(4).first, ColumnInfo(cid: 4, name: "DBL", type: "REAL", notnull: 0, dflt_value: .text("3.141592653589793"), pk: 0)) // FIXME: dflt_value should probably be a .real, but would require us to use sqlite3_column_value
+            XCTAssertEqual(columns.dropFirst(5).first, ColumnInfo(cid: 5, name: "BLB", type: "BLOB", notnull: 0, dflt_value: .null, pk: 0))
+        }
 
         var ob = DemoTable(txt: "ABC", num: 12.3, int: 456, dbl: 7.89, blb: blob)
         try sqlite.inserted(&ob)
@@ -885,10 +905,112 @@ extension SQLContext {
     }
 }
 
+/// `sqlite_schema`
+/// `type|name|tbl_name|rootpage|sql`
+public struct TableInfo : SQLCodable, Equatable {
+    public var type: String
+    static let type = SQLColumn(name: "type", type: .text)
+
+    public var name: String
+    static let name = SQLColumn(name: "name", type: .text)
+
+    public var tbl_name: String
+    static let tbl_name = SQLColumn(name: "tbl_name", type: .text)
+
+    public var rootpage: Int64
+    static let rootpage = SQLColumn(name: "rootpage", type: .long)
+
+    /// the default value for the column
+    public var sql: String?
+    static let sql = SQLColumn(name: "sql", type: .text)
+
+    public static let table = SQLTable(name: "sqlite_schema", columns: [type, name, tbl_name, rootpage, sql])
+
+    public init(type: String, name: String, tbl_name: String, rootpage: Int64, sql: String?) {
+        self.type = type
+        self.name = name
+        self.tbl_name = tbl_name
+        self.rootpage = rootpage
+        self.sql = sql
+    }
+
+    public init(row: SQLRow, context: SQLContext) throws {
+        self.type = try Self.type.textValueRequired(in: row)
+        self.name = try Self.name.textValueRequired(in: row)
+        self.tbl_name = try Self.tbl_name.textValueRequired(in: row)
+        self.rootpage = try Self.rootpage.longValueRequired(in: row)
+        self.sql = Self.sql.textValue(in: row)
+    }
+
+    public func encode(row: inout SQLRow) throws {
+        row[Self.type] = SQLValue(self.type)
+        row[Self.name] = SQLValue(self.name)
+        row[Self.tbl_name] = SQLValue(self.tbl_name)
+        row[Self.rootpage] = SQLValue(self.rootpage)
+        row[Self.sql] = SQLValue(self.sql)
+    }
+}
+
+/// https://sqlite.org/pragma.html#pragma_table_info
+///
+/// `select * from pragma_table_info('foo')`
+public struct ColumnInfo : SQLCodable, Equatable {
+    public var cid: Int64
+    static let cid = SQLColumn(name: "cid", type: .long)
+
+    public var name: String
+    static let name = SQLColumn(name: "name", type: .text)
+
+    /// data type if given, else ''
+    public var type: String
+    static let type = SQLColumn(name: "type", type: .text)
+
+    /// whether or not the column can be NULL
+    public var notnull: Int64
+    static let notnull = SQLColumn(name: "notnull", type: .long)
+
+    /// the default value for the column
+    public var dflt_value: SQLValue
+    static let dflt_value = SQLColumn(name: "dflt_value", type: .text)
+
+    /// either zero for columns that are not part of the primary key, or the 1-based index of the column within the primary key
+    public var pk: Int64
+    static let pk = SQLColumn(name: "pk", type: .long)
+
+    public static let table = SQLTable(name: "pragma_table_info(?)", columns: [cid, name, type, notnull, dflt_value, pk])
+
+    public init(cid: Int64, name: String, type: String, notnull: Int64, dflt_value: SQLValue, pk: Int64) {
+        self.cid = cid
+        self.name = name
+        self.type = type
+        self.notnull = notnull
+        self.dflt_value = dflt_value
+        self.pk = pk
+    }
+
+    public init(row: SQLRow, context: SQLContext) throws {
+        self.cid = try Self.cid.longValueRequired(in: row)
+        self.name = try Self.name.textValueRequired(in: row)
+        self.type = try Self.type.textValueRequired(in: row)
+        self.notnull = try Self.notnull.longValueRequired(in: row)
+        self.dflt_value = try Self.dflt_value.valueRequired(in: row)
+        self.pk = try Self.pk.longValueRequired(in: row)
+    }
+
+    public func encode(row: inout SQLRow) throws {
+        row[Self.cid] = SQLValue(self.cid)
+        row[Self.name] = SQLValue(self.name)
+        row[Self.type] = SQLValue(self.type)
+        row[Self.notnull] = SQLValue(self.notnull)
+        row[Self.dflt_value] = self.dflt_value
+        row[Self.pk] = SQLValue(self.pk)
+    }
+}
+
 /// A struct that can read and write its values to the `DEMO_TABLE` table.
 public struct DemoTable : SQLCodable, Equatable {
     public var id: Int64?
-    static let id = SQLColumn(name: "ID", type: .long, primaryKey: true, autoincrement: true)
+    static let id = SQLColumn(name: "ID", type: .long, primaryKey: true)
 
     public var txt: String?
     static let txt = SQLColumn(name: "TXT", type: .text, unique: true, nullable: false, index: SQLIndex(name: "IDX_TXT"))

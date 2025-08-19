@@ -139,6 +139,9 @@ public final class SQLStatement {
     /// Returns the type of the column at the given index.
     public func type(at idx: Int32) -> SQLType {
         SQLType(rawValue: SQLite3.sqlite3_column_type(stmnt, idx)) ?? .null
+        // TODO: sqlite3_column_type returns the type of the first row of the results, but if a column contains heterogeneous types, then a better way might be to examine each individual type and check its value, but this would require additions to the SQLiteLibrary protocol to handle the sqlite3_value struct
+        //let value = SQLite3.sqlite3_column_value(stmnt, idx)
+        //let valueType = SQLite3.sqlite3_value_type(value)
     }
 
     /// Returns the integer at the given index, coercing if necessary according to https://www.sqlite.org/datatype3.html
