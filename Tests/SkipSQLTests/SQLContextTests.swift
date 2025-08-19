@@ -905,7 +905,7 @@ extension SQLContext {
     }
 }
 
-/// `sqlite_schema`
+/// `sqlite_master` (the new recommended `sqlite_schema` name was introduced in SQLite 3.33.0)
 /// `type|name|tbl_name|rootpage|sql`
 public struct TableInfo : SQLCodable, Equatable {
     public var type: String
@@ -924,7 +924,7 @@ public struct TableInfo : SQLCodable, Equatable {
     public var sql: String?
     static let sql = SQLColumn(name: "sql", type: .text)
 
-    public static let table = SQLTable(name: "sqlite_schema", columns: [type, name, tbl_name, rootpage, sql])
+    public static let table = SQLTable(name: "sqlite_master", columns: [type, name, tbl_name, rootpage, sql])
 
     public init(type: String, name: String, tbl_name: String, rootpage: Int64, sql: String?) {
         self.type = type
