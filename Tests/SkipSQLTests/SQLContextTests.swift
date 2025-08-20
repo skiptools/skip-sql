@@ -259,9 +259,11 @@ final class SQLContextTests: XCTestCase {
 
         let date = Date(timeIntervalSince1970: 1754550000.0)
         let ob1 = try ctx.insert(SQLDateAsText(date: date))
+        let _ = ob1
         XCTAssertEqual(#"INSERT INTO "SQL_DATE_AS_TEXT" ("DATE") VALUES ('2025-08-07T07:00:00Z')"#, statements.last)
 
         let ob2 = try ctx.insert(SQLDateAsReal(date: date))
+        let _ = ob2
         XCTAssertEqual(#"INSERT INTO "SQL_DATE_AS_REAL" ("DATE") VALUES (1754550000.0)"#, statements.last)
 
         // test date/time functions on each of the types
@@ -433,7 +435,7 @@ final class SQLContextTests: XCTestCase {
         XCTAssertEqual("x'58595a'", SQLValue(blob).literalValue)
 
         func check(count expectedCount: Int, _ predicate: SQLPredicate? = nil, alias: String? = nil, sql: String? = nil) throws {
-            let resultSet = try sqlite.query(DemoTable.self, alias, where: predicate)
+            let resultSet = try sqlite.query(DemoTable.self, alias: alias).where(predicate).eval()
             defer { resultSet.close() }
             let instances = try resultSet.load()
             XCTAssertEqual(expectedCount, instances.count)
@@ -443,7 +445,7 @@ final class SQLContextTests: XCTestCase {
         }
 
         func checkJoin(count expectedCount: Int, _ predicate: SQLPredicate? = nil, alias: String? = nil, sql: String? = nil) throws {
-            let resultSet = try sqlite.query(DemoJoinTable.self, alias, where: predicate)
+            let resultSet = try sqlite.query(DemoJoinTable.self, alias: alias).where(predicate).eval()
             defer { resultSet.close() }
             let instances = try resultSet.load()
             XCTAssertEqual(expectedCount, instances.count)
@@ -459,9 +461,27 @@ final class SQLContextTests: XCTestCase {
         for ddl in DemoTable.table.createTableSQL(withIndexes: false) {
             try sqlite.exec(ddl)
         }
-        XCTAssertEqual(#"CREATE TABLE "DEMO_TABLE" ("ID" INTEGER PRIMARY KEY AUTOINCREMENT, "TXT" TEXT UNIQUE NOT NULL, "NUM" REAL, "INT" INTEGER NOT NULL, "DBL" REAL DEFAULT 3.141592653589793, "BLB" BLOB)"#, statements.last)
+        let createDemoTableSQL = #"CREATE TABLE "DEMO_TABLE" ("ID" INTEGER PRIMARY KEY, "TXT" TEXT UNIQUE NOT NULL, "NUM" REAL, "INT" INTEGER NOT NULL, "DBL" REAL DEFAULT 3.141592653589793, "BLB" BLOB)"#
+        XCTAssertEqual(createDemoTableSQL, statements.last)
 
         try check(count: 0)
+
+        do {
+            let tables = try sqlite.tables()
+            XCTAssertEqual(1, tables.count)
+            XCTAssertEqual(tables.dropFirst(0).first, TableInfo(type: "table", name: DemoTable.table.name, tbl_name: DemoTable.table.name, rootpage: 2, sql: createDemoTableSQL))
+            // XCTAssertEqual(tables.dropFirst(1).first, TableInfo(type: "index", name: "sqlite_autoindex_DEMO_TABLE_1", tbl_name: DemoTable.table.name, rootpage: 3, sql: nil)) // if we didn't filter on tables…
+            // XCTAssertEqual(tables.dropFirst(2).first, TableInfo(type: "table", name: "sqlite_sequence", tbl_name: "sqlite_sequence", rootpage: 4, sql: "CREATE TABLE sqlite_sequence(name,seq)")) // if the primary key were autoincrement this sequence table would have been added
+
+            let columns = try sqlite.columns(for: DemoTable.table.name)
+            XCTAssertEqual(6, columns.count)
+            XCTAssertEqual(columns.dropFirst(0).first, ColumnInfo(cid: 0, name: "ID", type: "INTEGER", notnull: 0, dflt_value: .null, pk: 1))
+            XCTAssertEqual(columns.dropFirst(1).first, ColumnInfo(cid: 1, name: "TXT", type: "TEXT", notnull: 1, dflt_value: .null, pk: 0))
+            XCTAssertEqual(columns.dropFirst(2).first, ColumnInfo(cid: 2, name: "NUM", type: "REAL", notnull: 0, dflt_value: .null, pk: 0))
+            XCTAssertEqual(columns.dropFirst(3).first, ColumnInfo(cid: 3, name: "INT", type: "INTEGER", notnull: 1, dflt_value: .null, pk: 0))
+            XCTAssertEqual(columns.dropFirst(4).first, ColumnInfo(cid: 4, name: "DBL", type: "REAL", notnull: 0, dflt_value: .text("3.141592653589793"), pk: 0)) // FIXME: dflt_value should probably be a .real, but would require us to use sqlite3_column_value
+            XCTAssertEqual(columns.dropFirst(5).first, ColumnInfo(cid: 5, name: "BLB", type: "BLOB", notnull: 0, dflt_value: .null, pk: 0))
+        }
 
         var ob = DemoTable(txt: "ABC", num: 12.3, int: 456, dbl: 7.89, blb: blob)
         try sqlite.inserted(&ob)
@@ -554,8 +574,7 @@ final class SQLContextTests: XCTestCase {
 
         // now try a cursored read of database instances
         do {
-            //let cursor = try DemoTable.select(context: sqlite)
-            let cursor = try sqlite.query(DemoTable.self)
+            let cursor = try sqlite.query(DemoTable.self).eval()
 
             // if we don't close the cursor before dropping the table, results in the error in Kotlin (GC'd):
             // SQLite error code 6: database table is locked
@@ -575,8 +594,10 @@ final class SQLContextTests: XCTestCase {
 
         do {
             // check limit/offset queries
-            XCTAssertEqual(1, try sqlite.query(DemoTable.self, limit: 1).load().count)
-            XCTAssertEqual(2, try sqlite.query(DemoTable.self, limit: 100, offset: 4).load().count)
+            XCTAssertEqual(1, try sqlite.query(DemoTable.self).limit(1).eval().load().count)
+            XCTAssertEqual(#"SELECT "ID", "TXT", "NUM", "INT", "DBL", "BLB" FROM "DEMO_TABLE" LIMIT 1"#, statements.last)
+            XCTAssertEqual(2, try sqlite.query(DemoTable.self).limit(100, offset: 4).eval().load().count)
+            XCTAssertEqual(#"SELECT "ID", "TXT", "NUM", "INT", "DBL", "BLB" FROM "DEMO_TABLE" LIMIT 100 OFFSET 4"#, statements.last)
         }
 
         try check(count: 1, .equals(DemoTable.txt, SQLValue("ABC")),
@@ -661,8 +682,22 @@ final class SQLContextTests: XCTestCase {
             XCTAssertEqual(try ob4.manyToManyRelation(in: sqlite), [ob6])
         }
 
+        do { // a single query with where, order, and limit clauses
+            let singleQuery = try sqlite.query(DemoTable.self, alias: "t0")
+                .where(DemoTable.num.greaterThan(SQLValue(1)))
+                .where(DemoTable.txt.notLike(SQLValue("x")))
+                .orderBy(DemoTable.num)
+                .limit(999)
+                .eval()
+            defer { singleQuery.close() }
+            let singleQueryResults = try singleQuery.load()
+            XCTAssertEqual(4, singleQueryResults.count)
+            XCTAssertEqual(ob1, singleQueryResults.first)
+            XCTAssertEqual(#"SELECT t0."ID", t0."TXT", t0."NUM", t0."INT", t0."DBL", t0."BLB" FROM "DEMO_TABLE" AS t0 WHERE ("NUM" > 1 AND "TXT" NOT LIKE 'x') ORDER BY "NUM" ASC LIMIT 999"#, statements.last)
+        }
+
         do { // a single aliased query
-            let singleQuery = try sqlite.query(DemoTable.self, "t0")
+            let singleQuery = try sqlite.query(DemoTable.self, alias: "t0").eval()
             defer { singleQuery.close() }
             let singleQueryResults = try singleQuery.load()
             XCTAssertEqual(6, singleQueryResults.count)
@@ -671,9 +706,9 @@ final class SQLContextTests: XCTestCase {
         }
 
         do { // a cross join
-            let crossJoin = try sqlite.query(DemoTable.self, "t0",
-                                             join: .cross, on: nil,
-                                             DemoJoinTable.self, "t1")
+            let crossJoin = try sqlite.query(DemoTable.self, alias: "t0")
+                .join(DemoJoinTable.self, alias: "t1", kind: .cross, on: nil)
+                .eval()
             defer { crossJoin.close() }
             let crossJoinResults = try crossJoin.load()
             XCTAssertEqual(6 * 3, crossJoinResults.count)
@@ -683,10 +718,11 @@ final class SQLContextTests: XCTestCase {
         }
 
         do { // a two-way inner join
-            let joined2 = try sqlite.query(DemoTable.self, "t0",
-                                           join: .inner, on: DemoJoinTable.id1,
-                                           DemoJoinTable.self, "t1",
-                                           orderBy: [(DemoTable.id.alias("t0"), .descending), (DemoTable.txt.alias("t0"), .ascending)])
+            let joined2 = try sqlite.query(DemoTable.self, alias: "t0")
+                .join(DemoJoinTable.self, alias: "t1", kind: .inner, on: DemoJoinTable.id1)
+                .orderBy(DemoTable.id.alias("t0"), order: .descending)
+                .orderBy(DemoTable.txt.alias("t0"), order: .ascending)
+                .eval()
             defer { joined2.close() }
             let joined2Results = try joined2.load()
             XCTAssertEqual(3, joined2Results.count)
@@ -696,23 +732,26 @@ final class SQLContextTests: XCTestCase {
         }
 
         do { // a two-way inner join with a condition
-            let joined2 = try sqlite.query(DemoTable.self, "t0",
-                                           join: .inner, on: DemoJoinTable.id1,
-                                           DemoJoinTable.self, "t1",
-                                           where: DemoTable.txt.alias("t0").equals(SQLValue("ABC")))
+            let joined2 = try sqlite.query(DemoTable.self, alias: "t0")
+                .join(DemoJoinTable.self, alias: "t1", kind: .inner, on: DemoJoinTable.id1)
+                .orderBy(DemoTable.int.alias("t0"))
+                .where(DemoTable.txt.alias("t0").equals(SQLValue("ABC")))
+                .orderBy(DemoTable.txt.alias("t0"), order: .descending)
+                .eval()
+
             defer { joined2.close() }
             let joined2Results = try joined2.load()
             XCTAssertEqual(1, joined2Results.count)
             XCTAssertEqual(ob1, joined2Results.first?.0)
             XCTAssertEqual(joinOb1, joined2Results.first?.1)
-            XCTAssertEqual(#"SELECT t0."ID", t0."TXT", t0."NUM", t0."INT", t0."DBL", t0."BLB", t1."ID1", t1."ID2" FROM "DEMO_TABLE" AS t0 INNER JOIN "DEMO_JOIN_TABLE" AS t1 ON t0."ID" = t1."ID1" WHERE t0."TXT" = 'ABC'"#, statements.last)
+            XCTAssertEqual(#"SELECT t0."ID", t0."TXT", t0."NUM", t0."INT", t0."DBL", t0."BLB", t1."ID1", t1."ID2" FROM "DEMO_TABLE" AS t0 INNER JOIN "DEMO_JOIN_TABLE" AS t1 ON t0."ID" = t1."ID1" WHERE t0."TXT" = 'ABC' ORDER BY t0."INT" ASC, t0."TXT" DESC"#, statements.last)
         }
 
         do { // a two-way inner join without aliases
-            let joined2 = try sqlite.query(DemoTable.self, nil,
-                                           join: .inner, on: DemoJoinTable.id1,
-                                           DemoJoinTable.self, nil,
-                                           where: DemoTable.txt.equals(SQLValue("ABC")))
+            let joined2 = try sqlite.query(DemoTable.self)
+                .join(DemoJoinTable.self, kind: .inner, on: DemoJoinTable.id1)
+                .where(DemoTable.txt.equals(SQLValue("ABC")))
+                .eval()
             defer { joined2.close() }
             let joined2Results = try joined2.load()
             XCTAssertEqual(1, joined2Results.count)
@@ -722,9 +761,9 @@ final class SQLContextTests: XCTestCase {
         }
 
         do { // a two-way inner join without aliases (to the other foreign key)
-            let joined2 = try sqlite.query(DemoTable.self, nil,
-                                           join: .inner, on: DemoJoinTable.id2,
-                                           DemoJoinTable.self, nil)
+            let joined2 = try sqlite.query(DemoTable.self)
+                .join(DemoJoinTable.self, kind: .inner, on: DemoJoinTable.id2)
+                .eval()
             defer { joined2.close() }
             let joined2Results = try joined2.load()
             XCTAssertEqual(3, joined2Results.count)
@@ -734,11 +773,10 @@ final class SQLContextTests: XCTestCase {
         }
 
         if sqlite.supports(feature: .rightJoin) { // a three-way RIGHT/LEFT join
-            let rightLeftJoined = try sqlite.query(DemoTable.self, "t0",
-                                                   join1: .right, on1: DemoJoinTable.id1,
-                                                   DemoJoinTable.self, "t1",
-                                                   join2: .left, on2: DemoJoinTable.id2,
-                                                   DemoTable.self, "t2")
+            let rightLeftJoined = try sqlite.query(DemoTable.self, alias: "t0")
+                .join(DemoJoinTable.self, alias: "t1", kind: .right, on: DemoJoinTable.id1)
+                .join(DemoTable.self, alias: "t2", kind: .left, on: DemoJoinTable.id2)
+                .eval()
             defer { rightLeftJoined.close() }
             let rightLeftJoinedResults = try rightLeftJoined.load()
             XCTAssertEqual(3, rightLeftJoinedResults.count)
@@ -752,12 +790,11 @@ final class SQLContextTests: XCTestCase {
         }
 
         if sqlite.supports(feature: .rightJoin) { // a three-way LEFT/RIGHT join (where some items will be expected to be nil)
-            let leftRightJoined = try sqlite.query(DemoTable.self, "t0",
-                                                   join1: .left, on1: DemoJoinTable.id1,
-                                                   DemoJoinTable.self, "t1",
-                                                   join2: .right, on2: DemoJoinTable.id2,
-                                                   DemoTable.self, "t2",
-                                                   where: DemoTable.int.alias("t2").isNotNull())
+            let leftRightJoined = try sqlite.query(DemoTable.self, alias: "t0")
+                .join(DemoJoinTable.self, alias: "t1", kind: .left, on: DemoJoinTable.id1)
+                .join(DemoTable.self, alias: "t2", kind: .right, on: DemoJoinTable.id2)
+                .where(DemoTable.int.alias("t2").isNotNull())
+                .eval()
             defer { leftRightJoined.close() }
             let leftRightJoinedResults = try leftRightJoined.load()
             XCTAssertEqual(6, leftRightJoinedResults.count)
@@ -772,11 +809,10 @@ final class SQLContextTests: XCTestCase {
         }
 
         if sqlite.supports(feature: .fullOuterJoin) { // a three-way full outer join
-            let leftRightJoined = try sqlite.query(DemoTable.self, "t0",
-                                                   join1: .full, on1: DemoJoinTable.id1,
-                                                   DemoJoinTable.self, "t1",
-                                                   join2: .full, on2: DemoJoinTable.id2,
-                                                   DemoTable.self, "t2")
+            let leftRightJoined = try sqlite.query(DemoTable.self, alias: "t0")
+                .join(DemoJoinTable.self, alias: "t1", kind: .full, on: DemoJoinTable.id1)
+                .join(DemoTable.self, alias: "t2", kind: .full, on: DemoJoinTable.id2)
+                .eval()
             defer { leftRightJoined.close() }
             let leftRightJoinedResults = try leftRightJoined.load()
             XCTAssertEqual(9, leftRightJoinedResults.count)
@@ -831,7 +867,7 @@ final class SQLContextTests: XCTestCase {
 
         try check(count: 4)
 
-        let remaining = try sqlite.query(DemoTable.self, orderBy: [(DemoTable.id, .descending), (DemoTable.txt, .ascending)]).load()
+        let remaining = try sqlite.query(DemoTable.self).orderBy(DemoTable.id, order: .descending).orderBy(DemoTable.txt, order: .ascending).eval().load()
         XCTAssertEqual(#"SELECT "ID", "TXT", "NUM", "INT", "DBL", "BLB" FROM "DEMO_TABLE" ORDER BY "ID" DESC, "TXT" ASC"#, statements.last)
 
         try sqlite.delete(instances: remaining)
@@ -842,6 +878,71 @@ final class SQLContextTests: XCTestCase {
 
         try sqlite.exec(DemoJoinTable.table.dropTableSQL())
         try sqlite.exec(DemoTable.table.dropTableSQL())
+    }
+
+    func testMultipleSchemas() throws {
+        let sqlite = SQLContext(configuration: .test)
+        var statements: [String] = []
+        sqlite.trace { sql in
+            self.logger.info("SQL: \(sql)")
+            statements.append(sql)
+        }
+
+
+        try (DemoTable.table.createTableSQL(withIndexes: true)).forEach {
+            try sqlite.exec($0)
+        }
+        try sqlite.exec(sql: "attach database :memory as schema2")
+        try (DemoTable.table.createTableSQL(inSchema: "schema2", withIndexes: true)).forEach {
+            try sqlite.exec($0)
+        }
+        try sqlite.exec(sql: "attach database :memory as schema3")
+        try (DemoTable.table.createTableSQL(inSchema: "schema3", withIndexes: true)).forEach {
+            try sqlite.exec($0)
+        }
+
+        let ob1 = try sqlite.insert(DemoTable(txt: "unique", int: 1, dbl: 123.45))
+        XCTAssertEqual(#"INSERT INTO "DEMO_TABLE" ("TXT", "INT", "DBL") VALUES ('unique', 1, 123.45)"#, statements.last)
+
+        let ob2 = try sqlite.insert(DemoTable(txt: "unique", int: 1, dbl: 678.90), inSchema: "schema2")
+        XCTAssertEqual(#"INSERT INTO "schema2"."DEMO_TABLE" ("TXT", "INT", "DBL") VALUES ('unique', 1, 678.9)"#, statements.last)
+
+        let ob3 = try sqlite.insert(DemoTable(txt: "unique", int: 1, dbl: 555.00), inSchema: "schema3")
+        XCTAssertEqual(#"INSERT INTO "schema3"."DEMO_TABLE" ("TXT", "INT", "DBL") VALUES ('unique', 1, 555.0)"#, statements.last)
+
+        // now join across the schemas with a custom join predicate
+        let joined = try sqlite.query(DemoTable.self, alias: "t0")
+            .join(DemoTable.self, alias: "t1", schema: "schema2", kind: .inner, on: DemoTable.int.alias("t0").equals(DemoTable.int.alias("t1")))
+            .join(DemoTable.self, alias: "t2", schema: "schema3", kind: .inner, on: DemoTable.int.alias("t1").equals(DemoTable.int.alias("t2")))
+            .eval()
+            .load()
+        XCTAssertEqual(#"SELECT t0."ID", t0."TXT", t0."NUM", t0."INT", t0."DBL", t0."BLB", t1."ID", t1."TXT", t1."NUM", t1."INT", t1."DBL", t1."BLB", t2."ID", t2."TXT", t2."NUM", t2."INT", t2."DBL", t2."BLB" FROM "DEMO_TABLE" AS t0 INNER JOIN "schema2"."DEMO_TABLE" AS t1 ON t0."INT" = t1."INT" INNER JOIN "schema3"."DEMO_TABLE" AS t2 ON t1."INT" = t2."INT""#, statements.last)
+
+        XCTAssertEqual(ob1, joined.first?.0)
+        XCTAssertEqual(ob2, joined.first?.1)
+        XCTAssertEqual(ob3, joined.first?.2)
+
+        // also test custom rows
+        let customq = try sqlite.query(SQLCustomRow.self)
+            .eval()
+            .load()
+        XCTAssertEqual(#"SELECT "TXT", "INT" FROM "DEMO_TABLE""#, statements.last)
+        XCTAssertEqual("unique", customq.first?.row[DemoTable.txt]?.textValue)
+    }
+
+    /// An example of a type that maps to a custom row with a subset of columns from the `DemoTable` type
+    struct SQLCustomRow : SQLCodable {
+        static var table: SQLTable = SQLTable(name: DemoTable.table.name, columns: [DemoTable.txt, DemoTable.int])
+
+        let row: SQLRow
+
+        init(row: SQLRow, context: SQLContext) throws {
+            self.row = row
+        }
+
+        func encode(row: inout SQLRow) throws {
+            row = self.row
+        }
     }
 
     func testSQLRefType() throws {
@@ -888,7 +989,7 @@ extension SQLContext {
 /// A struct that can read and write its values to the `DEMO_TABLE` table.
 public struct DemoTable : SQLCodable, Equatable {
     public var id: Int64?
-    static let id = SQLColumn(name: "ID", type: .long, primaryKey: true, autoincrement: true)
+    static let id = SQLColumn(name: "ID", type: .long, primaryKey: true)
 
     public var txt: String?
     static let txt = SQLColumn(name: "TXT", type: .text, unique: true, nullable: false, index: SQLIndex(name: "IDX_TXT"))
@@ -938,12 +1039,27 @@ public struct DemoTable : SQLCodable, Equatable {
 public extension DemoTable {
     /// Fetches the one-to-many relationship for this instance
     func oneToManyRelation(in context: SQLContext) throws -> [DemoRelation] {
-        try context.query(DemoRelation.self, where: DemoRelation.fk.equals(SQLValue(self.id))).load()
+        try context.query(DemoTable.self, alias: "t0")
+            .join(DemoRelation.self, alias: "t1", kind: .inner, on: DemoRelation.fk)
+            .where(DemoTable.id.alias("t0").equals(SQLValue(self.id)))
+            .eval()
+            .load()
+            .compactMap(\.1)
+
+        // alternatively, this same result could be achieved without a join:
+        //return try context.query(DemoRelation.self).where(DemoRelation.fk.equals(SQLValue(self.id))).eval().load()
     }
 
     /// Fetches the many-to-many relationship for this instance
     func manyToManyRelation(in context: SQLContext) throws -> [DemoTable] {
-        try context.query(DemoTable.self, "t0", join1: .inner, on1: DemoJoinTable.id1, DemoJoinTable.self, "t1", join2: .inner, on2: DemoJoinTable.id2, DemoTable.self, "t2", where: DemoTable.id.alias("t0").equals(SQLValue(self.id))).load().compactMap(\.2)
+        let values: [(DemoTable?, DemoJoinTable?, DemoTable?)] = try context.query(DemoTable.self, alias: "t0")
+            .join(DemoJoinTable.self, alias: "t1", kind: .inner, on: DemoJoinTable.id1)
+            .join(DemoTable.self, alias: "t2", kind: .inner, on: DemoJoinTable.id2)
+            .where(DemoTable.id.alias("t0").equals(SQLValue(self.id)))
+            .eval()
+            .load()
+
+        return values.compactMap(\.2)
     }
 
     /// Adds the given instance to the many-many relationship table

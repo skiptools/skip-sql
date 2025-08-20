@@ -17,7 +17,7 @@ try sqlite.exec(sql: "CREATE TABLE IF NOT EXISTS SOME_TABLE (STRING TEXT)")
 
 try sqlite.exec(sql: "INSERT INTO SOME_TABLE (STRING) VALUES (?)", parameters: [SQLValue.text("ABC")])
 
-let rows: [[SQLValue]] = ctx.query(sql: "SELECT STRING FROM SOME_TABLE")
+let rows: [[SQLValue]] = ctx.selectAll(sql: "SELECT STRING FROM SOME_TABLE")
 assert(rows[0][0] == SQLValue.text("ABC"))
 
 ```
@@ -30,7 +30,7 @@ When passing `nil` as the path, the `SQLContext` will reside entirely in memory,
 let ctx = try SQLContext(path: nil)
 defer { ctx.close() }
 
-let rows: [[SQLValue]] = ctx.query(sql: "SELECT 1, 1.1+2.2, 'AB'||'C'")
+let rows: [[SQLValue]] = ctx.selectAll(sql: "SELECT 1, 1.1+2.2, 'AB'||'C'")
 
 assert(rows[0][0] == SQLValue.long(1))
 assert(rows[0][1] == SQLValue.real(3.3))
@@ -199,7 +199,7 @@ The `SQLPredicate` type enables querying the database for instances of a `SQLCod
 // issues: SELECT "ID", "TXT", "NUM", "INT", "DBL", "BLB" FROM "DEMO_TABLE" WHERE ("NUM" IS NULL OR "TXT" = 'ABC')
 let predicate = DemoTable.num.isNull().or(DemoTable.txt.equals(SQLValue("ABC")))
 
-let resultSet = try sqlite.query(DemoTable.self, where: predicate)
+let resultSet = try sqlite.query(DemoTable.self).where(predicate).eval()
 defer { resultSet.close() }
 
 let cursor = resultSet.makeIterator()
@@ -305,7 +305,8 @@ public struct SQLDateAsText : SQLCodable {
 
 SkipSQL is not a complete object-relational mapping (ORM) package,
 but it does contain the ability to perform joins across multiple
-`SQLCodable` tables.
+`SQLCodable` tables when one of the `SQLColumn` definitions
+includes a `SQLForeignKey`.
 
 ```swift
 /// A struct that can read and write its values to the `DEMO_TABLE` table.
@@ -315,7 +316,7 @@ public struct DemoParent : SQLCodable {
 
     public var parentInfo: String?
     static let parentInfo = SQLColumn(name: "PARENT_INFO", type: .text)
-    
+
     public static let table = SQLTable(name: "DEMO_TABLE", columns: [id, parentInfo])
 }
 
@@ -328,15 +329,15 @@ public struct DemoChild : SQLCodable {
 
     public var childInfo: String?
     static let childInfo = SQLColumn(name: "CHILD_INFO", type: .text)
-    
+
     public static let table = SQLTable(name: "DEMO_CHILD", columns: [id, parentID, childInfo])
 }
 
 // perform a join between all the parents and children
-let joined2: [(DemoParent?, DemoChild?)] = try sqlite.query(DemoParent.self, "t0",
-    join: .inner, on: DemoChild.parentID,
-    DemoChild.self, "t1").load()
-
+let joined2: [(DemoParent?, DemoChild?)] = try sqlite.query(DemoParent.self, alias: "t0")
+    .join(DemoChild.self, "t1", kind: .inner, on: DemoChild.parentID)
+    .eval()
+    .load()
 ```
 
 This operation will perform a one-to-many inner join from the `DemoParent`
@@ -348,10 +349,10 @@ outer join types, it is possible to have empty rows, which would map to
 ## Implementation
 
 SkipSQL speaks directly to the low-level SQLite3 C library that is pre-installed on all iOS and Android devices.
-On Darwin/iOS, and with SkipFuse on Android, it communicates directly through Swift's C bridging support.
+On Darwin/iOS, and with SkipFuse on Android, it communicates directly through Swift's C integration.
 With transpiled SkipLite on Android, it uses the [SkipFFI](https://source.skip.tools/skip-ffi) module to interact directly with the underlying sqlite installation on Android for SkipSQL, or with the locally-built SQLite that is packages and bundled with the application as a shared object file.
 
-Note that For performance and a consistent API, SkipSQL eschews Android's `android.database.sqlite` Java wrapper, and instead uses the same SQLite C API on both Android and Darwin platforms.
+Note that for performance and a consistent API, SkipSQL eschews Android's `android.database.sqlite` Java wrapper, and instead uses the same SQLite C API on both Android and Darwin platforms.
 
 ## SQLite Versions
 
@@ -430,10 +431,10 @@ try sqlplus.exec(sql: #"CREATE TABLE users (id INTEGER PRIMARY KEY, profile JSON
 try sqlplus.exec(sql: #"INSERT INTO users (id, profile) VALUES (1, '{"name": "Alice", "age": 30}')"#)
 try sqlplus.exec(sql: #"INSERT INTO users (id, profile) VALUES (2, '{"name": "Bob", "age": 25}')"#)
 
-let j1 = try sqlplus.query(sql: #"SELECT json_extract(profile, '$.name') as name FROM users WHERE id = ?"#, parameters: [.integer(1)]).first
+let j1 = try sqlplus.selectAll(sql: #"SELECT json_extract(profile, '$.name') as name FROM users WHERE id = ?"#, parameters: [.integer(1)]).first
 assert j1 == [.text("Alice")]
 
-let j2 = try sqlplus.query(sql: #"SELECT json_extract(profile, '$.name') as name, json_extract(profile, '$.age') as age FROM users WHERE id = ?"#, parameters: [.integer(2)]).first
+let j2 = try sqlplus.selectAll(sql: #"SELECT json_extract(profile, '$.name') as name, json_extract(profile, '$.age') as age FROM users WHERE id = ?"#, parameters: [.integer(2)]).first
 assert j2 == [.text("Bob"), .integer(25)]
 ```
 
@@ -446,8 +447,7 @@ SQLPlus contains the SQLCipher extension, which adds 256 bit AES encryption of d
 - Memory sanitization
 - Strong key derivation
 
-SQLCipher is based on SQLite and stable upstream release features are periodically integrated. The extension is documented at the official [SQLCipher site](https://www.zetetic.net/sqlcipher/). It is used by many mobile applications like the [Signal](https://github.com/signalapp/sqlcipher) iOS and Android app to
-secure local database files. Cryptographic algorithms are provided by the [LibTomCrypt](https://github.com/libtom/libtomcrypt) C library, which is included alongside the sqlcipher sources.
+SQLCipher is based on SQLite and stable upstream release features are periodically integrated. The extension is documented at the official [SQLCipher site](https://www.zetetic.net/sqlcipher/). It is used by many mobile applications like the [Signal](https://github.com/signalapp/sqlcipher) iOS and Android app to secure local database files. Cryptographic algorithms are provided by the [LibTomCrypt](https://github.com/libtom/libtomcrypt) C library, which is included alongside the sqlcipher sources.
 
 An example of creating an encryped database:
 

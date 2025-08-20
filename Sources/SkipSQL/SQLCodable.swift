@@ -16,217 +16,6 @@ public protocol SQLCodable {
     func encode(row: inout SQLRow) throws
 }
 
-public typealias SQLRow = [SQLColumn: SQLValue]
-
-/// A representable of a SQL table
-public struct SQLTable : Hashable, Sendable {
-    public var name: String
-    public var columns: [SQLColumn]
-
-    public init(name: String, columns: [SQLColumn]) {
-        self.name = name
-        self.columns = columns
-    }
-
-    public var quotedName: String {
-        name.quote(#"""#)
-    }
-
-    public func dropTableSQL(ifExists: Bool = false) -> SQLExpression {
-        var sql = "DROP TABLE "
-        if ifExists {
-            sql += "IF EXISTS "
-        }
-        sql += self.quotedName
-        return SQLExpression(sql)
-    }
-    
-    /// Returns the SQL to create this table.
-    public func createTableSQL(ifNotExists: Bool = false, withIndexes: Bool = true, columns: [SQLColumn]? = nil, additionalClauses: [String] = []) -> [SQLExpression] {
-        var sql = "CREATE TABLE "
-        if ifNotExists {
-            sql += "IF NOT EXISTS "
-        }
-
-        let columns = columns ?? self.columns
-
-        var clauses: [String] = []
-        let pkColumns = columns.filter(\.primaryKey)
-        if pkColumns.count >= 2 {
-            // primary key clause added to the end only when there are multiple PKs for the table
-            clauses.append("PRIMARY KEY (\(pkColumns.map(\.quotedName).joined(separator: ", ")))")
-        }
-
-        let fkColumns = columns.filter({ $0.references != nil })
-        for fkColumn in fkColumns {
-            // add in any foreign key clauses
-            if let reference = fkColumn.references {
-                clauses.append("FOREIGN KEY (\(fkColumn.quotedName)) REFERENCES \(reference.referencesClause)")
-            }
-        }
-
-        // finally add any manual clauses that are needed
-        clauses += additionalClauses
-
-        sql += self.quotedName
-        sql += " ("
-        sql += (columns.map({ col in
-            col.definition(withPrimaryKey: pkColumns.count == 1)
-        }) + clauses).joined(separator: ", ")
-        sql += ")"
-
-        return [SQLExpression(sql)] + (withIndexes ? createIndexSQL(ifNotExists: ifNotExists, columns: columns) : [])
-    }
-    
-    /// Returns the SQL to add a column to the given table
-    public func addColumnSQL(column: SQLColumn, withIndexes: Bool = true) -> [SQLExpression] {
-        var sql = "ALTER TABLE \(self.quotedName) ADD COLUMN "
-        sql += column.definition(withPrimaryKey: false)
-        return [SQLExpression(sql)] + (withIndexes ? createIndexSQL(columns: [column]) : [])
-    }
-
-    /// Returns the SQL to add a column to the given table
-    public func dropColumnSQL(column: SQLColumn) -> SQLExpression {
-        var sql = "ALTER TABLE \(self.quotedName) DROP COLUMN "
-        sql += column.quotedName
-        return SQLExpression(sql)
-    }
-
-    /// Returns the SQL to create any indices on this table.
-    public func createIndexSQL(ifNotExists: Bool = false, columns: [SQLColumn]? = nil) -> [SQLExpression] {
-        var stmnts: [SQLExpression] = []
-        for column in columns ?? self.columns {
-            if let index = column.index {
-                var sql = "CREATE INDEX "
-                if ifNotExists {
-                    sql += "IF NOT EXISTS "
-                }
-                sql += index.name.quote()
-                sql += " ON "
-                sql += self.name.quote()
-                sql += "("
-                // TODO: compound indices
-                sql += column.quotedName
-                sql += ")"
-                stmnts.append(SQLExpression(sql))
-            }
-        }
-        return stmnts
-    }
-}
-
-/// A representable of a SQL column
-public struct SQLColumn : Hashable, Sendable {
-    public var name: String
-    public var type: SQLType
-    public var primaryKey: Bool
-    public var autoincrement: Bool
-    public var unique: Bool
-    public var nullable: Bool
-    public var defaultValue: SQLValue?
-    public var index: SQLIndex?
-    public var references: SQLForeignKey?
-    /// An optional override of the columns definition for use in a `CREATE TABLE` statement
-    public var columnDefinition: String?
-
-    public init(name: String, type: SQLType, primaryKey: Bool = false, autoincrement: Bool = false, unique: Bool = false, nullable: Bool = true, defaultValue: SQLValue? = nil, index: SQLIndex? = nil, references: SQLForeignKey? = nil, columnDefinition: String? = nil) {
-        self.name = name
-        self.type = type
-        self.primaryKey = primaryKey
-        self.autoincrement = autoincrement
-        self.unique = unique
-        self.nullable = nullable
-        self.defaultValue = defaultValue
-        self.references = references
-        self.index = index
-        self.columnDefinition = columnDefinition
-    }
-
-    public var quotedName: String {
-        name.quote(#"""#)
-    }
-
-    func definition(withPrimaryKey: Bool) -> String {
-        if let columnDefinition {
-            // definition override
-            return columnDefinition
-        }
-        var def = quotedName + " " + type.typeName
-        if withPrimaryKey {
-            if primaryKey {
-                def += " PRIMARY KEY"
-            }
-            if autoincrement {
-                def += " AUTOINCREMENT"
-            }
-        }
-        if unique {
-            def += " UNIQUE"
-        }
-        if !nullable {
-            def += " NOT NULL"
-        }
-        if let defaultValue = defaultValue {
-            def += " DEFAULT \(defaultValue.literalValue)"
-        }
-        return def
-    }
-}
-
-public struct SQLIndex : Hashable, Sendable {
-    public var name: String
-    public var unique: Bool
-
-    public init(name: String, unique: Bool = false) {
-        self.name = name
-        self.unique = unique
-    }
-}
-
-public struct SQLForeignKey : Hashable, Sendable {
-    public var table: SQLTable
-    public var columns: [SQLColumn]
-    public var deleteAction: SQLForeignKeyAction?
-    public var updateAction: SQLForeignKeyAction?
-
-    public init(table: SQLTable, column: SQLColumn, onDelete deleteAction: SQLForeignKeyAction? = nil, onUpdate updateAction: SQLForeignKeyAction? = nil) {
-        self.table = table
-        self.columns = [column]
-        self.deleteAction = deleteAction
-        self.updateAction = updateAction
-    }
-
-    public var referencesClause: String {
-        var fkClause = self.table.quotedName
-        fkClause += "("
-        fkClause += self.columns.map(\.quotedName).joined(separator: ", ")
-        fkClause += ")"
-        if let onDelete = self.deleteAction {
-            fkClause += " ON DELETE \(onDelete.actionClause)"
-        }
-        if let onUpdate = self.updateAction {
-            fkClause += " ON UPDATE \(onUpdate.actionClause)"
-        }
-        return fkClause
-    }
-}
-
-public enum SQLForeignKeyAction : Hashable, Sendable {
-    case cascade
-    case restrict
-    case setNull
-    case setDefault
-
-    public var actionClause: String {
-        switch self {
-        case .cascade: return "CASCADE"
-        case .restrict: return "RESTRICT"
-        case .setNull: return "SET NULL"
-        case .setDefault: return "SET DEFAULT"
-        }
-    }
-}
-
 public extension SQLCodable {
     /// Returns the encoded row of this instance
     func encodedRow() throws -> SQLRow {
@@ -257,17 +46,21 @@ public extension SQLCodable {
         }
     }
 
+    static func construct(row: SQLRow, context: SQLContext) throws -> Self {
+        // this is needed because `init` is treated special by the transpiler in a way that breaks its invocation on a reified type
+        // SKIP REPLACE: return init(row = row, context = context)
+        try self.init(row: row, context: context)
+    }
+
     static func selectSQL(alias: String? = nil) -> SQLExpression {
-        let aliasName = alias == nil ? "" : alias!
-        let aliasSuffix = alias == nil ? "" : (" AS " + aliasName)
-        let aliasPrefix = alias == nil ? "" : (aliasName + ".")
-
         var sql = "SELECT "
-        sql += self.table.columns.map({ aliasPrefix + $0.quotedName }).joined(separator: ", ")
+        sql += self.table.columns.map({ $0.quotedName(alias: alias) }).joined(separator: ", ")
         sql += " FROM "
-        sql += self.table.name.quote()
-        sql += aliasSuffix
-
+        // permit the table name to have a bound parameter so we can select from things like `pragma_table_info(?)`
+        sql += self.table.name.contains("?") ? self.table.name : self.table.name.quote()
+        if let alias {
+            sql += " AS " + alias
+        }
         return SQLExpression(sql)
     }
 }
@@ -283,9 +76,8 @@ public extension SQLContext {
         return stmnt
     }
 
-    @inline(__always) func count<T: SQLCodable>(_ type: T.Type, where: SQLPredicate? = nil) throws -> Int64 {
-        // SKIP INSERT: val T = T::class.companionObjectInstance as SQLCodableCompanion // needed to access statics in generic constrained type
-        var countSQL = SQLExpression("SELECT COUNT(*) FROM " + T.table.quotedName)
+    func count<T: SQLCodable>(_ type: T.Type, inSchema schemaName: String? = nil, where: SQLPredicate? = nil) throws -> Int64 {
+        var countSQL = SQLExpression("SELECT COUNT(*) FROM " + type.table.quotedName(inSchema: schemaName))
         if let `where` {
             countSQL.append(" WHERE ")
             `where`.apply(to: &countSQL)
@@ -299,9 +91,8 @@ public extension SQLContext {
     }
 
     /// Delete the given instances from the database. Instances must have at least one primary key defined.
-    @inline(__always) func delete<T: SQLCodable>(_ type: T.Type, where: SQLPredicate? = nil) throws {
-        // SKIP INSERT: val T = T::class.companionObjectInstance as SQLCodableCompanion // needed to access statics in generic constrained type
-        var deleteSQL = SQLExpression("DELETE FROM " + T.table.quotedName)
+    func delete<T: SQLCodable>(_ type: T.Type, inSchema schemaName: String? = nil, where: SQLPredicate? = nil) throws {
+        var deleteSQL = SQLExpression("DELETE FROM " + type.table.quotedName(inSchema: schemaName))
         if let `where` {
             deleteSQL.append(" WHERE ")
             `where`.apply(to: &deleteSQL)
@@ -349,9 +140,9 @@ public extension SQLContext {
     /// Returns the SQL for an INSERT or UPDATE for the given instance.
     /// - Parameters:
     ///   - upsert: INSERT if false, INSERT … ON CONFLICT if true, UPDATE if nil
-    @inline(__always) func insertUpdateSQL<T: SQLCodable>(for instance: T, upsert: Bool? = nil, explicitNulls: Bool = false) throws -> SQLExpression {
+    @inline(__always) func insertUpdateSQL<T: SQLCodable>(for instance: T, inSchema schemaName: String?, upsert: Bool? = nil, explicitNulls: Bool = false) throws -> SQLExpression {
         // SKIP INSERT: val T = T::class.companionObjectInstance as SQLCodableCompanion // needed to access statics in generic constrained type
-        let tableName = T.table.quotedName
+        let tableName = T.table.quotedName(inSchema: schemaName)
         let allColumns = T.table.columns
         let row = try instance.encodedRow()
         let allBindings = allColumns.map({ row[$0] ?? .null })
@@ -380,7 +171,7 @@ public extension SQLContext {
         } else {
             expression.append("INSERT INTO \(tableName) ")
             expression.append("(")
-            expression.append(columns.map(\.quotedName).joined(separator: ", "))
+            expression.append(columns.map({ $0.quotedName() }).joined(separator: ", "))
             expression.append(")")
             expression.append(" VALUES ")
             expression.append("(")
@@ -392,7 +183,7 @@ public extension SQLContext {
             }
             if update {
                 if !col.primaryKey { // don't bother updating the primary key values, because these don't change
-                    expression.append(col.quotedName + " = ")
+                    expression.append(col.quotedName() + " = ")
                     value.apply(to: &expression) // add the "?" and binding
                     updateValueCount += 1
                 }
@@ -408,13 +199,13 @@ public extension SQLContext {
         let pkColumns = T.primaryKeyColumns
         if update == false, upsert == true, !pkColumns.isEmpty {
             expression.append(" ON CONFLICT(")
-            expression.append(pkColumns.map(\.quotedName).joined(separator: ", "))
+            expression.append(pkColumns.map({ $0.quotedName() }).joined(separator: ", "))
             expression.append(") DO UPDATE SET ")
             for (index, col) in columns.enumerated() {
                 if index != 0 {
                     expression.append(", ")
                 }
-                expression.append(col.quotedName + " = EXCLUDED." + col.quotedName)
+                expression.append(col.quotedName() + " = " + col.quotedName(alias: "EXCLUDED"))
             }
         } else if update == true {
             expression.append(" WHERE ")
@@ -424,21 +215,41 @@ public extension SQLContext {
     }
 
     /// Performs an update of the given `SQLCodable` instance
-    @inline(__always) func update<T: SQLCodable>(_ ob: T) throws {
-        try exec(insertUpdateSQL(for: ob, upsert: nil))
+    @inline(__always) func update<T: SQLCodable>(_ ob: T, inSchema schemaName: String? = nil) throws {
+        try exec(insertUpdateSQL(for: ob, inSchema: schemaName, upsert: nil))
+    }
+
+    /// Create a rwo from the list of columns and values.
+    func createSQLRow(_ columns: [SQLColumn], _ values: [SQLValue]) throws -> SQLRow {
+        SQLRow(uniqueKeysWithValues: zip(columns, values))
+    }
+    
+    /// Instantiate the given type from the list of columns and values
+    internal func construct<T: SQLCodable>(type: T.Type, columns: [SQLColumn], values: [SQLValue]) throws -> T {
+        try type.construct(row: createSQLRow(columns, values), context: self) as T
+    }
+
+    /// Instantiate the given type from the list of columns and values, or return nil if all the values are null (e.g., for an empty row in an outer join)
+    internal func constructOptional<T: SQLCodable>(type: T.Type, columns: [SQLColumn], values: [SQLValue]) throws -> T? {
+        // if all the values are null, then the row is considered "empty" and we will return nil
+        if values.first(where: { $0 != .null }) == nil {
+            return nil
+        } else {
+            return try construct(type: type, columns: columns, values: values)
+        }
     }
 
     /// Performs an insert of the given `SQLCodable` instance
-    @inline(__always) @discardableResult func insert<T: SQLCodable>(_ ob: T, upsert: Bool = false) throws -> T {
+    @inline(__always) @discardableResult func insert<T: SQLCodable>(_ ob: T, inSchema schemaName: String? = nil, upsert: Bool = false) throws -> T {
         // SKIP INSERT: val T = T::class.companionObjectInstance as SQLCodableCompanion // needed to access statics in generic constrained type
-        try exec(insertUpdateSQL(for: ob, upsert: upsert))
+        try exec(insertUpdateSQL(for: ob, inSchema: schemaName, upsert: upsert))
         // check for primary key column and update it with the last insert Row ID
         let columns = T.table.columns
         let row = try ob.encodedRow()
-        var rowMap = try _createSQLRow(columns, columns.map({ row[$0] ?? .null }))
+        var rowMap = try createSQLRow(columns, columns.map({ row[$0] ?? .null }))
         var changedFields = 0
         for col in columns {
-            if col.primaryKey && col.autoincrement && (row[col] == .null || row[col] == SQLValue.defaultPrimaryKeyValue) {
+            if col.primaryKey && (row[col] == .null || (col.autoincrement && row[col] == SQLValue.defaultPrimaryKeyValue)) {
                 // get the last inserted row id and update it in the object
                 let lastID = SQLValue(lastInsertRowID)
                 if rowMap[col] != lastID {
@@ -479,9 +290,7 @@ public extension SQLContext {
     private func selectQuery<T: SQLCodable>(_ type: T.Type, _ expr: SQLExpression? = nil) throws -> RowCursor<T> {
         let columns = type.table.columns
         return RowCursor(statement: try prepare(expr: expr ?? type.selectSQL()), creator: { row in
-            // SKIP NOWARN
-            let created: T = try type.init(row: _createSQLRow(columns, row.rowValues()), context: self) as T
-            return created
+            return try self.construct(type: type, columns: columns, values: row.rowValues())
         })
     }
 
@@ -494,24 +303,24 @@ public extension SQLContext {
     func fetch<T: SQLCodable>(_ type: T.Type, primaryKeys: [SQLValue]) throws -> T? {
         let columns = type.table.columns
         let primaryKeyColumns = columns.filter(\.primaryKey)
-        let cursor = try self.query(type, where: .and(zip(primaryKeyColumns, primaryKeys).map({ SQLPredicate.equals($0, $1) })))
+        let cursor = try self.issueQuery(type, where: .and(zip(primaryKeyColumns, primaryKeys).map({ SQLPredicate.equals($0, $1) })))
         defer { cursor.close() }
         return try cursor.makeIterator().next()?.get()
     }
 
     /// Issue a query for matching values for the given column/value comparison.
-    func query<T: SQLCodable>(_ type: T.Type, _ alias: String? = nil, where predicate: SQLPredicate? = nil, orderBy: [(SQLRepresentable, SQLOrder)] = [], limit: Int? = nil, offset: Int? = nil) throws -> RowCursor<T> {
+    internal func issueQuery<T: SQLCodable>(_ type: T.Type, _ alias: String? = nil, where predicate: SQLPredicate? = nil, orderBy: [(SQLRepresentable, SQLOrder)] = [], limit: Int? = nil, offset: Int? = nil) throws -> RowCursor<T> {
         var select = type.selectSQL(alias: alias)
-        applyClauses(to: &select, where: predicate, orderBy: orderBy, limit: limit, offset: offset)
+        applyClauses(to: &select, whereClauses: predicate.map({ [$0] }) ?? [], orderBy: orderBy, limit: limit, offset: offset)
         return try self.selectQuery(type, select)
     }
 
-    internal func joinQuery(tableAliases: [(SQLTable, String?)], joins: [SQLJoinType], onColumns: [SQLColumn?], where: SQLPredicate?, orderBy: [(SQLRepresentable, SQLOrder)] = [], limit: Int? = nil, offset: Int? = nil) throws -> SQLExpression {
+    fileprivate func assembleQuery(tables tableAliases: [QualifiedTable], joins: [JoinClause], whereClauses: [SQLPredicate], orderBy: [(SQLRepresentable, SQLOrder)] = [], limit: Int? = nil, offset: Int? = nil) throws -> SQLExpression {
         var sql = "SELECT "
 
         var selectColumns: [String] = []
-        for tableAliase in tableAliases {
-            selectColumns += tableAliase.0.columns.map({ (tableAliase.1?.appendingString(".") ?? "") + $0.quotedName })
+        for tableAlias in tableAliases {
+            selectColumns += tableAlias.table.columns.map({ $0.quotedName(alias: tableAlias.alias) })
         }
 
         sql += selectColumns.joined(separator: ", ")
@@ -519,52 +328,31 @@ public extension SQLContext {
 
         var select = SQLExpression(sql)
 
-        for (index, tableAlias) in tableAliases.enumerated() {
-            let table = tableAlias.0
-            let alias = tableAlias.1
+        for (index, qtable) in tableAliases.enumerated() {
+            let table = qtable.table
+            let alias = qtable.alias
+            let schemaName = qtable.schema
             if index > 0 {
-                select.append(" " + joins[index - 1].joinClause + " ")
+                select.append(" " + joins[index - 1].kind.joinClause + " ")
             }
-            select.append(table.quotedName)
+            select.append(table.quotedName(inSchema: schemaName))
             if let alias {
                 select.append(" AS " + alias)
             }
-            if index > 0 {
-                let onColumn = onColumns[index - 1]
-                if let onColumn {
-                    let previousTable = tableAliases[index - 1].0
-                    let previousAlias = tableAliases[index - 1].1
-                    var joinPredicates: [SQLPredicate] = []
-
-                    // scan the columns on each side of the table for foreign keys that match the other table
-                    if let reference = onColumn.references {
-                        for refColumn in reference.columns {
-                            // if aliases are null, we will disambiguate the columns by referencing them with the table name
-                            let palias = previousAlias ?? previousTable.quotedName
-                            let talias = alias ?? table.quotedName
-                            let isPreviousRef = previousTable == reference.table && previousTable.columns.contains(refColumn)
-                            let col1 = refColumn.alias(isPreviousRef ? palias : talias)
-                            let col2 = onColumn.alias(isPreviousRef ? talias : palias)
-                            // only equijoins are currently supported
-                            joinPredicates.append(SQLPredicate.equals(col1, col2))
-                        }
-                    }
-                    if !joinPredicates.isEmpty {
-                        select.append(" ON ")
-                        SQLPredicate.and(joinPredicates).apply(to: &select)
-                    }
-                }
+            if index > 0, let joinCondition = joins[index - 1].condition {
+                select.append(" ON ")
+                joinCondition.applyJoinCondition(to: &select, fromTable: tableAliases[index - 1], toTable: qtable)
             }
         }
 
-        applyClauses(to: &select, where: `where`, orderBy: orderBy, limit: limit, offset: offset)
+        applyClauses(to: &select, whereClauses: whereClauses, orderBy: orderBy, limit: limit, offset: offset)
         return select
     }
 
-    func applyClauses(to select: inout SQLExpression, where predicate: SQLPredicate?, orderBy: [(SQLRepresentable, SQLOrder)], limit: Int?, offset: Int?) {
-        if let predicate {
+    internal func applyClauses(to select: inout SQLExpression, whereClauses: [SQLPredicate], orderBy: [(SQLRepresentable, SQLOrder)], limit: Int?, offset: Int?) {
+        if !whereClauses.isEmpty {
             select.append(" WHERE ")
-            predicate.apply(to: &select)
+            SQLPredicate.and(whereClauses).apply(to: &select)
         }
         if !orderBy.isEmpty {
             select.append(" ORDER BY ")
@@ -585,128 +373,223 @@ public extension SQLContext {
             select.append(" OFFSET \(offset)")
         }
     }
+}
 
-    /// Performs a query with a 2-way join.
-    /// - Parameters:
-    ///   - type1: the first SQLCodable type
-    ///   - join: the join between the first and second table
-    ///   - type2: the second SQLCodable type
-    ///   - where: a WHERE clause
-    /// - Returns: a RowCursor that deserializes into the instance types
-    func query<T1: SQLCodable, T2: SQLCodable>(_ type1: T1.Type, _ alias1: String?, join: SQLJoinType, on: SQLColumn?, _ type2: T2.Type, _ alias2: String?, where: SQLPredicate? = nil, orderBy: [(SQLRepresentable, SQLOrder)] = []) throws -> RowCursor<(T1?, T2?)> {
-        let columns1 = type1.table.columns
-        let c1c = columns1.count
-        let columns2 = type2.table.columns
-        let c2c = columns2.count
+/// A table descriptor that includes an optional alias and schema name
+public struct QualifiedTable {
+    public var table: SQLTable
+    public var alias: String?
+    public var schema: String?
+}
 
-        let select = try joinQuery(tableAliases: [(type1.table, alias1), (type2.table, alias2)], joins: [join], onColumns: [on], where: `where`, orderBy: orderBy)
-        return RowCursor(statement: try prepare(expr: select), creator: { row in
-            let values = row.rowValues()
+struct JoinClause {
+    var kind: SQLJoinType
+    var condition: SQLJoinCondition?
+}
 
-            let values1 = Array(values[0..<c1c])
-            // SKIP NOWARN
-            let created1 = _areAllNull(values1) ? nil : (try type1.init(row: _createSQLRow(columns1, values1), context: self) as T1)
-
-            let values2 = Array(values[c1c..<c1c + c2c])
-            // SKIP NOWARN
-            let created2 = _areAllNull(values2) ? nil : (try type2.init(row: _createSQLRow(columns2, values2), context: self) as T2)
-
-            return (created1 as T1?, created2 as T2?)
-        })
+// SKIP NOWARN: "This extension will be moved into its extended type definition when translated to Kotlin. It will not be able to access this file's private types or fileprivate members"
+public extension SQLContext {
+    /// Create a query against the specified type with the optional alias and schema.
+    func query<T: SQLCodable>(_ type: T.Type, alias: String? = nil, schema: String? = nil) -> SQLTableQuery<T> {
+        SQLTableQuery<T>(type: type, table: type.table, alias: alias, schema: schema, context: self)
     }
-    
-    /// Performs a query with a 3-way join.
-    /// - Parameters:
-    ///   - type1: the first SQLCodable type
-    ///   - join1: the join between the first and second table
-    ///   - type2: the second SQLCodable type
-    ///   - join2: the join between the second and third table
-    ///   - type3: the thid SQLCodable type
-    ///   - where: a WHERE clause
-    /// - Returns: a RowCursor that deserializes into the instance types
-    func query<T1: SQLCodable, T2: SQLCodable, T3: SQLCodable>(_ type1: T1.Type, _ alias1: String, join1: SQLJoinType, on1: SQLColumn?, _ type2: T2.Type, _ alias2: String, join2: SQLJoinType, on2: SQLColumn?, _ type3: T3.Type, _ alias3: String, where: SQLPredicate? = nil, orderBy: [(SQLRepresentable, SQLOrder)] = []) throws -> RowCursor<(T1?, T2?, T3?)> {
-        let columns1 = type1.table.columns
-        let c1c = columns1.count
-        let columns2 = type2.table.columns
-        let c2c = columns2.count
-        let columns3 = type3.table.columns
-        let c3c = columns3.count
+}
 
-        let select = try joinQuery(tableAliases: [(type1.table, alias1), (type2.table, alias2), (type3.table, alias3)], joins: [join1, join2], onColumns: [on1, on2], where: `where`, orderBy: orderBy)
-        return RowCursor(statement: try prepare(expr: select), creator: { row in
-            let values = row.rowValues()
+public protocol SQLQuery {
+    var context: SQLContext { get }
+}
 
-            let values1 = Array(values[0..<c1c])
-            // SKIP NOWARN
-            let created1 = _areAllNull(values1) ? nil : (try type1.init(row: _createSQLRow(columns1, values1), context: self) as T1)
+/// A query against a single `SQLCodable` type
+public struct SQLTableQuery<T: SQLCodable> : SQLQuery {
+    let type: T.Type
+    let qtable: QualifiedTable
+    var whereClauses: [SQLPredicate]
+    var orderByColumns: [(SQLRepresentable, SQLOrder)]
+    var limit: Int?
+    var offset: Int?
+    public let context: SQLContext
 
-            let values2 = Array(values[c1c..<c1c + c2c])
-            // SKIP NOWARN
-            let created2 = _areAllNull(values2) ? nil : (try type2.init(row: _createSQLRow(columns2, values2), context: self) as T2)
-
-            let values3 = Array(values[c1c + c2c..<c1c + c2c + c3c])
-            // SKIP NOWARN
-            let created3 = _areAllNull(values3) ? nil : (try type3.init(row: _createSQLRow(columns3, values3), context: self) as T3)
-
-            return (created1 as T1?, created2 as T2?, created3 as T3?)
-        })
+    init(type: T.Type, table: SQLTable, alias: String? = nil, schema: String? = nil, context: SQLContext) {
+        self.type = type
+        self.qtable = QualifiedTable(table: table, alias: alias, schema: schema)
+        self.context = context
+        self.whereClauses = []
+        self.orderByColumns = []
+        self.limit = nil
+        self.offset = nil
     }
 
-    /// Performs a query with a 4-way join.
-    /// - Parameters:
-    ///   - type1: the first SQLCodable type
-    ///   - join1: the join between the first and second table
-    ///   - type2: the second SQLCodable type
-    ///   - join2: the join between the second and third table
-    ///   - type3: the thid SQLCodable type
-    ///   - join3: the join between the third and fourth table
-    ///   - type4: the fourth SQLCodable type
-    ///   - where: a WHERE clause
-    /// - Returns: a RowCursor that deserializes into the instance types
-    func query<T1: SQLCodable, T2: SQLCodable, T3: SQLCodable, T4: SQLCodable>(_ type1: T1.Type, _ alias1: String, join1: SQLJoinType, on1: SQLColumn?, _ type2: T2.Type, _ alias2: String, join2: SQLJoinType, on2: SQLColumn?, _ type3: T3.Type, _ alias3: String, join3: SQLJoinType, on3: SQLColumn?, _ type4: T4.Type, _ alias4: String, where: SQLPredicate? = nil, orderBy: [(SQLRepresentable, SQLOrder)] = []) throws -> RowCursor<(T1?, T2?, T3?, T4?)> {
-        let columns1 = type1.table.columns
+    public func join<T2: SQLCodable>(_ to: T2.Type, alias: String? = nil, schema: String? = nil, kind: SQLJoinType, on joinCondition: SQLJoinCondition?) -> SQLJoin2Query<T, T2> {
+        SQLJoin2Query<T, T2>(type: to, base: self, kind: kind, table: to.table, joinCondition: joinCondition, alias: alias, schema: schema)
+    }
+
+    public func `where`(_ whereClause: SQLPredicate?) -> Self {
+        guard let whereClause else { return self }
+        var q = self
+        q.whereClauses.append(whereClause)
+        return q
+    }
+
+    public func orderBy(_ orderBy: SQLRepresentable, order: SQLOrder = .ascending) -> Self {
+        var q = self
+        q.orderByColumns.append((orderBy, order))
+        return q
+    }
+
+    public func limit(_ limit: Int, offset: Int? = nil) -> Self {
+        var q = self
+        q.limit = limit
+        q.offset = offset
+        return q
+    }
+
+    public func eval() throws -> RowCursor<T> {
+        let table = self.qtable
+
+        let columns1 = table.table.columns
         let c1c = columns1.count
-        let columns2 = type2.table.columns
-        let c2c = columns2.count
-        let columns3 = type3.table.columns
-        let c3c = columns3.count
-        let columns4 = type4.table.columns
-        let c4c = columns4.count
 
-        let select = try joinQuery(tableAliases: [(type1.table, alias1), (type2.table, alias2), (type3.table, alias3), (type4.table, alias4)], joins: [join1, join2, join3], onColumns: [on1, on2, on3], where: `where`, orderBy: orderBy)
-        return RowCursor(statement: try prepare(expr: select), creator: { row in
+        let select = try context.assembleQuery(tables: [table], joins: [], whereClauses: whereClauses, orderBy: orderByColumns, limit: limit, offset: offset)
+        return RowCursor(statement: try context.prepare(expr: select), creator: { row in
             let values = row.rowValues()
-
             let values1 = Array(values[0..<c1c])
-            // SKIP NOWARN
-            let created1 = _areAllNull(values1) ? nil : (try type1.init(row: _createSQLRow(columns1, values1), context: self) as T1)
-
-            let values2 = Array(values[c1c..<c1c + c2c])
-            // SKIP NOWARN
-            let created2 = _areAllNull(values2) ? nil : (try type2.init(row: _createSQLRow(columns2, values2), context: self) as T2)
-
-            let values3 = Array(values[c1c + c2c..<c1c + c2c + c3c])
-            // SKIP NOWARN
-            let created3 = _areAllNull(values3) ? nil : (try type3.init(row: _createSQLRow(columns3, values3), context: self) as T3)
-
-            let values4 = Array(values[c1c + c2c + c3c..<c1c + c2c + c3c + c4c])
-            // SKIP NOWARN
-            let created4 = _areAllNull(values4) ? nil : (try type4.init(row: _createSQLRow(columns4, values4), context: self) as T4)
-
-            return (created1 as T1?, created2 as T2?, created3 as T3?, created4 as T4?)
+            return try context.construct(type: type, columns: columns1, values: values1)
         })
     }
 }
 
-/// Create a rwo from the list of columns and values.
-public func _createSQLRow(_ columns: [SQLColumn], _ values: [SQLValue]) throws -> SQLRow {
-    SQLRow(uniqueKeysWithValues: zip(columns, values))
+/// A query joining two `SQLCodable` types
+public struct SQLJoin2Query<T1: SQLCodable, T2: SQLCodable> : SQLQuery {
+    let type: T2.Type
+    var base: SQLTableQuery<T1>
+    let qtable: QualifiedTable
+    let join: JoinClause
+
+    init(type: T2.Type, base: SQLTableQuery<T1>, kind: SQLJoinType, table: SQLTable, joinCondition: SQLJoinCondition?, alias: String? = nil, schema: String? = nil) {
+        self.type = type
+        self.base = base
+        self.qtable = QualifiedTable(table: table, alias: alias, schema: schema)
+        self.join = JoinClause(kind: kind, condition: joinCondition)
+    }
+
+    public var context: SQLContext {
+        base.context
+    }
+
+    public func join<T3: SQLCodable>(_ to: T3.Type, alias: String? = nil, schema: String? = nil, kind: SQLJoinType, on joinCondition: SQLJoinCondition?) -> SQLJoin3Query<T1, T2, T3> {
+        SQLJoin3Query<T1, T2, T3>(type: to, base: self, kind: kind, table: to.table, joinCondition: joinCondition, alias: alias, schema: schema)
+    }
+
+    public func `where`(_ whereClause: SQLPredicate?) -> Self {
+        guard let whereClause else { return self }
+        var q = self
+        q.base.whereClauses.append(whereClause)
+        return q
+    }
+
+    public func orderBy(_ orderBy: SQLRepresentable, order: SQLOrder = .ascending) -> Self {
+        var q = self
+        q.base = q.base.orderBy(orderBy, order: order)
+        return q
+    }
+
+    public func limit(_ limit: Int, offset: Int? = nil) -> Self {
+        var q = self
+        q.base.limit = limit
+        q.base.offset = offset
+        return q
+    }
+
+    public func eval() throws -> RowCursor<(T1?, T2?)> {
+        let table1 = base.qtable
+        let table2 = self.qtable
+
+        let columns1 = table1.table.columns
+        let c1c = columns1.count
+        let columns2 = table2.table.columns
+        let c2c = columns2.count
+
+        let select = try context.assembleQuery(tables: [table1, table2], joins: [join], whereClauses: base.whereClauses, orderBy: base.orderByColumns, limit: base.limit, offset: base.offset)
+        return RowCursor(statement: try context.prepare(expr: select), creator: { row in
+            let values = row.rowValues()
+
+            let values1 = Array(values[0..<c1c])
+            let created1 = try context.constructOptional(type: base.type, columns: columns1, values: values1)
+
+            let values2 = Array(values[c1c..<c1c + c2c])
+            let created2 = try context.constructOptional(type: self.type, columns: columns2, values: values2)
+
+            return (created1, created2)
+        })
+    }
 }
 
-/// Returns true is all the values in the list are null
-public func _areAllNull(_ values: [SQLValue]) -> Bool {
-    // needs to be public for the reified Kotlin side
-    values.first(where: { $0 != .null }) == nil
+/// A query joining three `SQLCodable` types
+public struct SQLJoin3Query<T1: SQLCodable, T2: SQLCodable, T3: SQLCodable> : SQLQuery {
+    let type: T3.Type
+    var base: SQLJoin2Query<T1, T2>
+    let qtable: QualifiedTable
+    let join: JoinClause
+
+    init(type: T3.Type, base: SQLJoin2Query<T1, T2>, kind: SQLJoinType, table: SQLTable, joinCondition: SQLJoinCondition?, alias: String? = nil, schema: String? = nil) {
+        self.type = type
+        self.base = base
+        self.qtable = QualifiedTable(table: table, alias: alias, schema: schema)
+        self.join = JoinClause(kind: kind, condition: joinCondition)
+    }
+
+    public var context: SQLContext {
+        base.context
+    }
+
+    public func `where`(_ whereClause: SQLPredicate?) -> Self {
+        guard let whereClause else { return self }
+        var q = self
+        q.base.base.whereClauses.append(whereClause)
+        return q
+    }
+
+    public func orderBy(_ orderBy: SQLRepresentable, order: SQLOrder = .ascending) -> Self {
+        var q = self
+        q.base.base = q.base.base.orderBy(orderBy, order: order)
+        return q
+    }
+
+    public func limit(_ limit: Int, offset: Int? = nil) -> Self {
+        var q = self
+        q.base.base.limit = limit
+        q.base.base.offset = offset
+        return q
+    }
+
+    public func eval() throws -> RowCursor<(T1?, T2?, T3?)> {
+        let table1 = base.base.qtable
+        let table2 = base.qtable
+        let table3 = self.qtable
+
+        let columns1 = table1.table.columns
+        let c1c = columns1.count
+        let columns2 = table2.table.columns
+        let c2c = columns2.count
+        let columns3 = table3.table.columns
+        let c3c = columns3.count
+
+        let select = try context.assembleQuery(tables: [table1, table2, table3], joins: [base.join, join], whereClauses: base.base.whereClauses, orderBy: base.base.orderByColumns, limit: base.base.limit, offset: base.base.offset)
+        return RowCursor(statement: try context.prepare(expr: select), creator: { row in
+            let values = row.rowValues()
+
+            let values1 = Array(values[0..<c1c])
+            let created1 = try context.constructOptional(type: base.base.type, columns: columns1, values: values1)
+
+            let values2 = Array(values[c1c..<c1c + c2c])
+            let created2 = try context.constructOptional(type: base.type, columns: columns2, values: values2)
+
+            let values3 = Array(values[c1c + c2c..<c1c + c2c + c3c])
+            let created3 = try context.constructOptional(type: self.type, columns: columns3, values: values3)
+
+            return (created1, created2, created3)
+        })
+    }
 }
 
 /// A type that can be represented in a SQL Statement
@@ -715,9 +598,10 @@ public protocol SQLRepresentable {
     func apply(to expression: inout SQLExpression)
 }
 
+// SKIP NOWARN // "This extension will be moved into its extended type definition when translated to Kotlin. It will not be able to access this file's private types or fileprivate members"
 extension SQLColumn : SQLRepresentable {
     public func apply(to expression: inout SQLExpression) {
-        expression.append(self.quotedName)
+        expression.append(self.quotedName())
     }
 
     public func alias(_ aliasName: String) -> SQLAliasedColumn {
@@ -725,6 +609,7 @@ extension SQLColumn : SQLRepresentable {
     }
 }
 
+// SKIP NOWARN // "This extension will be moved into its extended type definition when translated to Kotlin. It will not be able to access this file's private types or fileprivate members"
 extension SQLValue : SQLRepresentable {
     /// The empty primary key value, signifying that the primary key should be assigned
     public static let defaultPrimaryKeyValue = SQLValue.long(0)
@@ -809,24 +694,40 @@ public enum SQLJoinType {
     }
 }
 
-internal struct SQLJoinClause {
-    let aliases: [String]
-    let columns: [SQLColumn?]
-    let joinType: SQLJoinType
+/// A type that is able to create a join condition between two tables
+public protocol SQLJoinCondition {
+    func applyJoinCondition(to expression: inout SQLExpression, fromTable qt1: QualifiedTable, toTable qt2: QualifiedTable)
+}
 
-    init(aliases: [String], columns: [SQLColumn?], joinType: SQLJoinType) {
-        self.aliases = aliases
-        self.columns = columns
-        self.joinType = joinType
+// SKIP NOWARN // "This extension will be moved into its extended type definition when translated to Kotlin. It will not be able to access this file's private types or fileprivate members"
+extension SQLColumn : SQLJoinCondition {
+    public func applyJoinCondition(to expression: inout SQLExpression, fromTable qt1: QualifiedTable, toTable qt2: QualifiedTable) {
+        if let fk = self.references {
+            // for a columns foreign key, match up the two sides
+            let alias1 = qt1.alias ?? qt1.table.quotedName(inSchema: qt1.schema)
+            let alias2 = qt2.alias ?? qt2.table.quotedName(inSchema: qt2.schema)
+            if qt1.table.columns.contains(self) {
+                fk.column.alias(alias2).equals(self.alias(alias1)).apply(to: &expression)
+            } else {
+                fk.column.alias(alias1).equals(self.alias(alias2)).apply(to: &expression)
+            }
+        } else {
+            // TODO: what to do when there is no foreign key defined?
+            SQLValue(1).apply(to: &expression)
+        }
     }
 }
 
-public struct SQLPredicate : SQLRepresentable {
+public struct SQLPredicate : SQLRepresentable, SQLJoinCondition {
     /// Applies the given predicate to the SQL statement
     public let applicator: (inout SQLExpression) -> ()
 
     public func apply(to expression: inout SQLExpression) {
         applicator(&expression)
+    }
+
+    public func applyJoinCondition(to expression: inout SQLExpression, fromTable qt1: QualifiedTable, toTable qt2: QualifiedTable) {
+        apply(to: &expression)
     }
 }
 
@@ -970,9 +871,11 @@ public extension SQLPredicate {
         }
     }
 
-    static func custom(sql: String, bindings: [SQLValue] = []) -> SQLPredicate {
+    static func custom(sql: String?, bindings: [SQLValue] = []) -> SQLPredicate {
         SQLPredicate { exp in
-            exp.append(" " + sql)
+            if let sql {
+                exp.append(" " + sql)
+            }
             for binding in bindings {
                 exp.append("", binding)
             }
@@ -1046,84 +949,3 @@ public enum SQLBindingError : Error {
         return value
     }
 }
-
-public extension SQLColumn {
-    func longValue(in row: SQLRow) -> Int64? {
-        row[self]?.longValue
-    }
-
-    func longValueRequired(in row: SQLRow) throws -> Int64 {
-        try SQLBindingError.checkNonNull(longValue(in: row), self)
-    }
-
-    func realValue(in row: SQLRow) -> Double? {
-        row[self]?.realValue
-    }
-
-    func realValueRequired(in row: SQLRow) throws -> Double {
-        try SQLBindingError.checkNonNull(realValue(in: row), self)
-    }
-
-    func textValue(in row: SQLRow) -> String? {
-        row[self]?.textValue
-    }
-
-    func textValueRequired(in row: SQLRow) throws -> String {
-        try SQLBindingError.checkNonNull(textValue(in: row), self)
-    }
-
-    func blobValue(in row: SQLRow) -> Data? {
-        row[self]?.blobValue
-    }
-
-    func blobValueRequired(in row: SQLRow) throws -> Data {
-        try SQLBindingError.checkNonNull(blobValue(in: row), self)
-    }
-
-    /// SQLite does not have a storage class set aside for storing dates and/or times. Instead, the built-in Date And Time Functions of SQLite are capable of storing dates and times as TEXT, REAL, or INTEGER values:
-    ///
-    ///  - TEXT as ISO8601 strings ("YYYY-MM-DD HH:MM:SS.SSS").
-    ///  - REAL as Julian day numbers, the number of days since noon in Greenwich on November 24, 4714 B.C. according to the proleptic Gregorian calendar.
-    ///  - INTEGER as Unix Time, the number of seconds since 1970-01-01 00:00:00 UTC.
-    ///
-    /// Applications can choose to store dates and times in any of these formats and freely convert between formats using the built-in date and time functions.
-    func dateValue(in row: SQLRow) -> Date? {
-        if self.type == .real {
-            return self.realValue(in: row).flatMap({ Date(timeIntervalSince1970: $0) })
-        } else if self.type == .text {
-            guard let textValue = self.textValue(in: row) else {
-                return nil
-            }
-            var dateString = textValue
-            // try to parse the full date, and if it cannot, coerce some common degenerate variants
-            if let date = sharedISO8601DateFormatter.date(from: dateString) {
-                return date
-            }
-            dateString = dateString.replacingOccurrences(of: " ", with: "T")
-            if let date = sharedISO8601DateFormatter.date(from: dateString) {
-                return date
-            }
-
-            dateString += "Z"
-            if let date = sharedISO8601DateFormatter.date(from: dateString) {
-                return date
-            }
-
-            dateString = (dateString.split(separator: ".").first?.description ?? dateString) + "Z"
-            if let date = sharedISO8601DateFormatter.date(from: dateString) {
-                return date
-            }
-
-            //logger.warn("could not parse date string from text field: \(textValue) in column \(self.name)")
-            return nil
-        } else {
-            return nil
-        }
-    }
-
-    func dateValueRequired(in row: SQLRow) throws -> Date {
-        try SQLBindingError.checkNonNull(dateValue(in: row), self)
-    }
-}
-
-private let sharedISO8601DateFormatter = ISO8601DateFormatter()
