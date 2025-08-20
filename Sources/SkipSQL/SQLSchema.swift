@@ -14,7 +14,7 @@ public struct SQLTable : Hashable, Sendable {
         self.columns = columns
     }
 
-    public func quotedName(inSchema: String?) -> String {
+    public func quotedName(inSchema: String? = nil) -> String {
         if let inSchema {
             return inSchema.quote(#"""#) + "." + name.quote(#"""#)
         } else {
@@ -46,14 +46,14 @@ public struct SQLTable : Hashable, Sendable {
         let pkColumns = columns.filter(\.primaryKey)
         if pkColumns.count >= 2 {
             // primary key clause added to the end only when there are multiple PKs for the table
-            clauses.append("PRIMARY KEY (\(pkColumns.map(\.quotedName).joined(separator: ", ")))")
+            clauses.append("PRIMARY KEY (\(pkColumns.map({ $0.quotedName() }).joined(separator: ", ")))")
         }
 
         let fkColumns = columns.filter({ $0.references != nil })
         for fkColumn in fkColumns {
             // add in any foreign key clauses
             if let reference = fkColumn.references {
-                clauses.append("FOREIGN KEY (\(fkColumn.quotedName)) REFERENCES \(reference.referencesClause(inSchema: schemaName))")
+                clauses.append("FOREIGN KEY (\(fkColumn.quotedName())) REFERENCES \(reference.referencesClause(inSchema: schemaName))")
             }
         }
 
@@ -79,7 +79,7 @@ public struct SQLTable : Hashable, Sendable {
     /// Returns the SQL to add a column to the given table
     public func dropColumnSQL(column: SQLColumn, inSchema schemaName: String? = nil) -> SQLExpression {
         var sql = "ALTER TABLE \(self.quotedName(inSchema: schemaName)) DROP COLUMN "
-        sql += column.quotedName
+        sql += column.quotedName()
         return SQLExpression(sql)
     }
 
@@ -101,7 +101,7 @@ public struct SQLTable : Hashable, Sendable {
                 sql += self.quotedName(inSchema: nil) // schema goes on index name, not table name
                 sql += "("
                 // TODO: compound indices
-                sql += column.quotedName
+                sql += column.quotedName()
                 sql += ")"
                 stmnts.append(SQLExpression(sql))
             }
@@ -137,8 +137,12 @@ public struct SQLColumn : Hashable, Sendable {
         self.columnDefinition = columnDefinition
     }
 
-    public var quotedName: String {
-        name.quote(#"""#)
+    public func quotedName(alias: String? = nil) -> String {
+        if let alias {
+            return alias + "." + name.quote(#"""#)
+        } else {
+            return name.quote(#"""#)
+        }
     }
 
     func definition(withPrimaryKey: Bool) -> String {
@@ -146,7 +150,7 @@ public struct SQLColumn : Hashable, Sendable {
             // definition override
             return columnDefinition
         }
-        var def = quotedName + " " + type.typeName
+        var def = quotedName() + " " + type.typeName
         if withPrimaryKey {
             if primaryKey {
                 def += " PRIMARY KEY"
@@ -194,7 +198,7 @@ public struct SQLForeignKey : Hashable, Sendable {
     public func referencesClause(inSchema schemaName: String? = nil) -> String {
         var fkClause = self.table.quotedName(inSchema: schemaName)
         fkClause += "("
-        fkClause += self.columns.map(\.quotedName).joined(separator: ", ")
+        fkClause += self.columns.map({ $0.quotedName() }).joined(separator: ", ")
         fkClause += ")"
         if let onDelete = self.deleteAction {
             fkClause += " ON DELETE \(onDelete.actionClause)"

@@ -682,6 +682,20 @@ final class SQLContextTests: XCTestCase {
             XCTAssertEqual(try ob4.manyToManyRelation(in: sqlite), [ob6])
         }
 
+        do { // a single query with where, order, and limit clauses
+            let singleQuery = try sqlite.query(DemoTable.self, alias: "t0")
+                .where(DemoTable.num.greaterThan(SQLValue(1)))
+                .where(DemoTable.txt.notLike(SQLValue("x")))
+                .orderBy(DemoTable.num)
+                .limit(999)
+                .eval()
+            defer { singleQuery.close() }
+            let singleQueryResults = try singleQuery.load()
+            XCTAssertEqual(4, singleQueryResults.count)
+            XCTAssertEqual(ob1, singleQueryResults.first)
+            XCTAssertEqual(#"SELECT t0."ID", t0."TXT", t0."NUM", t0."INT", t0."DBL", t0."BLB" FROM "DEMO_TABLE" AS t0 WHERE ("NUM" > 1 AND "TXT" NOT LIKE 'x') ORDER BY "NUM" ASC LIMIT 999"#, statements.last)
+        }
+
         do { // a single aliased query
             let singleQuery = try sqlite.query(DemoTable.self, alias: "t0").eval()
             defer { singleQuery.close() }
@@ -898,6 +912,28 @@ final class SQLContextTests: XCTestCase {
 
         XCTAssertEqual(ob1, joined.first?.0)
         XCTAssertEqual(ob2, joined.first?.1)
+
+        // also test custom rows
+        let customq = try sqlite.query(SQLCustomRow.self)
+            .eval()
+            .load()
+        XCTAssertEqual(#"SELECT "TXT", "INT" FROM "DEMO_TABLE""#, statements.last)
+        XCTAssertEqual("unique", customq.first?.row[DemoTable.txt]?.textValue)
+    }
+
+    /// An example of a type that maps to a custom row with a subset of columns from the `DemoTable` type
+    struct SQLCustomRow : SQLCodable {
+        static var table: SQLTable = SQLTable(name: DemoTable.table.name, columns: [DemoTable.txt, DemoTable.int])
+
+        let row: SQLRow
+
+        init(row: SQLRow, context: SQLContext) throws {
+            self.row = row
+        }
+
+        func encode(row: inout SQLRow) throws {
+            row = self.row
+        }
     }
 
     func testSQLRefType() throws {
