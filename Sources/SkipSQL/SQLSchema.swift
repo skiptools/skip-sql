@@ -184,7 +184,11 @@ public struct SQLIndex : Hashable, Sendable {
 
 public struct SQLForeignKey : Hashable, Sendable {
     public var table: SQLTable
-    public var columns: [SQLColumn]
+    // needs to be an array or else: "Value type 'SQLForeignKey' cannot have a stored property that recursively contains it"
+    private var columns: [SQLColumn]
+    public var column: SQLColumn {
+        get { columns[0] }
+    }
     public var deleteAction: SQLForeignKeyAction?
     public var updateAction: SQLForeignKeyAction?
 
@@ -198,7 +202,7 @@ public struct SQLForeignKey : Hashable, Sendable {
     public func referencesClause(inSchema schemaName: String? = nil) -> String {
         var fkClause = self.table.quotedName(inSchema: schemaName)
         fkClause += "("
-        fkClause += self.columns.map({ $0.quotedName() }).joined(separator: ", ")
+        fkClause += self.column.quotedName()
         fkClause += ")"
         if let onDelete = self.deleteAction {
             fkClause += " ON DELETE \(onDelete.actionClause)"

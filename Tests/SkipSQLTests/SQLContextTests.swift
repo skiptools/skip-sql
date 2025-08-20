@@ -888,12 +888,16 @@ final class SQLContextTests: XCTestCase {
             statements.append(sql)
         }
 
-        try sqlite.exec(sql: "attach database :memory as schema2")
 
         try (DemoTable.table.createTableSQL(withIndexes: true)).forEach {
             try sqlite.exec($0)
         }
+        try sqlite.exec(sql: "attach database :memory as schema2")
         try (DemoTable.table.createTableSQL(inSchema: "schema2", withIndexes: true)).forEach {
+            try sqlite.exec($0)
+        }
+        try sqlite.exec(sql: "attach database :memory as schema3")
+        try (DemoTable.table.createTableSQL(inSchema: "schema3", withIndexes: true)).forEach {
             try sqlite.exec($0)
         }
 
@@ -903,15 +907,20 @@ final class SQLContextTests: XCTestCase {
         let ob2 = try sqlite.insert(DemoTable(txt: "unique", int: 1, dbl: 678.90), inSchema: "schema2")
         XCTAssertEqual(#"INSERT INTO "schema2"."DEMO_TABLE" ("TXT", "INT", "DBL") VALUES ('unique', 1, 678.9)"#, statements.last)
 
-        // now join across the schemas with a synthetic foreign key
+        let ob3 = try sqlite.insert(DemoTable(txt: "unique", int: 1, dbl: 555.00), inSchema: "schema3")
+        XCTAssertEqual(#"INSERT INTO "schema3"."DEMO_TABLE" ("TXT", "INT", "DBL") VALUES ('unique', 1, 555.0)"#, statements.last)
+
+        // now join across the schemas with a custom join predicate
         let joined = try sqlite.query(DemoTable.self, alias: "t0")
-            .join(DemoTable.self, alias: "t1", schema: "schema2", kind: .inner, on: SQLColumn(name: DemoTable.int.name, type: .long, references: SQLForeignKey(table: DemoTable.table, column: DemoTable.int)))
+            .join(DemoTable.self, alias: "t1", schema: "schema2", kind: .inner, on: DemoTable.int.alias("t0").equals(DemoTable.int.alias("t1")))
+            .join(DemoTable.self, alias: "t2", schema: "schema3", kind: .inner, on: DemoTable.int.alias("t1").equals(DemoTable.int.alias("t2")))
             .eval()
             .load()
-        XCTAssertEqual(#"SELECT t0."ID", t0."TXT", t0."NUM", t0."INT", t0."DBL", t0."BLB", t1."ID", t1."TXT", t1."NUM", t1."INT", t1."DBL", t1."BLB" FROM "DEMO_TABLE" AS t0 INNER JOIN "schema2"."DEMO_TABLE" AS t1 ON t0."INT" = t1."INT""#, statements.last)
+        XCTAssertEqual(#"SELECT t0."ID", t0."TXT", t0."NUM", t0."INT", t0."DBL", t0."BLB", t1."ID", t1."TXT", t1."NUM", t1."INT", t1."DBL", t1."BLB", t2."ID", t2."TXT", t2."NUM", t2."INT", t2."DBL", t2."BLB" FROM "DEMO_TABLE" AS t0 INNER JOIN "schema2"."DEMO_TABLE" AS t1 ON t0."INT" = t1."INT" INNER JOIN "schema3"."DEMO_TABLE" AS t2 ON t1."INT" = t2."INT""#, statements.last)
 
         XCTAssertEqual(ob1, joined.first?.0)
         XCTAssertEqual(ob2, joined.first?.1)
+        XCTAssertEqual(ob3, joined.first?.2)
 
         // also test custom rows
         let customq = try sqlite.query(SQLCustomRow.self)

@@ -219,6 +219,15 @@ public extension SQLContext {
         try exec(insertUpdateSQL(for: ob, inSchema: schemaName, upsert: nil))
     }
 
+    /// Create a rwo from the list of columns and values.
+    func createSQLRow(_ columns: [SQLColumn], _ values: [SQLValue]) throws -> SQLRow {
+        SQLRow(uniqueKeysWithValues: zip(columns, values))
+    }
+
+    func construct<T: SQLCodable>(type: T.Type, columns: [SQLColumn], values: [SQLValue]) throws -> T {
+        try type.construct(row: createSQLRow(columns, values), context: self) as T
+    }
+
     /// Performs an insert of the given `SQLCodable` instance
     @inline(__always) @discardableResult func insert<T: SQLCodable>(_ ob: T, inSchema schemaName: String? = nil, upsert: Bool = false) throws -> T {
         // SKIP INSERT: val T = T::class.companionObjectInstance as SQLCodableCompanion // needed to access statics in generic constrained type
@@ -226,7 +235,7 @@ public extension SQLContext {
         // check for primary key column and update it with the last insert Row ID
         let columns = T.table.columns
         let row = try ob.encodedRow()
-        var rowMap = try _createSQLRow(columns, columns.map({ row[$0] ?? .null }))
+        var rowMap = try createSQLRow(columns, columns.map({ row[$0] ?? .null }))
         var changedFields = 0
         for col in columns {
             if col.primaryKey && (row[col] == .null || (col.autoincrement && row[col] == SQLValue.defaultPrimaryKeyValue)) {
@@ -270,9 +279,7 @@ public extension SQLContext {
     private func selectQuery<T: SQLCodable>(_ type: T.Type, _ expr: SQLExpression? = nil) throws -> RowCursor<T> {
         let columns = type.table.columns
         return RowCursor(statement: try prepare(expr: expr ?? type.selectSQL()), creator: { row in
-            // SKIP NOWARN
-            let created: T = try type.init(row: _createSQLRow(columns, row.rowValues()), context: self) as T
-            return created
+            return try self.construct(type: type, columns: columns, values: row.rowValues())
         })
     }
 
@@ -297,7 +304,7 @@ public extension SQLContext {
         return try self.selectQuery(type, select)
     }
 
-    internal func _assembleQuery(tables tableAliases: [QualifiedTable], joins: [SQLJoinType], onColumns: [SQLColumn?], whereClauses: [SQLPredicate], orderBy: [(SQLRepresentable, SQLOrder)] = [], limit: Int? = nil, offset: Int? = nil) throws -> SQLExpression {
+    fileprivate func assembleQuery(tables tableAliases: [QualifiedTable], joins: [JoinClause], whereClauses: [SQLPredicate], orderBy: [(SQLRepresentable, SQLOrder)] = [], limit: Int? = nil, offset: Int? = nil) throws -> SQLExpression {
         var sql = "SELECT "
 
         var selectColumns: [String] = []
@@ -310,43 +317,20 @@ public extension SQLContext {
 
         var select = SQLExpression(sql)
 
-        for (index, tableAlias) in tableAliases.enumerated() {
-            let table = tableAlias.table
-            let alias = tableAlias.alias
-            let schemaName = tableAlias.schema
+        for (index, qtable) in tableAliases.enumerated() {
+            let table = qtable.table
+            let alias = qtable.alias
+            let schemaName = qtable.schema
             if index > 0 {
-                select.append(" " + joins[index - 1].joinClause + " ")
+                select.append(" " + joins[index - 1].kind.joinClause + " ")
             }
             select.append(table.quotedName(inSchema: schemaName))
             if let alias {
                 select.append(" AS " + alias)
             }
-            if index > 0 {
-                let onColumn = onColumns[index - 1]
-                if let onColumn {
-                    let previousTable = tableAliases[index - 1].table
-                    let previousAlias = tableAliases[index - 1].alias
-                    let previousSchema = tableAliases[index - 1].schema
-                    var joinPredicates: [SQLPredicate] = []
-
-                    // scan the columns on each side of the table for foreign keys that match the other table
-                    if let reference = onColumn.references {
-                        for refColumn in reference.columns {
-                            // if aliases are null, we will disambiguate the columns by referencing them with the table name
-                            let palias = previousAlias ?? previousTable.quotedName(inSchema: previousSchema)
-                            let talias = alias ?? table.quotedName(inSchema: schemaName)
-                            let isPreviousRef = previousTable == reference.table && previousTable.columns.contains(refColumn)
-                            let col1 = refColumn.alias(isPreviousRef ? palias : talias)
-                            let col2 = onColumn.alias(isPreviousRef ? talias : palias)
-                            // only equijoins are currently supported
-                            joinPredicates.append(SQLPredicate.equals(col1, col2))
-                        }
-                    }
-                    if !joinPredicates.isEmpty {
-                        select.append(" ON ")
-                        SQLPredicate.and(joinPredicates).apply(to: &select)
-                    }
-                }
+            if index > 0, let joinCondition = joins[index - 1].condition {
+                select.append(" ON ")
+                joinCondition.applyJoinCondition(to: &select, fromTable: tableAliases[index - 1], toTable: qtable)
             }
         }
 
@@ -380,30 +364,25 @@ public extension SQLContext {
     }
 }
 
-/// Create a rwo from the list of columns and values.
-public func _createSQLRow(_ columns: [SQLColumn], _ values: [SQLValue]) throws -> SQLRow {
-    SQLRow(uniqueKeysWithValues: zip(columns, values))
-}
-
 /// Returns true is all the values in the list are null
-public func _areAllNull(_ values: [SQLValue]) -> Bool {
+private func areAllNull(_ values: [SQLValue]) -> Bool {
     // needs to be public for the reified Kotlin side
     values.first(where: { $0 != .null }) == nil
 }
 
 /// A table descriptor that includes an optional alias and schema name
-struct QualifiedTable {
-    var table: SQLTable
-    var alias: String?
-    var schema: String?
-
-    init(table: SQLTable, alias: String?, schema: String?) {
-        self.table = table
-        self.alias = alias
-        self.schema = schema
-    }
+public struct QualifiedTable {
+    public var table: SQLTable
+    public var alias: String?
+    public var schema: String?
 }
 
+struct JoinClause {
+    var kind: SQLJoinType
+    var condition: SQLJoinCondition?
+}
+
+// SKIP NOWARN: "This extension will be moved into its extended type definition when translated to Kotlin. It will not be able to access this file's private types or fileprivate members"
 public extension SQLContext {
     /// Create a query against the specified type with the optional alias and schema.
     func query<T: SQLCodable>(_ type: T.Type, alias: String? = nil, schema: String? = nil) -> SQLTableQuery<T> {
@@ -435,8 +414,8 @@ public struct SQLTableQuery<T: SQLCodable> : SQLQuery {
         self.offset = nil
     }
 
-    public func join<T2: SQLCodable>(_ to: T2.Type, alias: String? = nil, schema: String? = nil, kind: SQLJoinType, on joinColumn: SQLColumn?) -> SQLJoin2Query<T, T2> {
-        SQLJoin2Query<T, T2>(type: to, base: self, kind: kind, table: to.table, joinColumn: joinColumn, alias: alias, schema: schema)
+    public func join<T2: SQLCodable>(_ to: T2.Type, alias: String? = nil, schema: String? = nil, kind: SQLJoinType, on joinCondition: SQLJoinCondition?) -> SQLJoin2Query<T, T2> {
+        SQLJoin2Query<T, T2>(type: to, base: self, kind: kind, table: to.table, joinCondition: joinCondition, alias: alias, schema: schema)
     }
 
     public func `where`(_ whereClause: SQLPredicate?) -> Self {
@@ -459,22 +438,17 @@ public struct SQLTableQuery<T: SQLCodable> : SQLQuery {
         return q
     }
 
-    /// Shorthand for `eval().load()`
-    public func load() throws -> [T] {
-        try eval().load()
-    }
-
     public func eval() throws -> RowCursor<T> {
         let table = self.qtable
 
         let columns1 = table.table.columns
         let c1c = columns1.count
 
-        let select = try context._assembleQuery(tables: [table], joins: [], onColumns: [], whereClauses: whereClauses, orderBy: orderByColumns, limit: limit, offset: offset)
+        let select = try context.assembleQuery(tables: [table], joins: [], whereClauses: whereClauses, orderBy: orderByColumns, limit: limit, offset: offset)
         return RowCursor(statement: try context.prepare(expr: select), creator: { row in
             let values = row.rowValues()
             let values1 = Array(values[0..<c1c])
-            return try type.construct(row: _createSQLRow(columns1, values1), context: context) as T
+            return try context.construct(type: type, columns: columns1, values: values1)
         })
     }
 }
@@ -482,25 +456,23 @@ public struct SQLTableQuery<T: SQLCodable> : SQLQuery {
 /// A query joining two `SQLCodable` types
 public struct SQLJoin2Query<T1: SQLCodable, T2: SQLCodable> : SQLQuery {
     let type: T2.Type
-    let qtable: QualifiedTable
     var base: SQLTableQuery<T1>
-    let kind: SQLJoinType
-    let joinColumn: SQLColumn?
+    let qtable: QualifiedTable
+    let join: JoinClause
 
-    init(type: T2.Type, base: SQLTableQuery<T1>, kind: SQLJoinType, table: SQLTable, joinColumn: SQLColumn?, alias: String? = nil, schema: String? = nil) {
+    init(type: T2.Type, base: SQLTableQuery<T1>, kind: SQLJoinType, table: SQLTable, joinCondition: SQLJoinCondition?, alias: String? = nil, schema: String? = nil) {
         self.type = type
-        self.qtable = QualifiedTable(table: table, alias: alias, schema: schema)
         self.base = base
-        self.kind = kind
-        self.joinColumn = joinColumn
+        self.qtable = QualifiedTable(table: table, alias: alias, schema: schema)
+        self.join = JoinClause(kind: kind, condition: joinCondition)
     }
 
     public var context: SQLContext {
         base.context
     }
 
-    public func join<T3: SQLCodable>(_ to: T3.Type, alias: String? = nil, schema: String? = nil, kind: SQLJoinType, on joinColumn: SQLColumn?) -> SQLJoin3Query<T1, T2, T3> {
-        SQLJoin3Query<T1, T2, T3>(type: to, base: self, kind: kind, table: to.table, joinColumn: joinColumn, alias: alias, schema: schema)
+    public func join<T3: SQLCodable>(_ to: T3.Type, alias: String? = nil, schema: String? = nil, kind: SQLJoinType, on joinCondition: SQLJoinCondition?) -> SQLJoin3Query<T1, T2, T3> {
+        SQLJoin3Query<T1, T2, T3>(type: to, base: self, kind: kind, table: to.table, joinCondition: joinCondition, alias: alias, schema: schema)
     }
 
     public func `where`(_ whereClause: SQLPredicate?) -> Self {
@@ -523,11 +495,6 @@ public struct SQLJoin2Query<T1: SQLCodable, T2: SQLCodable> : SQLQuery {
         return q
     }
 
-    /// Shorthand for `eval().load()`
-    public func load() throws -> [(T1?, T2?)] {
-        try eval().load()
-    }
-
     public func eval() throws -> RowCursor<(T1?, T2?)> {
         let table1 = base.qtable
         let table2 = self.qtable
@@ -537,17 +504,17 @@ public struct SQLJoin2Query<T1: SQLCodable, T2: SQLCodable> : SQLQuery {
         let columns2 = table2.table.columns
         let c2c = columns2.count
 
-        let select = try context._assembleQuery(tables: [table1, table2], joins: [kind], onColumns: [joinColumn], whereClauses: base.whereClauses, orderBy: base.orderByColumns, limit: base.limit, offset: base.offset)
+        let select = try context.assembleQuery(tables: [table1, table2], joins: [join], whereClauses: base.whereClauses, orderBy: base.orderByColumns, limit: base.limit, offset: base.offset)
         return RowCursor(statement: try context.prepare(expr: select), creator: { row in
             let values = row.rowValues()
 
             let values1 = Array(values[0..<c1c])
-            let created1 = _areAllNull(values1) ? nil : (try base.type.construct(row: _createSQLRow(columns1, values1), context: context) as T1)
+            let created1 = areAllNull(values1) ? nil : try context.construct(type: base.type, columns: columns1, values: values1)
 
             let values2 = Array(values[c1c..<c1c + c2c])
-            let created2 = _areAllNull(values2) ? nil : (try self.type.construct(row: _createSQLRow(columns2, values2), context: context) as T2)
+            let created2 = areAllNull(values2) ? nil : try context.construct(type: self.type, columns: columns2, values: values2)
 
-            return (created1 as T1?, created2 as T2?)
+            return (created1, created2)
         })
     }
 }
@@ -555,17 +522,15 @@ public struct SQLJoin2Query<T1: SQLCodable, T2: SQLCodable> : SQLQuery {
 /// A query joining three `SQLCodable` types
 public struct SQLJoin3Query<T1: SQLCodable, T2: SQLCodable, T3: SQLCodable> : SQLQuery {
     let type: T3.Type
-    let qtable: QualifiedTable
     var base: SQLJoin2Query<T1, T2>
-    let kind: SQLJoinType
-    let joinColumn: SQLColumn?
+    let qtable: QualifiedTable
+    let join: JoinClause
 
-    init(type: T3.Type, base: SQLJoin2Query<T1, T2>, kind: SQLJoinType, table: SQLTable, joinColumn: SQLColumn?, alias: String? = nil, schema: String? = nil) {
+    init(type: T3.Type, base: SQLJoin2Query<T1, T2>, kind: SQLJoinType, table: SQLTable, joinCondition: SQLJoinCondition?, alias: String? = nil, schema: String? = nil) {
         self.type = type
-        self.qtable = QualifiedTable(table: table, alias: alias, schema: schema)
         self.base = base
-        self.kind = kind
-        self.joinColumn = joinColumn
+        self.qtable = QualifiedTable(table: table, alias: alias, schema: schema)
+        self.join = JoinClause(kind: kind, condition: joinCondition)
     }
 
     public var context: SQLContext {
@@ -592,11 +557,6 @@ public struct SQLJoin3Query<T1: SQLCodable, T2: SQLCodable, T3: SQLCodable> : SQ
         return q
     }
 
-    /// Shorthand for `eval().load()`
-    public func load() throws -> [(T1?, T2?, T3?)] {
-        try eval().load()
-    }
-
     public func eval() throws -> RowCursor<(T1?, T2?, T3?)> {
         let table1 = base.base.qtable
         let table2 = base.qtable
@@ -609,20 +569,20 @@ public struct SQLJoin3Query<T1: SQLCodable, T2: SQLCodable, T3: SQLCodable> : SQ
         let columns3 = table3.table.columns
         let c3c = columns3.count
 
-        let select = try context._assembleQuery(tables: [table1, table2, table3], joins: [base.kind, kind], onColumns: [base.joinColumn, joinColumn], whereClauses: base.base.whereClauses, orderBy: base.base.orderByColumns, limit: base.base.limit, offset: base.base.offset)
+        let select = try context.assembleQuery(tables: [table1, table2, table3], joins: [base.join, join], whereClauses: base.base.whereClauses, orderBy: base.base.orderByColumns, limit: base.base.limit, offset: base.base.offset)
         return RowCursor(statement: try context.prepare(expr: select), creator: { row in
             let values = row.rowValues()
 
             let values1 = Array(values[0..<c1c])
-            let created1 = _areAllNull(values1) ? nil : (try base.base.type.construct(row: _createSQLRow(columns1, values1), context: context) as T1)
+            let created1 = areAllNull(values1) ? nil : try context.construct(type: base.base.type, columns: columns1, values: values1)
 
             let values2 = Array(values[c1c..<c1c + c2c])
-            let created2 = _areAllNull(values2) ? nil : (try base.type.construct(row: _createSQLRow(columns2, values2), context: context) as T2)
+            let created2 = areAllNull(values2) ? nil : try context.construct(type: base.type, columns: columns2, values: values2)
 
             let values3 = Array(values[c1c + c2c..<c1c + c2c + c3c])
-            let created3 = _areAllNull(values3) ? nil : (try self.type.construct(row: _createSQLRow(columns3, values3), context: context) as T3)
+            let created3 = areAllNull(values3) ? nil : try context.construct(type: self.type, columns: columns3, values: values3)
 
-            return (created1 as T1?, created2 as T2?, created3 as T3?)
+            return (created1, created2, created3)
         })
     }
 }
@@ -729,24 +689,40 @@ public enum SQLJoinType {
     }
 }
 
-internal struct SQLJoinClause {
-    let aliases: [String]
-    let columns: [SQLColumn?]
-    let joinType: SQLJoinType
+/// A type that is able to create a join condition between two tables
+public protocol SQLJoinCondition {
+    func applyJoinCondition(to expression: inout SQLExpression, fromTable qt1: QualifiedTable, toTable qt2: QualifiedTable)
+}
 
-    init(aliases: [String], columns: [SQLColumn?], joinType: SQLJoinType) {
-        self.aliases = aliases
-        self.columns = columns
-        self.joinType = joinType
+// SKIP NOWARN // "This extension will be moved into its extended type definition when translated to Kotlin. It will not be able to access this file's private types or fileprivate members"
+extension SQLColumn : SQLJoinCondition {
+    public func applyJoinCondition(to expression: inout SQLExpression, fromTable qt1: QualifiedTable, toTable qt2: QualifiedTable) {
+        if let fk = self.references {
+            // for a columns foreign key, match up the two sides
+            let alias1 = qt1.alias ?? qt1.table.quotedName(inSchema: qt1.schema)
+            let alias2 = qt2.alias ?? qt2.table.quotedName(inSchema: qt2.schema)
+            if qt1.table.columns.contains(self) {
+                fk.column.alias(alias2).equals(self.alias(alias1)).apply(to: &expression)
+            } else {
+                fk.column.alias(alias1).equals(self.alias(alias2)).apply(to: &expression)
+            }
+        } else {
+            // TODO: what to do when there is no foreign key defined?
+            SQLValue(1).apply(to: &expression)
+        }
     }
 }
 
-public struct SQLPredicate : SQLRepresentable {
+public struct SQLPredicate : SQLRepresentable, SQLJoinCondition {
     /// Applies the given predicate to the SQL statement
     public let applicator: (inout SQLExpression) -> ()
 
     public func apply(to expression: inout SQLExpression) {
         applicator(&expression)
+    }
+
+    public func applyJoinCondition(to expression: inout SQLExpression, fromTable qt1: QualifiedTable, toTable qt2: QualifiedTable) {
+        apply(to: &expression)
     }
 }
 
