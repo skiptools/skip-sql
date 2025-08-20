@@ -1039,7 +1039,15 @@ public struct DemoTable : SQLCodable, Equatable {
 public extension DemoTable {
     /// Fetches the one-to-many relationship for this instance
     func oneToManyRelation(in context: SQLContext) throws -> [DemoRelation] {
-        try context.query(DemoRelation.self).where(DemoRelation.fk.equals(SQLValue(self.id))).eval().load()
+        try context.query(DemoTable.self, alias: "t0")
+            .join(DemoRelation.self, alias: "t1", kind: .inner, on: DemoRelation.fk)
+            .where(DemoTable.id.alias("t0").equals(SQLValue(self.id)))
+            .eval()
+            .load()
+            .compactMap(\.1)
+
+        // alternatively, this same result could be achieved without a join:
+        //return try context.query(DemoRelation.self).where(DemoRelation.fk.equals(SQLValue(self.id))).eval().load()
     }
 
     /// Fetches the many-to-many relationship for this instance

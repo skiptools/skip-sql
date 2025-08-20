@@ -223,9 +223,20 @@ public extension SQLContext {
     func createSQLRow(_ columns: [SQLColumn], _ values: [SQLValue]) throws -> SQLRow {
         SQLRow(uniqueKeysWithValues: zip(columns, values))
     }
-
-    func construct<T: SQLCodable>(type: T.Type, columns: [SQLColumn], values: [SQLValue]) throws -> T {
+    
+    /// Instantiate the given type from the list of columns and values
+    internal func construct<T: SQLCodable>(type: T.Type, columns: [SQLColumn], values: [SQLValue]) throws -> T {
         try type.construct(row: createSQLRow(columns, values), context: self) as T
+    }
+
+    /// Instantiate the given type from the list of columns and values, or return nil if all the values are null (e.g., for an empty row in an outer join)
+    internal func constructOptional<T: SQLCodable>(type: T.Type, columns: [SQLColumn], values: [SQLValue]) throws -> T? {
+        // if all the values are null, then the row is considered "empty" and we will return nil
+        if values.first(where: { $0 != .null }) == nil {
+            return nil
+        } else {
+            return try construct(type: type, columns: columns, values: values)
+        }
     }
 
     /// Performs an insert of the given `SQLCodable` instance
@@ -362,12 +373,6 @@ public extension SQLContext {
             select.append(" OFFSET \(offset)")
         }
     }
-}
-
-/// Returns true is all the values in the list are null
-private func areAllNull(_ values: [SQLValue]) -> Bool {
-    // needs to be public for the reified Kotlin side
-    values.first(where: { $0 != .null }) == nil
 }
 
 /// A table descriptor that includes an optional alias and schema name
@@ -509,10 +514,10 @@ public struct SQLJoin2Query<T1: SQLCodable, T2: SQLCodable> : SQLQuery {
             let values = row.rowValues()
 
             let values1 = Array(values[0..<c1c])
-            let created1 = areAllNull(values1) ? nil : try context.construct(type: base.type, columns: columns1, values: values1)
+            let created1 = try context.constructOptional(type: base.type, columns: columns1, values: values1)
 
             let values2 = Array(values[c1c..<c1c + c2c])
-            let created2 = areAllNull(values2) ? nil : try context.construct(type: self.type, columns: columns2, values: values2)
+            let created2 = try context.constructOptional(type: self.type, columns: columns2, values: values2)
 
             return (created1, created2)
         })
@@ -574,13 +579,13 @@ public struct SQLJoin3Query<T1: SQLCodable, T2: SQLCodable, T3: SQLCodable> : SQ
             let values = row.rowValues()
 
             let values1 = Array(values[0..<c1c])
-            let created1 = areAllNull(values1) ? nil : try context.construct(type: base.base.type, columns: columns1, values: values1)
+            let created1 = try context.constructOptional(type: base.base.type, columns: columns1, values: values1)
 
             let values2 = Array(values[c1c..<c1c + c2c])
-            let created2 = areAllNull(values2) ? nil : try context.construct(type: base.type, columns: columns2, values: values2)
+            let created2 = try context.constructOptional(type: base.type, columns: columns2, values: values2)
 
             let values3 = Array(values[c1c + c2c..<c1c + c2c + c3c])
-            let created3 = areAllNull(values3) ? nil : try context.construct(type: self.type, columns: columns3, values: values3)
+            let created3 = try context.constructOptional(type: self.type, columns: columns3, values: values3)
 
             return (created1, created2, created3)
         })
