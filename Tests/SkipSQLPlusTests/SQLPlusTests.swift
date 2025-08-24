@@ -1,14 +1,11 @@
 // Copyright 2023–2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 import XCTest
-import OSLog
 import Foundation
 import SkipSQL
 import SkipSQLPlus
 
 final class SQLPlusTests: XCTestCase {
-    let logger: Logger = Logger(subsystem: "skip.sql", category: "SQLPlusTests")
-
     func testSQLPlus() throws {
         let sqlplus = SQLContext(configuration: .plus)
         _ = try sqlplus.selectAll(sql: "SELECT 1")
@@ -70,7 +67,7 @@ final class SQLPlusTests: XCTestCase {
         func createDB(key: String?, plaintextHeader: Int? = nil, string: String) throws -> Data {
             let dbPath = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("db")
 
-            logger.log("testEncryption: checking db: \(dbPath.path)")
+            //logger.log("testEncryption: checking db: \(dbPath.path)")
             let db = try SQLContext(path: dbPath.path, flags: [.create, .readWrite], configuration: .plus)
             if let key = key {
                 _ = try db.selectAll(sql: "PRAGMA key = '\(key)'")

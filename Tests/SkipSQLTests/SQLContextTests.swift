@@ -1,9 +1,31 @@
 // Copyright 2023–2025 Skip
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 import XCTest
-import OSLog
 import Foundation
 import SkipSQL
+
+#if SKIP || canImport(OSLog)
+import OSLog
+#else
+class Logger {
+    let subsystem: String
+    let category: String
+
+    init(subsystem: String, category: String) {
+        self.subsystem = subsystem
+        self.category = category
+    }
+
+    func log(_ string: String) {
+        print("\(subsystem)/\(category): \(string)")
+    }
+
+    func info(_ string: String) {
+        print("\(subsystem)/\(category): \(string)")
+    }
+}
+
+#endif
 
 /*
  This test is shared between SkipSQLTests and SkipSQLPlusTests using a symbolic link.
@@ -16,7 +38,7 @@ final class SQLContextTests: XCTestCase {
     let logger: Logger = Logger(subsystem: "skip.sql", category: "SQLiteTests")
 
     func testSQLiteTrace() throws {
-        let ctx = SQLContext(configuration: .test)
+        let ctx = try SQLContextTest()
         // track executed SQL statements
         var sql: [String] = []
         ctx.trace { sql.append($0) }
@@ -31,7 +53,7 @@ final class SQLContextTests: XCTestCase {
     }
 
     func testSQLiteVersion() throws {
-        let sqlite = SQLContext(configuration: .test)
+        let sqlite = try SQLContextTest()
         sqlite.trace { sql in
             self.logger.info("SQL: \(sql)")
         }
@@ -43,7 +65,7 @@ final class SQLContextTests: XCTestCase {
     }
 
     func testSQLite() throws {
-        let sqlite = SQLContext(configuration: .test)
+        let sqlite = try SQLContextTest()
         logger.info("connected to SQLite version: \(sqlite.versionNumber)")
 
         _ = try sqlite.selectAll(sql: "SELECT 1")
@@ -246,7 +268,7 @@ final class SQLContextTests: XCTestCase {
     }
 
     func testDateTypes() throws {
-        let ctx = SQLContext(configuration: .test)
+        let ctx = try SQLContextTest()
         var statements: [String] = []
         ctx.trace { sql in
             self.logger.info("SQL: \(sql)")
@@ -307,7 +329,7 @@ final class SQLContextTests: XCTestCase {
     }
 
     func testSQLiteNamedParameters() throws {
-        let ctx = SQLContext(configuration: .test)
+        let ctx = try SQLContextTest()
 
         do {
             let stmnt = try ctx.prepare(sql: "SELECT 1")
@@ -355,7 +377,7 @@ final class SQLContextTests: XCTestCase {
     }
 
     func testSQLiteInterrupt() async throws {
-        let ctx = SQLContext(configuration: .test)
+        let ctx = try SQLContextTest()
 
         let stmnt = try ctx.prepare(sql: """
             WITH RECURSIVE SlowQuery AS (
@@ -398,7 +420,7 @@ final class SQLContextTests: XCTestCase {
     func testSQLitePerformance() throws {
         let dir = URL.temporaryDirectory
         let dbpath = dir.appendingPathComponent("testSQLitePerformance-\(UUID().uuidString).db").path
-        let sqlite = try SQLContext(path: dbpath, flags: [.create, .readWrite], configuration: .test)
+        let sqlite = try SQLContextTest(path: dbpath, flags: [.create, .readWrite])
 
         try sqlite.exec(sql: "CREATE TABLE BIGTABLE (STRING TEXT)")
 
@@ -418,7 +440,7 @@ final class SQLContextTests: XCTestCase {
     }
 
     func testSQLCodable() throws {
-        let sqlite = SQLContext(configuration: .test)
+        let sqlite = try SQLContextTest()
         var statements: [String] = []
         sqlite.trace { sql in
             self.logger.info("SQL: \(sql)")
@@ -881,7 +903,7 @@ final class SQLContextTests: XCTestCase {
     }
 
     func testMultipleSchemas() throws {
-        let sqlite = SQLContext(configuration: .test)
+        let sqlite = try SQLContextTest()
         var statements: [String] = []
         sqlite.trace { sql in
             self.logger.info("SQL: \(sql)")
@@ -946,7 +968,7 @@ final class SQLContextTests: XCTestCase {
     }
 
     func testSQLRefType() throws {
-        let sqlite = SQLContext(configuration: .test)
+        let sqlite = try SQLContextTest()
         var statements: [String] = []
         sqlite.trace { sql in
             self.logger.info("SQL: \(sql)")
