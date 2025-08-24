@@ -7,3 +7,7 @@ extension SQLiteConfiguration {
     /// The shared SQLContextTests uses thus local variable to determine the configuration to use
     public static let test = SQLiteConfiguration.plus
 }
+
+func SQLContextTest() throws -> SQLContext {
+    return SQLContext(configuration: .test)
+}

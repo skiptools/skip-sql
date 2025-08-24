@@ -6,3 +6,11 @@ extension SQLiteConfiguration {
     /// The shared SQLContextTests uses thus local variable to determine the configuration to use
     public static let test = SQLiteConfiguration.platform
 }
+
+func SQLContextTest() throws -> SQLContext {
+    #if !canImport(SQLite3)
+    throw XCTSkip("SQLite is not available on platform")
+    #else
+    return SQLContext(configuration: .test)
+    #endif
+}
