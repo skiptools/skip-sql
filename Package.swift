@@ -79,6 +79,7 @@ let package = Package(
     ]
 )
 
+#if false
 #if os(Linux) || os(Windows)
 package.dependencies += [.package(url: "https://github.com/swiftlang/swift-toolchain-sqlite.git", from: "1.0.0")]
 package.targets += [
@@ -90,4 +91,5 @@ package.targets += [
     )
 ]
 package.targets[0].dependencies += [.target(name: "SQLite3")]
+#endif
 #endif
