@@ -78,3 +78,16 @@ let package = Package(
             plugins: [.plugin(name: "skipstone", package: "skip")]),
     ]
 )
+
+#if os(Linux) || os(Windows)
+package.dependencies += [.package(url: "https://github.com/swiftlang/swift-toolchain-sqlite.git", from: "1.0.0")]
+package.targets += [
+    .target(
+        name: "SQLite3",
+        dependencies: [
+            .product(name: "SwiftToolchainCSQLite", package: "swift-toolchain-sqlite", condition: .when(platforms: [.linux, .windows, .android]))
+        ]
+    )
+]
+package.targets[0].dependencies += [.target(name: "SQLite3")]
+#endif
