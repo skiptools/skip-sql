@@ -4,7 +4,7 @@ import XCTest
 import Foundation
 import SkipSQL
 
-#if canImport(OSLog)
+#if SKIP || canImport(OSLog)
 import OSLog
 #else
 class Logger {
