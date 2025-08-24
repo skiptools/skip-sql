@@ -420,7 +420,7 @@ final class SQLContextTests: XCTestCase {
     func testSQLitePerformance() throws {
         let dir = URL.temporaryDirectory
         let dbpath = dir.appendingPathComponent("testSQLitePerformance-\(UUID().uuidString).db").path
-        let sqlite = try SQLContext(path: dbpath, flags: [.create, .readWrite], configuration: .test)
+        let sqlite = try SQLContextTest(path: dbpath, flags: [.create, .readWrite])
 
         try sqlite.exec(sql: "CREATE TABLE BIGTABLE (STRING TEXT)")
 

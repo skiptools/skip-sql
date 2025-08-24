@@ -8,10 +8,13 @@ extension SQLiteConfiguration {
     public static let test = SQLiteConfiguration.platform
 }
 
-func SQLContextTest() throws -> SQLContext {
+func SQLContextTest(path: String? = nil, flags: SQLContext.OpenFlags? = nil) throws -> SQLContext {
     #if !canImport(SQLite3)
     throw XCTSkip("SQLite is not available on platform")
-    #else
-    return SQLContext(configuration: .test)
     #endif
+    if let path {
+        return try SQLContext(path: path, flags: flags, configuration: .test)
+    } else {
+        return SQLContext(configuration: SQLiteConfiguration.test)
+    }
 }

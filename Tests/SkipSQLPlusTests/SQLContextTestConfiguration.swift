@@ -8,6 +8,10 @@ extension SQLiteConfiguration {
     public static let test = SQLiteConfiguration.plus
 }
 
-func SQLContextTest() throws -> SQLContext {
-    return SQLContext(configuration: .test)
+func SQLContextTest(path: String? = nil, flags: SQLContext.OpenFlags? = nil) throws -> SQLContext {
+    if let path {
+        return try SQLContext(path: path, flags: flags, configuration: .test)
+    } else {
+        return SQLContext(configuration: SQLiteConfiguration.test)
+    }
 }
