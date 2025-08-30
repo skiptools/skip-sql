@@ -79,6 +79,7 @@ let package = Package(
     ]
 )
 
+// TODO: this might be the route to take to add Linux support to SkipSQL itself
 #if false
 #if os(Linux) || os(Windows)
 package.dependencies += [.package(url: "https://github.com/swiftlang/swift-toolchain-sqlite.git", from: "1.0.0")]
