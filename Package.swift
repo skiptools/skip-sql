@@ -78,3 +78,19 @@ let package = Package(
             plugins: [.plugin(name: "skipstone", package: "skip")]),
     ]
 )
+
+// TODO: this might be the route to take to add Linux support to SkipSQL itself
+#if false
+#if os(Linux) || os(Windows)
+package.dependencies += [.package(url: "https://github.com/swiftlang/swift-toolchain-sqlite.git", from: "1.0.0")]
+package.targets += [
+    .target(
+        name: "SQLite3",
+        dependencies: [
+            .product(name: "SwiftToolchainCSQLite", package: "swift-toolchain-sqlite", condition: .when(platforms: [.linux, .windows, .android]))
+        ]
+    )
+]
+package.targets[0].dependencies += [.target(name: "SQLite3")]
+#endif
+#endif
