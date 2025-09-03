@@ -24,6 +24,11 @@ public class SQLContext {
         SQLite3.sqlite3_changes(db)
     }
 
+    /// Returns the version string of the current SQLite instance.
+    public var version: String {
+        SQLite3.sqlite3_libversion().flatMap({ String(cString: $0) }) ?? "unknown"
+    }
+
     /// Returns a number signifying the major, minor, and patch release of the underlying SQLite library.
     ///
     /// E.g., 3001002 == 3.1.2
@@ -369,6 +374,29 @@ public class SQLContext {
         get { (try? selectAll(sql: "PRAGMA user_version").first?.first?.longValue) ?? 0 }
         set { _ = try? exec(sql: "PRAGMA user_version = \(newValue)") }
     }
+
+    /// Returns the map of compile options that were used to create the current SQLite build
+    public lazy var compileOptions: [String: SQLValue] = {
+        var options = (try? selectAll(sql: "PRAGMA compile_options")) ?? []
+        var opts: [String: SQLValue] = [:]
+        for optionsResult in options {
+            if let optionString = optionsResult.first?.textValue {
+                // some options are raw (like "ENABLE_API_ARMOR"), and options options are delimited (like "COMPILER=clang-17.0.0")
+                let parts = optionString.split(separator: "=", maxSplits: 2)
+                if parts.count == 1 {
+                    opts[parts[0].description] = SQLValue.null
+                } else {
+                    let valueString = parts[1].description
+                    if let number = Int64(valueString) {
+                        opts[parts[0].description] = SQLValue.long(number)
+                    } else {
+                        opts[parts[0].description] = SQLValue.text(valueString)
+                    }
+                }
+            }
+        }
+        return opts
+    }()
 
     /// Quotes the given string
     public func quoteSingle(_ string: String) -> String {

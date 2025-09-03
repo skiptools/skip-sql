@@ -57,8 +57,7 @@ final class SQLContextTests: XCTestCase {
         sqlite.trace { sql in
             self.logger.info("SQL: \(sql)")
         }
-        logger.info("connected to SQLite version: \(sqlite.versionNumber)")
-
+        logger.info("connected to SQLite version: \(sqlite.version) (\(sqlite.versionNumber)) with compile options: \(sqlite.compileOptions)")
         XCTAssertEqual(0, sqlite.userVersion)
         sqlite.userVersion += 1
         XCTAssertEqual(1, sqlite.userVersion)
@@ -66,7 +65,6 @@ final class SQLContextTests: XCTestCase {
 
     func testSQLite() throws {
         let sqlite = try SQLContextTest()
-        logger.info("connected to SQLite version: \(sqlite.versionNumber)")
 
         _ = try sqlite.selectAll(sql: "SELECT 1")
         _ = try sqlite.selectAll(sql: "SELECT CURRENT_TIMESTAMP")
@@ -564,7 +562,7 @@ final class SQLContextTests: XCTestCase {
         ob.txt = "NMO"
         ob.num = nil
         ob.id = 4
-        try sqlite.insert(ob, upsert: false)
+        try sqlite.insert(ob)
 
         ob.txt = "ZZZ"
         do {
@@ -576,7 +574,13 @@ final class SQLContextTests: XCTestCase {
         }
 
         // try again as an upsert
-        try sqlite.insert(ob, upsert: true)
+        let supportsUpsert = sqlite.supports(feature: .upsert)
+        if !supportsUpsert {
+            // we're on an old version of SQLite (e.g., Android API 28 => sqlite 3.22), so we cannot upsert;
+            // instead, we manually delete the instance instead
+            try sqlite.delete(instances: [ob])
+        }
+        try sqlite.insert(ob, upsert: supportsUpsert)
         let ob4 = ob
 
         XCTAssertEqual(SQLValue.long(5), try count(table: "DEMO_TABLE"))
