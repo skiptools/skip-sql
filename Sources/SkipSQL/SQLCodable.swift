@@ -198,6 +198,9 @@ public extension SQLContext {
 
         let pkColumns = T.primaryKeyColumns
         if update == false, upsert == true, !pkColumns.isEmpty {
+            if !supports(feature: .upsert) {
+                throw SQLNotSupportedError(errorDescription: "Upsert syntax is not supported in this version of SQLite (\(self.version))")
+            }
             expression.append(" ON CONFLICT(")
             expression.append(pkColumns.map({ $0.quotedName() }).joined(separator: ", "))
             expression.append(") DO UPDATE SET ")
@@ -935,6 +938,11 @@ public extension SQLRepresentable {
     func `in`(_ values: [SQLRepresentable]) -> SQLPredicate {
         .in(self, values)
     }
+}
+
+/// An attempt was made to use a SQLite feature that is not supported, either due to the version or compilation options.
+public struct SQLNotSupportedError : LocalizedError {
+    public var errorDescription: String?
 }
 
 public enum SQLBindingError : Error {

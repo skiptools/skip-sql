@@ -53,6 +53,7 @@ public enum SQLAction : Int32 {
 
 public enum SQLiteFeature {
     case rowValueSyntax               // WHERE (a,b) = (1,2)
+    case upsert                       // INSERT INTO ... ON CONFLICT(x) DO UPDATE SET ...
     case renameColumn                 // ALTER TABLE ... RENAME COLUMN
     case partialIntegrityCheck        // PRAGMA integrity_check(table)
     case sqliteSchemaTable            // sqlite_master => sqlite_schema
@@ -66,13 +67,19 @@ public enum SQLiteFeature {
     /// The minimum SQLite version for the given feature
     public var minimumSupportedVersion: Int32 {
         switch self {
+        // Android 9 (API 28): 3.22
         case .rowValueSyntax:         return 3_015_000 // https://sqlite.org/rowvalue.html#backwards_compatibility
+        case .upsert:                 return 3_024_000 // https://sqlite.org/lang_upsert.html#history
         case .renameColumn:           return 3_025_000
+        // iOS 13 / Android 10 (API 30): 3.28
+        // Android 13 (API 33): 3.32
         case .partialIntegrityCheck:  return 3_033_000
         case .sqliteSchemaTable:      return 3_033_000
         case .selectReturning:        return 3_035_000
         case .dropColumn:             return 3_035_000
+        // iOS 15: 3.36
         case .jsonFunction:           return 3_038_000 // 2022-02-22
+        // iOS 16 / Android 14 (API 34): 3.39
         case .rightJoin:              return 3_039_000
         case .fullOuterJoin:          return 3_039_000
         case .rowValueInSyntax:       return 3_039_000 // https://sqlite.org/rowvalue.html#rvinop, supposedly 3.24, but observed to fail in 3.28

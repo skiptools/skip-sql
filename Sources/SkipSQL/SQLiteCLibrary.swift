@@ -196,6 +196,10 @@ final class SQLiteCLibrary : SQLiteLibrary {
         SQLite3.sqlite3_shutdown()
     }
 
+    func sqlite3_libversion() -> sqlite3_cstring_ptr? {
+        SQLite3.sqlite3_libversion()
+    }
+
     func sqlite3_libversion_number() -> Int32 {
         SQLite3.sqlite3_libversion_number()
     }
