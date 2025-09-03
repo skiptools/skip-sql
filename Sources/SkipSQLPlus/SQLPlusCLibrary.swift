@@ -198,7 +198,7 @@ internal final class SQLPlusCLibrary : SQLiteLibrary {
     }
 
     func sqlite3_libversion() -> sqlite3_cstring_ptr? {
-        SQLExt.sqlite3_libversion_number()
+        SQLExt.sqlite3_libversion()
     }
 
     func sqlite3_libversion_number() -> Int32 {
