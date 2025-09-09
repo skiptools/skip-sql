@@ -75,6 +75,7 @@ let package = Package(
                 .define("SQLCIPHER_CRYPTO_LIBTOMCRYPT"),
                 //.unsafeFlags(["-Wno-shorten-64-to-32", "-Wno-ambiguous-macro"]), // enabled manually in libs
             ],
+            linkerSettings: [.linkedLibrary("log", .when(platforms: [.android]))],
             plugins: [.plugin(name: "skipstone", package: "skip")]),
     ]
 )
