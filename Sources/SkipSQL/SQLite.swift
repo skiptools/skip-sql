@@ -30,8 +30,9 @@ public struct SQLiteConfiguration {
         #elseif canImport(SQLite3)
         SQLiteConfiguration(library: SQLiteCLibrary.shared)
         #else
-        // on Android you need to use SQLPlus
-        fatalError("no platform SQLiteCLibrary available; use SkipSQLPlus instead")
+        SQLiteConfiguration(library: SQLiteCLibrary.shared)
+//        // on Android you need to use SQLPlus
+//        fatalError("no platform SQLiteCLibrary available; use SkipSQLPlus instead")
         #endif
     }()
 }
