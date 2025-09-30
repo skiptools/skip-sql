@@ -16,4 +16,4 @@ jobs:
     uses: skiptools/actions/.github/workflows/skip-framework.yml@v1
     with:
       run-android-native-build: true
-      runs-on: "['macos-13', 'ubuntu-24.04']"
+      runs-on: "['macos-15-intel', 'ubuntu-24.04']"
