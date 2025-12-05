@@ -14,7 +14,6 @@ let package = Package(
         .package(url: "https://source.skip.tools/skip-foundation.git", from: "1.1.11"),
         .package(url: "https://source.skip.tools/skip-unit.git", from: "1.0.1"),
         .package(url: "https://source.skip.tools/skip-ffi.git", from: "1.0.0"),
-        .package(url: "https://source.skip.tools/skip-ltc.git", from: "1.0.0"),
     ],
     targets: [
         .target(name: "SkipSQL", dependencies: [
@@ -34,12 +33,12 @@ let package = Package(
             .product(name: "SkipTest", package: "skip")
         ], plugins: [.plugin(name: "skipstone", package: "skip")]),
         .target(name: "SQLExt", dependencies: [
-            .product(name: "SkipLTC", package: "skip-ltc"),
             .product(name: "SkipUnit", package: "skip-unit")
         ], sources: ["sqlite"],
             publicHeadersPath: "sqlite",
             cSettings: [
                 .headerSearchPath("sqlite"),
+                .headerSearchPath("sqlite/libtomcrypt/headers"),
                 .define("NDEBUG"),
                 .define("SQLITE_DQS", to: "0"),
                 .define("SQLITE_ENABLE_API_ARMOR"),

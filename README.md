@@ -2,6 +2,29 @@
 
 The SkipSQL module is a dual-platform [Skip Lite](https://skip.tools) framework that provides access to sqlite database in Darwin and Android systems.
 
+## Setup
+
+To include this framework in your project, add the following
+dependency to your `Package.swift` file:
+
+```swift
+let package = Package(
+    name: "my-package",
+    products: [
+        .library(name: "MyProduct", targets: ["MyTarget"]),
+    ],
+    dependencies: [
+        .package(url: "https://source.skip.tools/skip-sql.git", "0.0.0"..<"2.0.0"),
+    ],
+    targets: [
+        .target(name: "MyTarget", dependencies: [
+            .product(name: "SkipSQL", package: "skip-sql"),
+            //.product(name: "SkipSQLPlus", package: "skip-sql") // optional for SQLCipher support
+        ])
+    ]
+)
+```
+
 ## Usage
 
 ### Connection example
