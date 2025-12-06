@@ -1,5 +1,4 @@
 module SQLExt {
   header "../sqlite/sqlite3.h"
-  link "SQLExt"
   export *
 }
