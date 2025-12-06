@@ -34,11 +34,10 @@ let package = Package(
         ], plugins: [.plugin(name: "skipstone", package: "skip")]),
         .target(name: "SQLExt", dependencies: [
             .product(name: "SkipUnit", package: "skip-unit")
-        ], sources: ["sqlite"],
-            publicHeadersPath: "sqlite",
+        ], publicHeadersPath: "sqlcipher",
             cSettings: [
-                .headerSearchPath("sqlite"),
-                .headerSearchPath("sqlite/libtomcrypt/headers"),
+                .headerSearchPath("sqlcipher"),
+                .headerSearchPath("libtomcrypt/headers"),
                 .define("NDEBUG"),
                 .define("SQLITE_DQS", to: "0"),
                 .define("SQLITE_ENABLE_API_ARMOR"),

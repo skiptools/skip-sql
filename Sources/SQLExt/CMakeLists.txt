@@ -2,9 +2,11 @@ cmake_minimum_required(VERSION 3.3)
 
 project(sqlext LANGUAGES C)
 
-file(GLOB_RECURSE SOURCES sqlite/*.c)
+file(GLOB_RECURSE SOURCES sqlcipher/*.c)
+file(GLOB_RECURSE SOURCES libtomcrypt/*.c)
 add_library(sqlext SHARED ${SOURCES})
-include_directories(sqlext PUBLIC sqlite/)
+include_directories(sqlext PUBLIC sqlcipher/)
+include_directories(sqlext PUBLIC libtomcrypt/headers/)
 
 # these should match the definitions in the Package.swift
 # so the Android build and the Swift build options match
@@ -70,8 +72,6 @@ else()
 endif()
 
 string(TOLOWER "${BUILD_MODE}" BUILD_MODE_LOWER)
-
-#message("CHECKING CMAKE LIBRARY: ${CMAKE_PARENT_SOURCE_DIR}/../LibTomCrypt/")
 
 # sqlite has calls to __android_log_print
 target_link_libraries(sqlext log)

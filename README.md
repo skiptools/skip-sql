@@ -472,7 +472,7 @@ SQLPlus contains the SQLCipher extension, which adds 256 bit AES encryption of d
 
 SQLCipher is based on SQLite and stable upstream release features are periodically integrated. The extension is documented at the official [SQLCipher site](https://www.zetetic.net/sqlcipher/). It is used by many mobile applications like the [Signal](https://github.com/signalapp/sqlcipher) iOS and Android app to secure local database files. Cryptographic algorithms are provided by the [LibTomCrypt](https://github.com/libtom/libtomcrypt) C library, which is included alongside the sqlcipher sources.
 
-An example of creating an encryped database:
+An example of creating an encrypted database:
 
 ```swift
 import SkipSQLPlus
@@ -487,7 +487,7 @@ try db.close()
 
 ##### Encrypting an unencrypted database
 
-Note that setting the key on the database must be the first operation that is performed after the database is opened, before any other SQL is executed. To encrypt an unencryped database that has already been created, the database must be exported with the `export(path, key)` function and then re-opened with the key. An example utility extension to do this is:
+Note that setting the key on the database must be the first operation that is performed after the database is opened, before any other SQL is executed. To encrypt an unencrypted database that has already been created, the database must be exported with the `export(path, key)` function and then re-opened with the key. An example utility extension to do this is:
 
 ```swift
 extension SQLContext {
