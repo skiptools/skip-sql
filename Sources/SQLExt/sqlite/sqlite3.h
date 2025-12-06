@@ -7615,10 +7615,8 @@ struct sqlite3_module {
   int (*xShadowName)(const char*);
   /* The methods above are in versions 1 through 3 of the sqlite_module object.
   ** Those below are for version 4 and greater. */
-#if !defined(SKIPSQL_SQLITE_IVERSION) || (SKIPSQL_SQLITE_IVERSION >= 4)
   int (*xIntegrity)(sqlite3_vtab *pVTab, const char *zSchema,
                     const char *zTabName, int mFlags, char **pzErr);
-#endif
 };
 
 /*
@@ -13465,7 +13463,6 @@ struct Fts5ExtensionApi {
   void (*xPhraseNextColumn)(Fts5Context*, Fts5PhraseIter*, int *piCol);
 
   /* Below this point are iVersion>=3 only */
-#if !defined(SKIPSQL_SQLITE_IVERSION) || (SKIPSQL_SQLITE_IVERSION >= 3)
   int (*xQueryToken)(Fts5Context*,
       int iPhrase, int iToken,
       const char **ppToken, int *pnToken
@@ -13480,7 +13477,6 @@ struct Fts5ExtensionApi {
     void *pCtx,                        /* Context passed to xToken() */
     int (*xToken)(void*, int, const char*, int, int, int)       /* Callback */
   );
-#endif
 };
 
 /*
@@ -13806,7 +13802,6 @@ struct fts5_api {
   );
 
   /* APIs below this point are only available if iVersion>=3 */
-#if !defined(SKIPSQL_SQLITE_IVERSION) || (SKIPSQL_SQLITE_IVERSION >= 3)
   /* Create a new tokenizer */
   int (*xCreateTokenizer_v2)(
     fts5_api *pApi,
@@ -13823,7 +13818,6 @@ struct fts5_api {
     void **ppUserData,
     fts5_tokenizer_v2 **ppTokenizer
   );
-#endif
 };
 
 /*
