@@ -34,7 +34,9 @@ let package = Package(
         ], plugins: [.plugin(name: "skipstone", package: "skip")]),
         .target(name: "SQLExt", dependencies: [
             .product(name: "SkipUnit", package: "skip-unit")
-        ], publicHeadersPath: "sqlcipher",
+        ],
+            sources: ["sqlcipher", "libtomcrypt"],
+            publicHeadersPath: "sqlcipher",
             cSettings: [
                 .headerSearchPath("sqlcipher"),
                 .headerSearchPath("libtomcrypt/headers"),
