@@ -37,7 +37,6 @@ let package = Package(
             .product(name: "SkipLTC", package: "skip-ltc"),
             .product(name: "SkipUnit", package: "skip-unit")
         ], sources: ["sqlite"],
-            publicHeadersPath: "sqlite",
             cSettings: [
                 .headerSearchPath("sqlite"),
                 .define("NDEBUG"),
@@ -73,6 +72,7 @@ let package = Package(
                 .define("HAVE_GETHOSTUUID", to: "0"),
                 .define("HAVE_STDINT_H"),
                 .define("SQLCIPHER_CRYPTO_LIBTOMCRYPT"),
+                .define("SKIPSQL_SQLITE_IVERSION", to: Context.environment["SKIPSQL_SQLITE_IVERSION"] ?? "4"),
                 //.unsafeFlags(["-Wno-shorten-64-to-32", "-Wno-ambiguous-macro"]), // enabled manually in libs
             ],
             linkerSettings: [.linkedLibrary("log", .when(platforms: [.android]))],

@@ -7615,9 +7615,10 @@ struct sqlite3_module {
   int (*xShadowName)(const char*);
   /* The methods above are in versions 1 through 3 of the sqlite_module object.
   ** Those below are for version 4 and greater. */
-    // Removed due to SkipSQLExt build errors
-//  int (*xIntegrity)(sqlite3_vtab *pVTab, const char *zSchema,
-//                    const char *zTabName, int mFlags, char **pzErr);
+#if !defined(SKIPSQL_SQLITE_IVERSION) || (SKIPSQL_SQLITE_IVERSION >= 4)
+  int (*xIntegrity)(sqlite3_vtab *pVTab, const char *zSchema,
+                    const char *zTabName, int mFlags, char **pzErr);
+#endif
 };
 
 /*
@@ -13464,21 +13465,22 @@ struct Fts5ExtensionApi {
   void (*xPhraseNextColumn)(Fts5Context*, Fts5PhraseIter*, int *piCol);
 
   /* Below this point are iVersion>=3 only */
-    // Removed due to SkipSQLExt build errors
-//  int (*xQueryToken)(Fts5Context*,
-//      int iPhrase, int iToken,
-//      const char **ppToken, int *pnToken
-//  );
-//  int (*xInstToken)(Fts5Context*, int iIdx, int iToken, const char**, int*);
-//
-//  /* Below this point are iVersion>=4 only */
-//  int (*xColumnLocale)(Fts5Context*, int iCol, const char **pz, int *pn);
-//  int (*xTokenize_v2)(Fts5Context*,
-//    const char *pText, int nText,      /* Text to tokenize */
-//    const char *pLocale, int nLocale,  /* Locale to pass to tokenizer */
-//    void *pCtx,                        /* Context passed to xToken() */
-//    int (*xToken)(void*, int, const char*, int, int, int)       /* Callback */
-//  );
+#if !defined(SKIPSQL_SQLITE_IVERSION) || (SKIPSQL_SQLITE_IVERSION >= 3)
+  int (*xQueryToken)(Fts5Context*,
+      int iPhrase, int iToken,
+      const char **ppToken, int *pnToken
+  );
+  int (*xInstToken)(Fts5Context*, int iIdx, int iToken, const char**, int*);
+
+  /* Below this point are iVersion>=4 only */
+  int (*xColumnLocale)(Fts5Context*, int iCol, const char **pz, int *pn);
+  int (*xTokenize_v2)(Fts5Context*,
+    const char *pText, int nText,      /* Text to tokenize */
+    const char *pLocale, int nLocale,  /* Locale to pass to tokenizer */
+    void *pCtx,                        /* Context passed to xToken() */
+    int (*xToken)(void*, int, const char*, int, int, int)       /* Callback */
+  );
+#endif
 };
 
 /*
@@ -13804,24 +13806,24 @@ struct fts5_api {
   );
 
   /* APIs below this point are only available if iVersion>=3 */
-    // Removed due to SkipSQLExt build errors
-//
-//  /* Create a new tokenizer */
-//  int (*xCreateTokenizer_v2)(
-//    fts5_api *pApi,
-//    const char *zName,
-//    void *pUserData,
-//    fts5_tokenizer_v2 *pTokenizer,
-//    void (*xDestroy)(void*)
-//  );
-//
-//  /* Find an existing tokenizer */
-//  int (*xFindTokenizer_v2)(
-//    fts5_api *pApi,
-//    const char *zName,
-//    void **ppUserData,
-//    fts5_tokenizer_v2 **ppTokenizer
-//  );
+#if !defined(SKIPSQL_SQLITE_IVERSION) || (SKIPSQL_SQLITE_IVERSION >= 3)
+  /* Create a new tokenizer */
+  int (*xCreateTokenizer_v2)(
+    fts5_api *pApi,
+    const char *zName,
+    void *pUserData,
+    fts5_tokenizer_v2 *pTokenizer,
+    void (*xDestroy)(void*)
+  );
+
+  /* Find an existing tokenizer */
+  int (*xFindTokenizer_v2)(
+    fts5_api *pApi,
+    const char *zName,
+    void **ppUserData,
+    fts5_tokenizer_v2 **ppTokenizer
+  );
+#endif
 };
 
 /*

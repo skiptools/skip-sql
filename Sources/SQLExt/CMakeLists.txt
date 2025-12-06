@@ -41,6 +41,7 @@ add_compile_definitions(HAVE_GETHOSTUUID=0)
 add_compile_definitions(HAVE_STDINT_H)
 add_compile_definitions(SQLCIPHER_CRYPTO_LIBTOMCRYPT)
 
+add_compile_definitions(SKIPSQL_SQLITE_IVERSION=4)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -frtti -fexceptions")
 
