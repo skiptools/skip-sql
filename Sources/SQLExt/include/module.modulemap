@@ -1,4 +1,4 @@
 module SQLExt [system] [extern_c] {
-  header "../sqlite/sqlite3ext.h"
+  header "../sqlite/sqlite3.h"
   //export *
 }
