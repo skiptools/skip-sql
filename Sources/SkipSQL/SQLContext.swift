@@ -72,7 +72,9 @@ public class SQLContext {
             if let flags = flags {
                 return library.sqlite3_open_v2(path, ptr, flags.rawValue, nil)
             } else {
-                return library.sqlite3_open(path, ptr)
+                let flags: OpenFlags = [OpenFlags.create, OpenFlags.readWrite]
+                return library.sqlite3_open_v2(path, ptr, flags.rawValue, nil)
+                //return library.sqlite3_open(path, ptr)
             }
         })
 
