@@ -4,19 +4,7 @@
 import Foundation
 import OSLog
 import SkipFFI
-
-/// The argument to `sqlite3_update_hook`
-public protocol sqlite3_update_hook : NativeCallback {
-    // public typealias sqlite3_update_hook = @convention(c) (_ updateActionPtr: UnsafeMutableRawPointer?, _ operation: Int32, _ dbname: UnsafePointer<CChar>?, _ tblname: UnsafePointer<CChar>?, _ rowid: sqlite3_int64) -> ()
-    func callback(userData: OpaquePointer?, operation: Int32, databaseName: OpaquePointer?, tableName: OpaquePointer?, rowid: Int64)
-}
-
-/// The argument to `sqlite3_trace_v2`
-public protocol sqlite3_trace_hook : NativeCallback {
-    // public typealias sqlite3_trace_hook = @convention(c) (_ type: UInt32, _ context: UnsafeMutableRawPointer?, _ p: UnsafeMutableRawPointer?, _ px: UnsafeMutableRawPointer?) -> Int32
-    func callback(type: sqlite3_unsigned, context: OpaquePointer?, p: OpaquePointer?, px: OpaquePointer?) -> Int32
-}
-
+import SkipSQLCore
 
 /// A concrete implementation of the `SQLiteLibrary` interface that declares `external` methods to use [JNA Direct Mapping](https://github.com/java-native-access/jna/blob/master/www/DirectMapping.md) to cache native method lookups.
 internal final class SQLiteJNALibrary : SQLiteLibrary {

@@ -4,7 +4,7 @@
 import Foundation
 import OSLog
 import SkipFFI
-import SkipSQL
+import SkipSQLCore
 
 /// A concrete implementation of the `SQLiteLibrary` interface that declared `external` methods to use [JNA Direct Mapping](https://github.com/java-native-access/jna/blob/master/www/DirectMapping.md) to cache native method lookups.
 ///

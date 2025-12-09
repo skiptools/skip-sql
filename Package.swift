@@ -17,16 +17,19 @@ let package = Package(
         .package(url: "https://source.skip.tools/skip-ltc.git", from: "1.0.0"),
     ],
     targets: [
-        .target(name: "SkipSQL", dependencies: [
+        .target(name: "SkipSQLCore", dependencies: [
             .product(name: "SkipFoundation", package: "skip-foundation"),
             .product(name: "SkipFFI", package: "skip-ffi")
+        ], plugins: [.plugin(name: "skipstone", package: "skip")]),
+        .target(name: "SkipSQL", dependencies: [
+            "SkipSQLCore",
         ], plugins: [.plugin(name: "skipstone", package: "skip")]),
         .testTarget(name: "SkipSQLTests", dependencies: [
             "SkipSQL",
             .product(name: "SkipTest", package: "skip")
         ], plugins: [.plugin(name: "skipstone", package: "skip")]),
         .target(name: "SkipSQLPlus", dependencies: [
-            "SkipSQL",
+            "SkipSQLCore",
             "SQLExt",
         ], plugins: [.plugin(name: "skipstone", package: "skip")]),
         .testTarget(name: "SkipSQLPlusTests", dependencies: [

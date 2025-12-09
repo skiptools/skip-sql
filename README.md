@@ -8,9 +8,12 @@ The SkipSQL module is a dual-platform [Skip Lite](https://skip.tools) framework 
 
 To connect 
 ```swift
+import SkipSQLCore
+import SkipSQL
+
 let dbpath = URL.applicationSupportDirectory.appendingPathComponent("db.sqlite")
 
-let ctx = try SQLContext(path: dbpath, flags: [.create, .readWrite])
+let ctx = try SQLContext(path: dbpath, flags: [.create, .readWrite], configuration: .platform)
 defer { ctx.close() }
 
 try sqlite.exec(sql: "CREATE TABLE IF NOT EXISTS SOME_TABLE (STRING TEXT)")
@@ -27,7 +30,10 @@ assert(rows[0][0] == SQLValue.text("ABC"))
 When passing `nil` as the path, the `SQLContext` will reside entirely in memory, and will not persist once the context is closed. This can be useful for unit testing and performing in-memory calculations, or as a temporary engine for calculations and sorting.
 
 ```swift
-let ctx = try SQLContext(path: nil)
+import SkipSQLCore
+import SkipSQL
+
+let ctx = try SQLContext(path: nil, configuration: .platform)
 defer { ctx.close() }
 
 let rows: [[SQLValue]] = ctx.selectAll(sql: "SELECT 1, 1.1+2.2, 'AB'||'C'")
@@ -379,6 +385,7 @@ Also be aware that the availability of some SQL features are contingent on the c
 | Android 14 (API 34)    | 3.39           |
 | Android 15 (API 35)    | 3.44           |
 | SQLPlus                | 3.50           |
+| Android 16 (API 36)    | 3.50           |
 
 
 Note that as cautioned in the [Android documentation](https://developer.android.com/reference/android/database/sqlite/package-summary), some Android device manufacturers include different versions of SQLite on their devices, so if your app depends on a SQLite version that may not be available on a device that your app supports, you may want to consider using [SQLPlus](#sqlplus) instead.
@@ -411,7 +418,7 @@ The SQLPlus extensions can be used by importing the `SkipSQLPlus` module
 and passing `configuration: .plus` to the `SQLContext` constructor, like so:
 
 ```swift
-import SkipSQL
+import SkipSQLCore
 import SkipSQLPlus
 
 let dbpath = URL.applicationSupportDirectory.appendingPathComponent("db.sqlite")
@@ -452,6 +459,7 @@ SQLCipher is based on SQLite and stable upstream release features are periodical
 An example of creating an encryped database:
 
 ```swift
+import SkipSQLCore
 import SkipSQLPlus
 
 let dbpath = URL.applicationSupportDirectory.appendingPathComponent("encrypted.sqlite")

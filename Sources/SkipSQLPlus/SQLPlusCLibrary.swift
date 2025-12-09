@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only WITH LGPL-3.0-linking-exception
 #if !SKIP
 import SQLExt
-import SkipSQL
+import SkipSQLCore
 
 /// A `SQLiteLibrary` implementation that uses the locally built `SQLExt` library
 /// to provide a consistent SQLite build with full-text-search (FTS) and encryption (sqlcipher)

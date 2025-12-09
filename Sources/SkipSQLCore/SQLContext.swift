@@ -50,7 +50,7 @@ public class SQLContext {
     }
 
     /// Create an in-memory `SQLContext`.
-    public init(configuration: SQLiteConfiguration = .platform) {
+    public init(configuration: SQLiteConfiguration) {
         // try! because creating an in-memory context should never fail
         self.SQLite3 = configuration.library
         self.db = try! Self.connect(path: ":memory:", configuration: configuration)!
@@ -60,12 +60,12 @@ public class SQLContext {
     /// - Parameters:
     ///   - path: The path to the local file, or ":memory:" for an in-memory database.
     ///   - flags: The flags to use to open the database.
-    public init(path: String, flags: OpenFlags? = nil, configuration: SQLiteConfiguration = .platform) throws {
+    public init(path: String, flags: OpenFlags? = nil, configuration: SQLiteConfiguration) throws {
         self.SQLite3 = configuration.library
         self.db = try Self.connect(path: path, flags: flags, configuration: configuration)!
     }
 
-    private static func connect(path: String, flags: OpenFlags? = nil, configuration: SQLiteConfiguration = .platform) throws -> OpaquePointer? {
+    private static func connect(path: String, flags: OpenFlags? = nil, configuration: SQLiteConfiguration) throws -> OpaquePointer? {
         var db: OpaquePointer? = nil
         let library = configuration.library
         try check(library, db: db, code: withUnsafeMutablePointer(to: &db) { ptr in
@@ -582,3 +582,17 @@ public class RowIterator<Row> : RowIteratorType<Row> {
     }
     #endif
 }
+
+#if SKIP
+/// The argument to `sqlite3_update_hook`
+public protocol sqlite3_update_hook : NativeCallback {
+    // public typealias sqlite3_update_hook = @convention(c) (_ updateActionPtr: UnsafeMutableRawPointer?, _ operation: Int32, _ dbname: UnsafePointer<CChar>?, _ tblname: UnsafePointer<CChar>?, _ rowid: sqlite3_int64) -> ()
+    func callback(userData: OpaquePointer?, operation: Int32, databaseName: OpaquePointer?, tableName: OpaquePointer?, rowid: Int64)
+}
+
+/// The argument to `sqlite3_trace_v2`
+public protocol sqlite3_trace_hook : NativeCallback {
+    // public typealias sqlite3_trace_hook = @convention(c) (_ type: UInt32, _ context: UnsafeMutableRawPointer?, _ p: UnsafeMutableRawPointer?, _ px: UnsafeMutableRawPointer?) -> Int32
+    func callback(type: sqlite3_unsigned, context: OpaquePointer?, p: OpaquePointer?, px: OpaquePointer?) -> Int32
+}
+#endif
