@@ -3,6 +3,7 @@
 #if !SKIP
 #if canImport(SQLite3)
 import SQLite3
+import SkipSQLCore
 
 /// The vendored SQLite3 library on Darwin platforms.
 /// The version of this library will vary between OS version, so some features (e.g., JSON support) might not be available.
