@@ -14,7 +14,6 @@ let package = Package(
         .package(url: "https://source.skip.tools/skip-foundation.git", from: "1.1.11"),
         .package(url: "https://source.skip.tools/skip-unit.git", from: "1.0.1"),
         .package(url: "https://source.skip.tools/skip-ffi.git", from: "1.0.0"),
-        .package(url: "https://source.skip.tools/skip-ltc.git", from: "1.0.0"),
     ],
     targets: [
         .target(name: "SkipSQLCore", dependencies: [
@@ -37,12 +36,12 @@ let package = Package(
             .product(name: "SkipTest", package: "skip")
         ], plugins: [.plugin(name: "skipstone", package: "skip")]),
         .target(name: "SQLExt", dependencies: [
-            .product(name: "SkipLTC", package: "skip-ltc"),
             .product(name: "SkipUnit", package: "skip-unit")
-        ], sources: ["sqlite"],
+        ],
+            sources: ["sqlite", "libtomcrypt"],
             publicHeadersPath: "sqlite",
             cSettings: [
-                .headerSearchPath("sqlite"),
+                .headerSearchPath("libtomcrypt/headers"),
                 .define("NDEBUG"),
                 .define("SQLITE_DQS", to: "0"),
                 .define("SQLITE_ENABLE_API_ARMOR"),
@@ -76,6 +75,7 @@ let package = Package(
                 .define("HAVE_GETHOSTUUID", to: "0"),
                 .define("HAVE_STDINT_H"),
                 .define("SQLCIPHER_CRYPTO_LIBTOMCRYPT"),
+                .define("SQLCIPHER_CRYPTO_CUSTOM", to: "sqlcipher_ltc_setup"),
                 //.unsafeFlags(["-Wno-shorten-64-to-32", "-Wno-ambiguous-macro"]), // enabled manually in libs
             ],
             linkerSettings: [.linkedLibrary("log", .when(platforms: [.android]))],
