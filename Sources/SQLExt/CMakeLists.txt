@@ -3,11 +3,9 @@ cmake_minimum_required(VERSION 3.3)
 project(sqlext LANGUAGES C)
 
 include_directories(sqlext PUBLIC sqlite/)
-file(GLOB_RECURSE SOURCES sqlite/*.c)
-
 include_directories(sqlext PRIVATE libtomcrypt/headers)
-file(GLOB_RECURSE SOURCES libtomcrypt/*.c)
 
+file(GLOB_RECURSE SOURCES sqlite/*.c libtomcrypt/*.c)
 add_library(sqlext SHARED ${SOURCES})
 
 # these should match the definitions in the Package.swift
