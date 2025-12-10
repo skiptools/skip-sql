@@ -3,9 +3,9 @@ cmake_minimum_required(VERSION 3.3)
 project(sqlext LANGUAGES C)
 
 include_directories(sqlext PUBLIC sqlite/)
-file(SOURCES sqlite/*.c)
+file(GLOB_RECURSE SOURCES sqlite/*.c)
 
-include_directories(sqlext libtomcrypt/)
+include_directories(sqlext PRIVATE libtomcrypt/headers)
 file(GLOB_RECURSE SOURCES libtomcrypt/*.c)
 
 add_library(sqlext SHARED ${SOURCES})
