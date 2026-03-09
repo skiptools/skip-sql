@@ -12,7 +12,7 @@ import SkipFFI
 ///
 /// The default `platform` library uses the vendored sqlite libraries included
 /// with the operating system.
-/// - See: https://skip.tools/docs/modules/skip-sql/#sqlite-versions
+/// - See: https://skip.dev/docs/modules/skip-sql/#sqlite-versions
 public struct SQLiteConfiguration {
     public let library: SQLiteLibrary
 
