@@ -409,7 +409,7 @@ public class SQLContext {
     }
 }
 
-public struct SQLExpression {
+public struct SQLExpression: Sendable {
     public var parts: [(String, SQLValue?)] = []
 
     public init(_ sql: String, _ bindings: [SQLValue] = []) {
