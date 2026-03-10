@@ -85,6 +85,78 @@ public extension SQLContext {
         return try cursor(countSQL).map({ try $0.get() }).first?.first?.longValue ?? 0
     }
 
+    /// Returns true if any rows exist matching the optional predicate.
+    func exists<T: SQLCodable>(_ type: T.Type, inSchema schemaName: String? = nil, where predicate: SQLPredicate? = nil) throws -> Bool {
+        var sql = SQLExpression("SELECT EXISTS(SELECT 1 FROM " + type.table.quotedName(inSchema: schemaName))
+        if let predicate {
+            sql.append(" WHERE ")
+            predicate.apply(to: &sql)
+        }
+        sql.append(")")
+        return try cursor(sql).map({ try $0.get() }).first?.first?.longValue == Int64(1)
+    }
+
+    /// Fetches all instances of the given type, with optional filtering, ordering, and limit.
+    func fetchAll<T: SQLCodable>(_ type: T.Type, inSchema schemaName: String? = nil, where predicate: SQLPredicate? = nil, orderBy orderByColumn: SQLRepresentable? = nil, order: SQLOrder = .ascending, limit: Int? = nil, offset: Int? = nil) throws -> [T] {
+        var q = query(type, schema: schemaName).where(predicate)
+        if let orderByColumn {
+            q = q.orderBy(orderByColumn, order: order)
+        }
+        if let limit {
+            q = q.limit(limit, offset: offset)
+        }
+        let cursor = try q.eval()
+        defer { cursor.close() }
+        return try cursor.load()
+    }
+
+    /// Deletes all rows from the given table.
+    func deleteAll<T: SQLCodable>(_ type: T.Type, inSchema schemaName: String? = nil) throws {
+        try exec(SQLExpression("DELETE FROM " + type.table.quotedName(inSchema: schemaName)))
+    }
+
+    /// Inserts multiple instances in a single transaction for efficiency. Returns the inserted instances with assigned primary keys.
+    @inline(__always) @discardableResult func insertAll<T: SQLCodable>(_ instances: [T], inSchema schemaName: String? = nil) throws -> [T] {
+        if instances.isEmpty { return [] }
+        return try transaction {
+            var results: [T] = []
+            for instance in instances {
+                results.append(try insert(instance, inSchema: schemaName))
+            }
+            return results
+        }
+    }
+
+    /// Returns the result of an aggregate function applied to a column, with optional filtering.
+    func aggregate<T: SQLCodable>(_ function: String, column: SQLColumn, type: T.Type, inSchema schemaName: String? = nil, where predicate: SQLPredicate? = nil) throws -> SQLValue {
+        var sql = SQLExpression("SELECT " + function + "(" + column.quotedName() + ") FROM " + type.table.quotedName(inSchema: schemaName))
+        if let predicate {
+            sql.append(" WHERE ")
+            predicate.apply(to: &sql)
+        }
+        return try cursor(sql).map({ try $0.get() }).first?.first ?? .null
+    }
+
+    /// Returns the sum of the given column.
+    func sum<T: SQLCodable>(column: SQLColumn, of type: T.Type, inSchema schemaName: String? = nil, where predicate: SQLPredicate? = nil) throws -> SQLValue {
+        try aggregate("SUM", column: column, type: type, inSchema: schemaName, where: predicate)
+    }
+
+    /// Returns the average of the given column.
+    func avg<T: SQLCodable>(column: SQLColumn, of type: T.Type, inSchema schemaName: String? = nil, where predicate: SQLPredicate? = nil) throws -> SQLValue {
+        try aggregate("AVG", column: column, type: type, inSchema: schemaName, where: predicate)
+    }
+
+    /// Returns the minimum value of the given column.
+    func min<T: SQLCodable>(column: SQLColumn, of type: T.Type, inSchema schemaName: String? = nil, where predicate: SQLPredicate? = nil) throws -> SQLValue {
+        try aggregate("MIN", column: column, type: type, inSchema: schemaName, where: predicate)
+    }
+
+    /// Returns the maximum value of the given column.
+    func max<T: SQLCodable>(column: SQLColumn, of type: T.Type, inSchema schemaName: String? = nil, where predicate: SQLPredicate? = nil) throws -> SQLValue {
+        try aggregate("MAX", column: column, type: type, inSchema: schemaName, where: predicate)
+    }
+
     /// Delete the given instances from the database. Instances must have at least one primary key defined.
     @inline(__always) func delete<T: SQLCodable>(instances: [T]) throws {
         try delete(T.self, where: primaryKeyQuery(instances))
