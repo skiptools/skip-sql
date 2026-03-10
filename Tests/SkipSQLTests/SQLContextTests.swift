@@ -1004,6 +1004,325 @@ final class SQLContextTests: XCTestCase {
 
         try sqlite.exec(SQLRefType.table.dropTableSQL())
     }
+
+    // MARK: - ORM Feature Tests
+
+    func testExists() throws {
+        let sqlite = try SQLContextTest()
+        for ddl in DemoTable.table.createTableSQL(withIndexes: false) {
+            try sqlite.exec(ddl)
+        }
+
+        XCTAssertFalse(try sqlite.exists(DemoTable.self))
+
+        try sqlite.insert(DemoTable(txt: "A", int: 1))
+        try sqlite.insert(DemoTable(txt: "B", int: 2))
+
+        XCTAssertTrue(try sqlite.exists(DemoTable.self))
+        XCTAssertTrue(try sqlite.exists(DemoTable.self, where: DemoTable.txt.equals(SQLValue("A"))))
+        XCTAssertFalse(try sqlite.exists(DemoTable.self, where: DemoTable.txt.equals(SQLValue("Z"))))
+
+        try sqlite.exec(DemoTable.table.dropTableSQL())
+    }
+
+    func testFetchAll() throws {
+        let sqlite = try SQLContextTest()
+        for ddl in DemoTable.table.createTableSQL(withIndexes: false) {
+            try sqlite.exec(ddl)
+        }
+
+        // empty table
+        let empty = try sqlite.fetchAll(DemoTable.self)
+        XCTAssertEqual(0, empty.count)
+
+        try sqlite.insert(DemoTable(txt: "C", int: 30))
+        try sqlite.insert(DemoTable(txt: "A", int: 10))
+        try sqlite.insert(DemoTable(txt: "B", int: 20))
+
+        // fetch all
+        let all = try sqlite.fetchAll(DemoTable.self)
+        XCTAssertEqual(3, all.count)
+
+        // fetch with predicate
+        let filtered = try sqlite.fetchAll(DemoTable.self, where: DemoTable.int.greaterThan(SQLValue(Int64(15))))
+        XCTAssertEqual(2, filtered.count)
+
+        // fetch with ordering
+        let ordered = try sqlite.fetchAll(DemoTable.self, orderBy: DemoTable.txt, order: .ascending)
+        XCTAssertEqual("A", ordered.first?.txt)
+        XCTAssertEqual("C", ordered.last?.txt)
+
+        // fetch with descending order
+        let descending = try sqlite.fetchAll(DemoTable.self, orderBy: DemoTable.int, order: .descending)
+        XCTAssertEqual(30, descending.first?.int)
+        XCTAssertEqual(10, descending.last?.int)
+
+        // fetch with limit
+        let limited = try sqlite.fetchAll(DemoTable.self, orderBy: DemoTable.txt, limit: 2)
+        XCTAssertEqual(2, limited.count)
+        XCTAssertEqual("A", limited.first?.txt)
+
+        // fetch with limit and offset
+        let offsetted = try sqlite.fetchAll(DemoTable.self, orderBy: DemoTable.txt, limit: 1, offset: 1)
+        XCTAssertEqual(1, offsetted.count)
+        XCTAssertEqual("B", offsetted.first?.txt)
+
+        try sqlite.exec(DemoTable.table.dropTableSQL())
+    }
+
+    func testDeleteAll() throws {
+        let sqlite = try SQLContextTest()
+        for ddl in DemoTable.table.createTableSQL(withIndexes: false) {
+            try sqlite.exec(ddl)
+        }
+
+        try sqlite.insert(DemoTable(txt: "A", int: 1))
+        try sqlite.insert(DemoTable(txt: "B", int: 2))
+        try sqlite.insert(DemoTable(txt: "C", int: 3))
+
+        XCTAssertEqual(3, try sqlite.count(DemoTable.self))
+        try sqlite.deleteAll(DemoTable.self)
+        XCTAssertEqual(0, try sqlite.count(DemoTable.self))
+
+        try sqlite.exec(DemoTable.table.dropTableSQL())
+    }
+
+    func testInsertAll() throws {
+        let sqlite = try SQLContextTest()
+        for ddl in DemoTable.table.createTableSQL(withIndexes: false) {
+            try sqlite.exec(ddl)
+        }
+
+        let instances = [
+            DemoTable(txt: "A", int: 10),
+            DemoTable(txt: "B", int: 20),
+            DemoTable(txt: "C", int: 30),
+        ]
+        let inserted = try sqlite.insertAll(instances)
+        XCTAssertEqual(3, inserted.count)
+        XCTAssertEqual(3, try sqlite.count(DemoTable.self))
+
+        // verify IDs were assigned
+        XCTAssertNotNil(inserted[0].id)
+        XCTAssertNotNil(inserted[1].id)
+        XCTAssertNotNil(inserted[2].id)
+
+        // verify the data
+        XCTAssertEqual("A", inserted[0].txt)
+        XCTAssertEqual("B", inserted[1].txt)
+        XCTAssertEqual("C", inserted[2].txt)
+
+        // insertAll with empty array should be a no-op
+        let emptyResult = try sqlite.insertAll([DemoTable]())
+        XCTAssertEqual(0, emptyResult.count)
+        XCTAssertEqual(3, try sqlite.count(DemoTable.self))
+
+        try sqlite.exec(DemoTable.table.dropTableSQL())
+    }
+
+    func testInsertAllRollback() throws {
+        let sqlite = try SQLContextTest()
+        for ddl in DemoTable.table.createTableSQL(withIndexes: false) {
+            try sqlite.exec(ddl)
+        }
+
+        // insert one with a unique txt
+        try sqlite.insert(DemoTable(txt: "A", int: 1))
+        XCTAssertEqual(1, try sqlite.count(DemoTable.self))
+
+        // now try to insertAll with a duplicate — should rollback the entire batch
+        do {
+            try sqlite.insertAll([
+                DemoTable(txt: "B", int: 2),
+                DemoTable(txt: "A", int: 3), // duplicate "A"
+            ])
+            XCTFail("insertAll with duplicate should have thrown")
+        } catch {
+            // expected
+        }
+        // the original row should still be there, but the batch should have been rolled back
+        XCTAssertEqual(1, try sqlite.count(DemoTable.self))
+
+        try sqlite.exec(DemoTable.table.dropTableSQL())
+    }
+
+    func testAggregates() throws {
+        let sqlite = try SQLContextTest()
+        for ddl in DemoTable.table.createTableSQL(withIndexes: false) {
+            try sqlite.exec(ddl)
+        }
+
+        try sqlite.insert(DemoTable(txt: "A", num: 10.0, int: 1))
+        try sqlite.insert(DemoTable(txt: "B", num: 20.0, int: 2))
+        try sqlite.insert(DemoTable(txt: "C", num: 30.0, int: 3))
+        try sqlite.insert(DemoTable(txt: "D", num: nil, int: 4))
+
+        // SUM
+        let sumResult = try sqlite.sum(column: DemoTable.num, of: DemoTable.self)
+        XCTAssertEqual(60.0, sumResult.realValue)
+
+        // AVG
+        let avgResult = try sqlite.avg(column: DemoTable.num, of: DemoTable.self)
+        XCTAssertEqual(20.0, avgResult.realValue)
+
+        // MIN
+        let minResult = try sqlite.min(column: DemoTable.num, of: DemoTable.self)
+        XCTAssertEqual(10.0, minResult.realValue)
+
+        // MAX
+        let maxResult = try sqlite.max(column: DemoTable.num, of: DemoTable.self)
+        XCTAssertEqual(30.0, maxResult.realValue)
+
+        // Aggregates with predicate
+        let filteredSum = try sqlite.sum(column: DemoTable.num, of: DemoTable.self, where: DemoTable.num.greaterThan(SQLValue(15.0)))
+        XCTAssertEqual(50.0, filteredSum.realValue)
+
+        // Integer aggregates
+        let intSum = try sqlite.sum(column: DemoTable.int, of: DemoTable.self)
+        XCTAssertEqual(Int64(10), intSum.longValue)
+
+        let intMax = try sqlite.max(column: DemoTable.int, of: DemoTable.self)
+        XCTAssertEqual(Int64(4), intMax.longValue)
+
+        // Aggregate on empty result returns null
+        let emptySum = try sqlite.sum(column: DemoTable.num, of: DemoTable.self, where: DemoTable.txt.equals(SQLValue("NONEXISTENT")))
+        XCTAssertEqual(.null, emptySum)
+
+        try sqlite.exec(DemoTable.table.dropTableSQL())
+    }
+
+    func testTableExists() throws {
+        let sqlite = try SQLContextTest()
+
+        XCTAssertFalse(try sqlite.tableExists("DEMO_TABLE"))
+
+        for ddl in DemoTable.table.createTableSQL(withIndexes: false) {
+            try sqlite.exec(ddl)
+        }
+
+        XCTAssertTrue(try sqlite.tableExists("DEMO_TABLE"))
+        XCTAssertFalse(try sqlite.tableExists("NO_SUCH_TABLE"))
+
+        try sqlite.exec(DemoTable.table.dropTableSQL())
+        XCTAssertFalse(try sqlite.tableExists("DEMO_TABLE"))
+    }
+
+    func testCreateTableIfNotExists() throws {
+        let sqlite = try SQLContextTest()
+
+        // should succeed the first time
+        try sqlite.createTableIfNotExists(DemoTable.self)
+        XCTAssertTrue(try sqlite.tableExists("DEMO_TABLE"))
+
+        // should not throw on second call
+        try sqlite.createTableIfNotExists(DemoTable.self)
+        XCTAssertTrue(try sqlite.tableExists("DEMO_TABLE"))
+
+        // verify data can be inserted
+        try sqlite.insert(DemoTable(txt: "test", int: 42))
+        XCTAssertEqual(1, try sqlite.count(DemoTable.self))
+
+        try sqlite.exec(DemoTable.table.dropTableSQL())
+    }
+
+    func testAddColumnIfNotExists() throws {
+        let sqlite = try SQLContextTest()
+
+        // create a table with limited columns
+        try sqlite.exec(sql: #"CREATE TABLE "MIGRATION_TEST" ("ID" INTEGER PRIMARY KEY, "NAME" TEXT NOT NULL)"#)
+        let migrationTable = SQLTable(name: "MIGRATION_TEST", columns: [
+            SQLColumn(name: "ID", type: .long, primaryKey: true),
+            SQLColumn(name: "NAME", type: .text, nullable: false),
+        ])
+
+        // verify 2 columns exist
+        let initialColumns = try sqlite.columns(for: "MIGRATION_TEST")
+        XCTAssertEqual(2, initialColumns.count)
+
+        // add a new column
+        let ageColumn = SQLColumn(name: "AGE", type: .long)
+        try sqlite.addColumnIfNotExists(ageColumn, to: migrationTable)
+
+        let afterColumns = try sqlite.columns(for: "MIGRATION_TEST")
+        XCTAssertEqual(3, afterColumns.count)
+        XCTAssertTrue(afterColumns.contains(where: { $0.name == "AGE" }))
+
+        // calling again should be a no-op (not throw)
+        try sqlite.addColumnIfNotExists(ageColumn, to: migrationTable)
+        XCTAssertEqual(3, try sqlite.columns(for: "MIGRATION_TEST").count)
+
+        try sqlite.exec(sql: #"DROP TABLE "MIGRATION_TEST""#)
+    }
+
+    func testMigrate() throws {
+        let sqlite = try SQLContextTest()
+        XCTAssertEqual(0, sqlite.userVersion)
+
+        let migrations: [(SQLContext) throws -> Void] = [
+            // Migration 0 → 1: create initial table
+            { ctx in
+                try ctx.exec(sql: #"CREATE TABLE "ITEMS" ("ID" INTEGER PRIMARY KEY, "NAME" TEXT NOT NULL)"#)
+            },
+            // Migration 1 → 2: add a column
+            { ctx in
+                try ctx.exec(sql: #"ALTER TABLE "ITEMS" ADD COLUMN "SCORE" REAL"#)
+            },
+            // Migration 2 → 3: add another column with default
+            { ctx in
+                try ctx.exec(sql: #"ALTER TABLE "ITEMS" ADD COLUMN "ACTIVE" INTEGER DEFAULT 1"#)
+            },
+        ]
+
+        // run all migrations from scratch
+        try sqlite.migrate(migrations: migrations)
+        XCTAssertEqual(3, sqlite.userVersion)
+
+        // verify schema
+        let cols = try sqlite.columns(for: "ITEMS")
+        XCTAssertEqual(4, cols.count)
+        XCTAssertEqual("ID", cols[0].name)
+        XCTAssertEqual("NAME", cols[1].name)
+        XCTAssertEqual("SCORE", cols[2].name)
+        XCTAssertEqual("ACTIVE", cols[3].name)
+
+        // running again should be a no-op
+        try sqlite.migrate(migrations: migrations)
+        XCTAssertEqual(3, sqlite.userVersion)
+
+        // insert data to verify the table works
+        try sqlite.exec(sql: "INSERT INTO ITEMS (NAME, SCORE) VALUES (?, ?)", parameters: [.text("Test"), .real(9.5)])
+        let rows = try sqlite.selectAll(sql: "SELECT * FROM ITEMS")
+        XCTAssertEqual(1, rows.count)
+
+        try sqlite.exec(sql: #"DROP TABLE "ITEMS""#)
+    }
+
+    func testMigrateIncremental() throws {
+        let sqlite = try SQLContextTest()
+
+        // start with 2 migrations
+        let initialMigrations: [(SQLContext) throws -> Void] = [
+            { ctx in try ctx.exec(sql: #"CREATE TABLE "VERSIONED" ("ID" INTEGER PRIMARY KEY)"#) },
+            { ctx in try ctx.exec(sql: #"ALTER TABLE "VERSIONED" ADD COLUMN "V2" TEXT"#) },
+        ]
+        try sqlite.migrate(migrations: initialMigrations)
+        XCTAssertEqual(2, sqlite.userVersion)
+
+        // now add a third migration — only the new one should run
+        let extendedMigrations: [(SQLContext) throws -> Void] = [
+            { ctx in try ctx.exec(sql: #"CREATE TABLE "VERSIONED" ("ID" INTEGER PRIMARY KEY)"#) },
+            { ctx in try ctx.exec(sql: #"ALTER TABLE "VERSIONED" ADD COLUMN "V2" TEXT"#) },
+            { ctx in try ctx.exec(sql: #"ALTER TABLE "VERSIONED" ADD COLUMN "V3" INTEGER"#) },
+        ]
+        try sqlite.migrate(migrations: extendedMigrations)
+        XCTAssertEqual(3, sqlite.userVersion)
+
+        let cols = try sqlite.columns(for: "VERSIONED")
+        XCTAssertEqual(3, cols.count)
+        XCTAssertEqual("V3", cols[2].name)
+
+        try sqlite.exec(sql: #"DROP TABLE "VERSIONED""#)
+    }
 }
 
 extension SQLContext {

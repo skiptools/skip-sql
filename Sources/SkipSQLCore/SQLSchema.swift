@@ -333,6 +333,43 @@ public extension SQLContext {
         // the custom sql is a bit of a hack
         try issueQuery(ColumnInfo.self, where: .custom(sql: "name IS NOT NULL", bindings: [.text(tableName), .text(schemaName)])).load()
     }
+
+    /// Returns true if the given table exists in the database.
+    func tableExists(_ tableName: String) throws -> Bool {
+        let result = try selectAll(sql: "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?", parameters: [.text(tableName)])
+        return result.first?.first?.longValue ?? 0 > 0
+    }
+
+    /// Creates the table for the given type if it does not already exist, along with any indices.
+    func createTableIfNotExists<T: SQLCodable>(_ type: T.Type, inSchema schemaName: String? = nil) throws {
+        for ddl in type.table.createTableSQL(inSchema: schemaName, ifNotExists: true) {
+            try exec(ddl)
+        }
+    }
+
+    /// Adds a column to the table if it does not already exist. Useful for schema migrations.
+    func addColumnIfNotExists(_ column: SQLColumn, to table: SQLTable, inSchema schemaName: String? = nil) throws {
+        let existingColumns = try columns(for: table.name, in: schemaName ?? "main")
+        let columnExists = existingColumns.contains(where: { $0.name == column.name })
+        if !columnExists {
+            for ddl in table.addColumnSQL(column: column, inSchema: schemaName) {
+                try exec(ddl)
+            }
+        }
+    }
+
+    /// Performs a schema migration using the `userVersion` property.
+    /// The `migrations` array is 0-indexed: migrations[0] runs when upgrading from version 0 to 1, etc.
+    /// Each migration closure receives the `SQLContext` and should perform the necessary DDL changes.
+    func migrate(migrations: [(SQLContext) throws -> Void]) throws {
+        let currentVersion = Int(userVersion)
+        for version in currentVersion..<migrations.count {
+            try transaction {
+                try migrations[version](self)
+                self.userVersion = Int64(version + 1)
+            }
+        }
+    }
 }
 
 /// `sqlite_master` (the new recommended `sqlite_schema` name was introduced in SQLite 3.33.0)
