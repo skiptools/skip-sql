@@ -226,6 +226,10 @@ public class SQLContext {
 
     public typealias TraceAction = (String) -> Void
     private var traceHook: TraceHook?
+    #if SKIP
+    private var legacyTraceHook: LegacyTraceHook?
+    private var usesLegacyTrace = false
+    #endif
 
     #if !SKIP
     typealias TraceBox = @convention(block) (UnsafeRawPointer) -> Void
@@ -249,14 +253,45 @@ public class SQLContext {
             return 0
         }
     }
+
+    private final class LegacyTraceHook : sqlite3_legacy_trace_hook {
+        let action: TraceAction
+
+        init(action: TraceAction) {
+            self.action = action
+        }
+
+        override func callback(context: OpaquePointer?, sql: OpaquePointer?) {
+            if let sql {
+                let text = sql.getString(0)
+                // Legacy sqlite3_trace() reports trigger subprograms as SQL comments like "-- TRIGGER ...".
+                // Ignore those so we only surface the user's statement text, like trace_v2 + expanded_sql.
+                if text.hasPrefix("-- TRIGGER") {
+                    return
+                }
+                action(text)
+            }
+        }
+    }
     #endif
 
     /// Adds a callback that will be invoked with the expanded SQL whenever a statement is executed
     public func trace(_ action: TraceAction?) {
         guard let action else {
             // disable trace
+            #if SKIP
+            if usesLegacyTrace {
+                _ = SQLite3.sqlite3_trace(db, nil, nil)
+            } else {
+                _ = SQLite3.sqlite3_trace_v2(db, 0, nil, nil)
+            }
+            self.traceHook = nil
+            self.legacyTraceHook = nil
+            self.usesLegacyTrace = false
+            #else
             _ = SQLite3.sqlite3_trace_v2(db, 0, nil, nil)
             self.traceHook = nil
+            #endif
             return
         }
 
@@ -279,9 +314,18 @@ public class SQLContext {
         )
         traceHook = box
         #else
-        self.traceHook = TraceHook(action: action, context: self) // need to retain or it will be garbage collected eventually
-        // The Kotlin update mechanism is different; it uses a TraceHook implementation, and doesn't pass a context pointer
-        SQLite3.sqlite3_trace_v2(db, SQLITE_TRACE_STMT, self.traceHook, nil)
+        if versionNumber >= 3_014_000 {
+            self.usesLegacyTrace = false
+            self.legacyTraceHook = nil
+            self.traceHook = TraceHook(action: action, context: self) // need to retain or it will be garbage collected eventually
+            // The Kotlin update mechanism is different; it uses a TraceHook implementation, and doesn't pass a context pointer
+            SQLite3.sqlite3_trace_v2(db, SQLITE_TRACE_STMT, self.traceHook, nil)
+        } else {
+            self.usesLegacyTrace = true
+            self.traceHook = nil
+            self.legacyTraceHook = LegacyTraceHook(action: action) // need to retain or it will be garbage collected eventually
+            SQLite3.sqlite3_trace(db, self.legacyTraceHook, nil)
+        }
         #endif
     }
 

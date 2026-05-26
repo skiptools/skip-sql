@@ -95,7 +95,12 @@ final class SQLContextTests: XCTestCase {
                 try sqlite.exec(sql: sql)
                 XCTFail("SQL Statement should not have succeeed")
             } catch let error as SQLError {
-                XCTAssertEqual(message, error.msg)
+                if message == "incomplete input" {
+                    // SQLite 3.9 reports `near "TABLE": syntax error` for incomplete CREATE TABLE
+                    XCTAssertTrue(error.msg == message || error.msg == #"near "TABLE": syntax error"#)
+                } else {
+                    XCTAssertEqual(message, error.msg)
+                }
             }
         }
 
@@ -266,6 +271,11 @@ final class SQLContextTests: XCTestCase {
     }
 
     func testDateTypes() throws {
+        #if SKIP
+        if android.os.Build.VERSION.SDK_INT < 26 {
+            throw XCTSkip("java.time date formatting requires API 26+")
+        }
+        #endif
         let ctx = try SQLContextTest()
         var statements: [String] = []
         ctx.trace { sql in

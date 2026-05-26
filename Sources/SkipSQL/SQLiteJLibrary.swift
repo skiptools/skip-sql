@@ -7,8 +7,15 @@ import SkipFFI
 import SkipSQLCore
 
 /// A concrete implementation of the `SQLiteLibrary` interface that declares `external` methods to use [JNA Direct Mapping](https://github.com/java-native-access/jna/blob/master/www/DirectMapping.md) to cache native method lookups.
+///
+/// `sqlite3_expanded_sql` and `sqlite3_trace_v2` use lazy JNA lookup because they are missing on Android 7 (SQLite 3.9).
 internal final class SQLiteJNALibrary : SQLiteLibrary {
     static let shared = SQLiteJNALibrary()
+
+    private static var expandedSqlFn: com.sun.jna.Function? = nil
+    private static var expandedSqlUnavailable = false
+    private static var traceV2Fn: com.sun.jna.Function? = nil
+    private static var traceV2Unavailable = false
 
     private init() {
         do {
@@ -45,7 +52,23 @@ internal final class SQLiteJNALibrary : SQLiteLibrary {
     // /* SKIP INSERT: external */ func sqlite3_column_origin_name(_ stmt: OpaquePointer, _ columnIndex: Int32) -> sqlite3_cstring_ptr?
     /* SKIP INSERT: external */ func sqlite3_column_decltype(_ stmt: OpaquePointer, _ columnIndex: Int32) -> sqlite3_cstring_ptr?
     /* SKIP INSERT: external */ func sqlite3_sql(_ stmt: OpaquePointer) -> sqlite3_cstring_ptr?
-    /* SKIP INSERT: external */ func sqlite3_expanded_sql(_ stmt: OpaquePointer) -> sqlite3_cstring_mutptr?
+
+    func sqlite3_expanded_sql(_ stmt: OpaquePointer) -> sqlite3_cstring_mutptr? {
+        if expandedSqlUnavailable { return nil }
+        if let fn = expandedSqlFn {
+            return fn.invoke((com.sun.jna.Pointer.self as kotlin.reflect.KClass).java, kotlin.arrayOf(stmt)) as? OpaquePointer
+        } else {
+            do {
+                let fn = com.sun.jna.NativeLibrary.getInstance("sqlite3").getFunction("sqlite3_expanded_sql")
+                expandedSqlFn = fn
+                return fn.invoke((com.sun.jna.Pointer.self as kotlin.reflect.KClass).java, kotlin.arrayOf(stmt)) as? OpaquePointer
+            } catch let _ as java.lang.UnsatisfiedLinkError {
+                expandedSqlUnavailable = true
+                return nil
+            }
+        }
+    }
+
     /* SKIP INSERT: external */ func sqlite3_db_handle(_ stmt: OpaquePointer) -> OpaquePointer
     /* SKIP INSERT: external */ func sqlite3_bind_null(_ stmt: OpaquePointer, _ paramIndex: Int32) -> Int32
     /* SKIP INSERT: external */ func sqlite3_bind_int(_ stmt: OpaquePointer, _ paramIndex: Int32, _ value: Int32) -> Int32
@@ -77,7 +100,23 @@ internal final class SQLiteJNALibrary : SQLiteLibrary {
     /* SKIP INSERT: external */ func sqlite3_mutex_enter(_ lock: OpaquePointer?)
     /* SKIP INSERT: external */ func sqlite3_mutex_leave(_ lock: OpaquePointer?)
     /* SKIP INSERT: external */ func sqlite3_update_hook(_ db: OpaquePointer?, _ callback: sqlite3_update_hook?, _ pArg: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?
-    /* SKIP INSERT: external */ func sqlite3_trace_v2(_ db: OpaquePointer?, _ mask: sqlite3_unsigned, _ callback: sqlite3_trace_hook?, _ pCtx: UnsafeMutableRawPointer?) -> Int32
+    /* SKIP INSERT: external */ func sqlite3_trace(_ db: OpaquePointer?, _ callback: sqlite3_legacy_trace_hook?, _ pArg: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?
+
+    func sqlite3_trace_v2(_ db: OpaquePointer?, _ mask: sqlite3_unsigned, _ callback: sqlite3_trace_hook?, _ pCtx: UnsafeMutableRawPointer?) -> Int32 {
+        if traceV2Unavailable { return 1 }
+        if let fn = traceV2Fn {
+            return fn.invoke(java.lang.Integer.TYPE, kotlin.arrayOf(db, mask, callback, pCtx)) as! Int32
+        } else {
+            do {
+                let fn = com.sun.jna.NativeLibrary.getInstance("sqlite3").getFunction("sqlite3_trace_v2")
+                traceV2Fn = fn
+                return fn.invoke(java.lang.Integer.TYPE, kotlin.arrayOf(db, mask, callback, pCtx)) as! Int32
+            } catch let _ as java.lang.UnsatisfiedLinkError {
+                traceV2Unavailable = true
+                return 1
+            }
+        }
+    }
 }
 
 #endif

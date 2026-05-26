@@ -72,6 +72,7 @@ internal final class SQLPlusJNALibrary : SQLiteLibrary {
     /* SKIP INSERT: external */ func sqlite3_mutex_enter(_ lock: OpaquePointer?)
     /* SKIP INSERT: external */ func sqlite3_mutex_leave(_ lock: OpaquePointer?)
     /* SKIP INSERT: external */ func sqlite3_update_hook(_ db: OpaquePointer?, _ callback: sqlite3_update_hook?, _ pArg: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?
+    /* SKIP INSERT: external */ func sqlite3_trace(_ db: OpaquePointer?, _ callback: sqlite3_legacy_trace_hook?, _ pArg: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?
     /* SKIP INSERT: external */ func sqlite3_trace_v2(_ db: OpaquePointer?, _ mask: sqlite3_unsigned, _ callback: sqlite3_trace_hook?, _ pCtx: UnsafeMutableRawPointer?) -> Int32
 }
 

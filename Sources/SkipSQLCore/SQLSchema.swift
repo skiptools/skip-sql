@@ -330,8 +330,27 @@ public extension SQLContext {
     ///
     /// https://www.sqlite.org/pragma.html#pragma_table_info
     func columns(for tableName: String, in schemaName: String = "main") throws -> [ColumnInfo] {
-        // the custom sql is a bit of a hack
-        try issueQuery(ColumnInfo.self, where: .custom(sql: "name IS NOT NULL", bindings: [.text(tableName), .text(schemaName)])).load()
+        if supports(feature: .pragmaTableInfo) {
+            // the custom sql is a bit of a hack
+            return try issueQuery(ColumnInfo.self, where: .custom(sql: "name IS NOT NULL", bindings: [.text(tableName), .text(schemaName)])).load()
+        }
+        let quotedTable = tableName.quote("'")
+        let sql: String
+        if schemaName == "main" {
+            sql = "PRAGMA table_info(\(quotedTable))"
+        } else {
+            sql = "PRAGMA \(schemaName.quote("'")).table_info(\(quotedTable))"
+        }
+        return try selectAll(sql: sql).map { values in
+            ColumnInfo(
+                cid: values[0].longValue ?? 0,
+                name: values[1].textValue ?? "",
+                type: values[2].textValue ?? "",
+                notnull: values[3].longValue ?? 0,
+                dflt_value: values.count > 4 ? values[4] : .null,
+                pk: values.count > 5 ? (values[5].longValue ?? 0) : 0
+            )
+        }
     }
 
     /// Returns true if the given table exists in the database.
