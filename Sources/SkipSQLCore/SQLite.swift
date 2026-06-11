@@ -13,7 +13,7 @@ import SkipFFI
 /// The default `platform` library uses the vendored sqlite libraries included
 /// with the operating system.
 /// - See: https://skip.dev/docs/modules/skip-sql/#sqlite-versions
-public struct SQLiteConfiguration {
+public struct SQLiteConfiguration: Sendable {
     public let library: SQLiteLibrary
 
     public init(library: SQLiteLibrary) {

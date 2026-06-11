@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MPL-2.0
 import XCTest
 import Foundation
-import SkipSQLCore
 import SkipSQLPlus
 
 final class SQLPlusTests: XCTestCase {

@@ -7,7 +7,7 @@ extension SQLiteConfiguration {
     ///
     /// This will use the the vendored sqlite libraries that are provided by the operating system.
     /// The version will vary depending on the OS version.
-    public static let platform: SQLiteConfiguration = {
+    nonisolated(unsafe) public static let platform: SQLiteConfiguration = {
         #if SKIP
         SQLiteConfiguration(library: SQLiteJNALibrary.shared)
         #elseif canImport(SQLite3)

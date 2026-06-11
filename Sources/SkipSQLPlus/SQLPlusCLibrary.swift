@@ -7,7 +7,7 @@ import SkipSQLCore
 /// A `SQLiteLibrary` implementation that uses the locally built `SQLExt` library
 /// to provide a consistent SQLite build with full-text-search (FTS) and encryption (sqlcipher)
 /// extensions enabled.
-internal final class SQLPlusCLibrary : SQLiteLibrary {
+internal final class SQLPlusCLibrary : SQLiteLibrary, Sendable {
     static let shared = SQLPlusCLibrary()
 
     init() {

@@ -58,7 +58,7 @@ public let SQLITE_ROW = 100
 public let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 #endif
 
-public protocol SQLiteLibrary : NativeLibrary {
+public protocol SQLiteLibrary : NativeLibrary, Sendable {
     func sqlite3_sleep(_ duration: Int32) -> Int32
 
     // Database Connection API

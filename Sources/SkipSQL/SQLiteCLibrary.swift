@@ -8,7 +8,7 @@ import SkipSQLCore
 /// The vendored SQLite3 library on Darwin platforms.
 /// The version of this library will vary between OS version, so some features (e.g., JSON support) might not be available.
 final class SQLiteCLibrary : SQLiteLibrary {
-    static let shared = SQLiteCLibrary()
+    nonisolated(unsafe) static let shared = SQLiteCLibrary()
 
     init() {
     }

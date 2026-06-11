@@ -83,7 +83,7 @@ public class SQLContext {
         self.versionNumber >= feature.minimumSupportedVersion
     }
 
-    public struct OpenFlags: OptionSet {
+    public struct OpenFlags: OptionSet, Sendable {
         public let rawValue: Int32
 
         public init(rawValue: Int32) {

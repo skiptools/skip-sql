@@ -317,7 +317,7 @@ public extension SQLColumn {
     }
 }
 
-private let sharedISO8601DateFormatter = ISO8601DateFormatter()
+nonisolated(unsafe) private let sharedISO8601DateFormatter = ISO8601DateFormatter()
 
 // SKIP NOWARN // "This extension will be moved into its extended type definition when translated to Kotlin. It will not be able to access this file's private types or fileprivate members"
 public extension SQLContext {
