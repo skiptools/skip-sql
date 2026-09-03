@@ -48,10 +48,13 @@ public enum SQLiteFeature {
     case rightJoin                    // RIGHT JOIN
     case fullOuterJoin                // FULL OUTER JOIN
     case rowValueInSyntax             // WHERE (a,b) IN ((1,2), (3,4))
+    case pragmaTableInfo              // SELECT * FROM pragma_table_info(...)
 
     /// The minimum SQLite version for the given feature
     public var minimumSupportedVersion: Int32 {
         switch self {
+        // Android 7 (API 24): 3.9
+        case .pragmaTableInfo:        return 3_016_000 // https://sqlite.org/pragma.html#pragma_table_info
         // Android 9 (API 28): 3.22
         case .rowValueSyntax:         return 3_015_000 // https://sqlite.org/rowvalue.html#backwards_compatibility
         case .upsert:                 return 3_024_000 // https://sqlite.org/lang_upsert.html#history

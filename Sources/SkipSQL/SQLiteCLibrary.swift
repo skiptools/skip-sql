@@ -233,6 +233,10 @@ final class SQLiteCLibrary : SQLiteLibrary {
         SQLite3.sqlite3_update_hook(db, callback, pArg)
     }
 
+    func sqlite3_trace(_ db: OpaquePointer?, _ callback: sqlite3_legacy_trace_hook?, _ pArg: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
+        SQLite3.sqlite3_trace(db, callback, pArg)
+    }
+
     func sqlite3_trace_v2(_ db: OpaquePointer?, _ mask: sqlite3_unsigned, _ callback: sqlite3_trace_hook?, _ pCtx: UnsafeMutableRawPointer?) -> Int32 {
         SQLite3.sqlite3_trace_v2(db, mask, callback, pCtx)
     }

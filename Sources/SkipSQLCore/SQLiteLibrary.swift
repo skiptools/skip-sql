@@ -22,6 +22,11 @@ public typealias sqlite3_pointer_type = OpaquePointer
 
 public typealias sqlite3_unsigned = Int32 // JNA has no UInt understanding
 
+/// Legacy trace callback for `sqlite3_trace()` (pre-3.14).
+public protocol sqlite3_legacy_trace_hook : NativeCallback {
+    func callback(context: OpaquePointer?, sql: OpaquePointer?)
+}
+
 #else
 public typealias NativeLibrary = AnyObject
 public typealias NativeCallback = AnyObject
@@ -51,6 +56,9 @@ public typealias sqlite3_callback = @convention(c) (UnsafeMutableRawPointer?, In
 
 /// A trace callback is invoked with four arguments: callback(T,C,P,X). The T argument is one of the `SQLITE_TRACE` constants to indicate why the callback was invoked. The C argument is a copy of the context pointer. The P and X arguments are pointers whose meanings depend on T.
 public typealias sqlite3_trace_hook = @convention(c) (_ type: UInt32, _ context: UnsafeMutableRawPointer?, _ p: UnsafeMutableRawPointer?, _ px: UnsafeMutableRawPointer?) -> Int32
+
+/// Legacy trace callback for `sqlite3_trace()` (pre-3.14).
+public typealias sqlite3_legacy_trace_hook = @convention(c) (_ context: UnsafeMutableRawPointer?, _ sql: UnsafePointer<CChar>?) -> Void
 
 public let SQLITE_DONE = 101
 public let SQLITE_ROW = 100
@@ -146,6 +154,8 @@ public protocol SQLiteLibrary : NativeLibrary {
     //func int sqlite3_mutex_try(sqlite3_mutex*);
 
     func sqlite3_update_hook(_ db: OpaquePointer?, _ callback: sqlite3_update_hook?, _ pArg: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?
+
+    func sqlite3_trace(_ db: OpaquePointer?, _ callback: sqlite3_legacy_trace_hook?, _ pArg: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?
 
     func sqlite3_trace_v2(_ db: OpaquePointer?, _ mask: sqlite3_unsigned, _ callback: sqlite3_trace_hook?, _ pCtx: UnsafeMutableRawPointer?) -> Int32
 }
