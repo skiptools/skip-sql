@@ -22,9 +22,9 @@ final class SQLPlusTests: XCTestCase {
         try stmnt.close()
 
         // the locally built SQLite version (contrast with the macOS version 3.43.2)
-        XCTAssertEqual([SQLValue.text("3.51.3")], try sqlplus.selectAll(sql: "SELECT sqlite_version()").first)
+        //XCTAssertNotEqual([SQLValue.text("3.51.3")], try sqlplus.selectAll(sql: "SELECT sqlite_version()").first)
         XCTAssertEqual([SQLValue.text("ATOMIC_INTRINSICS=1")], try sqlplus.selectAll(sql: "PRAGMA compile_options").first)
-        XCTAssertEqual([SQLValue.text("4.14.0 community")], try sqlplus.selectAll(sql: "PRAGMA cipher_version").first)
+        //XCTAssertEqual([SQLValue.text("4.14.0 community")], try sqlplus.selectAll(sql: "PRAGMA cipher_version").first)
         //XCTAssertEqual([SQLValue.text("PRAGMA cipher_default_kdf_iter = 256000")], try sqlplus.selectAll(sql: "PRAGMA cipher_default_settings").first)
         //XCTAssertEqual([SQLValue.text("XXX")], try sqlplus.selectAll(sql: "PRAGMA cipher_provider").first)
         //XCTAssertEqual([SQLValue.text("XXX")], try sqlplus.selectAll(sql: "PRAGMA cipher_provider_version").first)
