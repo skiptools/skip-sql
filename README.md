@@ -631,8 +631,3 @@ The general flow for contributing to this and any other Skip package is:
 4. Push your changes to your fork and ensure the CI checks all pass in the Actions tab
 5. Add your name to the Skip [Contributor Agreement](https://github.com/skiptools/clabot-config)
 6. Open a Pull Request from your fork with a description of your changes
-
-## License
-
-This software is licensed under the 
-[Mozilla Public License 2.0](https://www.mozilla.org/MPL/).
